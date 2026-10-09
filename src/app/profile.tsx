@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -59,6 +61,10 @@ export default function ProfileScreen() {
 
   const [name, setName] = useState("");
 
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
   const [gender, setGender] = useState<string | null>(null);
 
   const [birthday, setBirthday] = useState<string | null>(null);
@@ -112,11 +118,12 @@ export default function ProfileScreen() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("name, gender, birthday")
+        .select("name, gender, birthday, avatar_url")
         .eq("id", uid)
         .maybeSingle();
 
       setName(profile?.name ?? "");
+      setAvatarUrl(profile?.avatar_url ?? null);
       setGender(profile?.gender ?? null);
       setBirthday(profile?.birthday ?? null);
 
@@ -246,6 +253,77 @@ export default function ProfileScreen() {
     }
   }
 
+  async function pickAvatar() {
+    if (!userId || uploadingAvatar) return;
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted && permission.canAskAgain !== false) {
+      Alert.alert(
+        "Нужен доступ",
+        "Разрешите доступ к фото, чтобы выбрать аватарку.",
+      );
+
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.6,
+      base64: true,
+    });
+
+    if (result.canceled || !result.assets?.[0]?.base64) return;
+
+    setUploadingAvatar(true);
+
+    try {
+      const base64 = result.assets[0].base64;
+
+      // Превращаем base64 в байты, которые понимает Supabase Storage
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      const path = `${userId}/avatar.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(path, bytes, {
+          contentType: "image/jpeg",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        Alert.alert("Ошибка", uploadError.message);
+
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(path);
+
+      // Добавляем метку времени, чтобы новая картинка не подменялась старым кэшем
+      const url = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const saved = await saveProfileField("avatar_url", url);
+
+      if (saved) {
+        setAvatarUrl(url);
+      }
+    } catch (error) {
+      Alert.alert("Ошибка", (error as Error).message);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -279,9 +357,21 @@ export default function ProfileScreen() {
       {/* ============ ШАПКА ============ */}
 
       <View style={styles.headerCard}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{initial}</Text>
-        </View>
+        <Pressable style={styles.avatarWrap} onPress={pickAvatar}>
+          {avatarUrl ? (
+            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+          ) : (
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initial}</Text>
+            </View>
+          )}
+
+          <View style={styles.avatarBadge}>
+            <Text style={styles.avatarBadgeText}>
+              {uploadingAvatar ? "…" : "📷"}
+            </Text>
+          </View>
+        </Pressable>
 
         {editingName ? (
           <View style={styles.editWrap}>
@@ -590,6 +680,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+  },
+
+  avatarWrap: {
+    marginBottom: 12,
+  },
+
+  avatarImage: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: "#fdeef3",
+  },
+
+  avatarBadge: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#ffffff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+
+  avatarBadgeText: {
+    fontSize: 13,
   },
 
   avatarText: {
