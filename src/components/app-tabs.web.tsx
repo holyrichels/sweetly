@@ -20,11 +20,24 @@ function useTelegramTopInset() {
     let attempts = 0;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
+    // Запасной отступ: Telegram в полноэкранном режиме рисует свои кнопки
+    // «Закрыть» и «···» поверх верха приложения. Если он не передал размер,
+    // берём оценку по высоте этих кнопок (примерно 85px по макету + запас).
+    const FULLSCREEN_FALLBACK = 32;
+
     const update = () => {
       if (!tg) return;
-      setTop(
-        (tg.safeAreaInset?.top ?? 0) + (tg.contentSafeAreaInset?.top ?? 0),
-      );
+
+      const reported =
+        (tg.safeAreaInset?.top ?? 0) + (tg.contentSafeAreaInset?.top ?? 0);
+
+      if (reported > 0) {
+        setTop(reported);
+
+        return;
+      }
+
+      setTop(tg.isFullscreen ? FULLSCREEN_FALLBACK : 0);
     };
 
     // Скрипт Telegram загружается асинхронно, поэтому ждём его появления
@@ -42,6 +55,7 @@ function useTelegramTopInset() {
       update();
       tg.onEvent?.("safeAreaChanged", update);
       tg.onEvent?.("contentSafeAreaChanged", update);
+      tg.onEvent?.("fullscreenChanged", update);
     };
 
     attach();
@@ -50,6 +64,7 @@ function useTelegramTopInset() {
       if (timer) clearTimeout(timer);
       tg?.offEvent?.("safeAreaChanged", update);
       tg?.offEvent?.("contentSafeAreaChanged", update);
+      tg?.offEvent?.("fullscreenChanged", update);
     };
   }, []);
 
