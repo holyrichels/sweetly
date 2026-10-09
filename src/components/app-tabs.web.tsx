@@ -23,7 +23,7 @@ function useTelegramTopInset() {
     // Запасной отступ: Telegram в полноэкранном режиме рисует свои кнопки
     // «Закрыть» и «···» поверх верха приложения. Если он не передал размер,
     // берём оценку по высоте этих кнопок. Значение подбирается по макету.
-    const FULLSCREEN_FALLBACK = 64;
+    const TELEGRAM_FALLBACK = 96;
 
     const update = () => {
       if (!tg) return;
@@ -37,7 +37,9 @@ function useTelegramTopInset() {
         return;
       }
 
-      setTop(tg.isFullscreen ? FULLSCREEN_FALLBACK : 0);
+      // Внутри Telegram верхняя зона всегда перекрыта кнопками, поэтому отступ
+      // ставим независимо от флага полноэкранного режима
+      setTop(TELEGRAM_FALLBACK);
     };
 
     // Скрипт Telegram загружается асинхронно, поэтому ждём его появления
