@@ -23,6 +23,8 @@ import { SymbolView } from "expo-symbols";
 
 import { supabase } from "@/lib/supabase";
 
+import TelegramLoginButton from "@/components/telegram-login-button";
+
 type AuthMode = "login" | "register";
 type CoupleMode = "menu" | "create" | "join";
 
@@ -1306,6 +1308,9 @@ export default function HomeScreen() {
           <Text style={styles.authSubtitle}>Место только для вас двоих ❤️</Text>
 
           <View style={styles.authCard}>
+            <TelegramLoginButton
+              onError={(message) => Alert.alert("Ошибка входа", message)}
+            />
             {authMode === "register" && (
               <TextInput
                 style={styles.input}
