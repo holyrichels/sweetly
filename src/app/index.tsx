@@ -18,11 +18,12 @@ import {
   View,
 } from "react-native";
 
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
 import { SymbolView } from "expo-symbols";
 
 import { supabase } from "@/lib/supabase";
-
 
 type AuthMode = "login" | "register";
 type CoupleMode = "menu" | "create" | "join";
@@ -47,6 +48,7 @@ function parseDateISO(value: string) {
   return new Date();
 }
 
+// Барабан выбора даты (день / месяц / год) как в таймере на iPhone.
 // Значение хранится строкой ГГГГ-ММ-ДД, чтобы остальной код не менялся.
 function DateWheel({
   value,
@@ -55,29 +57,31 @@ function DateWheel({
   value: string;
   onChange: (value: string) => void;
 }) {
-  if (Platform.OS === "web") {
-    // На телефоне браузер сам открывает календарь с выбором дня, месяца и года
-    const WebDateInput = "input" as any;
-
+  if (Platform.OS === "android") {
     return (
-      <WebDateInput
-        type="date"
-        value={value}
-        max={formatDateISO(new Date())}
-        onChange={(event: any) => onChange(event.target.value)}
-        style={{
-          width: "100%",
-          height: 48,
-          borderRadius: 14,
-          border: "1px solid #ead5dc",
-          padding: "0 12px",
-          fontSize: 16,
-          color: "#35242a",
-          backgroundColor: "#ffffff",
-          marginBottom: 12,
-          boxSizing: "border-box",
-        }}
-      />
+      <Pressable
+        style={[styles.input, styles.androidDateField]}
+        onPress={() =>
+          DateTimePickerAndroid.open({
+            value: parseDateISO(value),
+            mode: "date",
+            maximumDate: new Date(),
+            onChange: (_event, date) => {
+              if (date) {
+                onChange(formatDateISO(date));
+              }
+            },
+          })
+        }
+      >
+        <Text style={styles.androidDateText}>
+          {parseDateISO(value).toLocaleDateString("ru-RU", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </Text>
+      </Pressable>
     );
   }
 
@@ -187,6 +191,69 @@ function AnimatedTimerButton({
     >
       <TimerCircleButton icon={icon} onPress={onPress} />
     </Animated.View>
+  );
+}
+
+// Модалка с плавным появлением и исчезновением (на вебе встроенная fade не работает).
+function FadeModal({
+  visible,
+  onRequestClose,
+  children,
+}: {
+  visible: boolean;
+  onRequestClose: () => void;
+  children: React.ReactNode;
+}) {
+  const [mounted, setMounted] = useState(visible);
+
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 260,
+        useNativeDriver: false,
+      }).start();
+    } else {
+      Animated.timing(anim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: false,
+      }).start(({ finished }) => {
+        if (finished) setMounted(false);
+      });
+    }
+  }, [visible, anim]);
+
+  if (!mounted) return null;
+
+  return (
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      onRequestClose={onRequestClose}
+    >
+      <Animated.View
+        style={{
+          flex: 1,
+          opacity: anim,
+          transform: [
+            {
+              scale: anim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0.94, 1],
+              }),
+            },
+          ],
+        }}
+      >
+        {children}
+      </Animated.View>
+    </Modal>
   );
 }
 
@@ -1840,10 +1907,8 @@ export default function HomeScreen() {
       {/* МОДАЛКА СТАТУСА ПАРЫ */}
       {/* ================================================= */}
 
-      <Modal
+      <FadeModal
         visible={statusModalVisible}
-        transparent
-        animationType="fade"
         onRequestClose={() => setStatusModalVisible(false)}
       >
         <Pressable
@@ -1886,16 +1951,14 @@ export default function HomeScreen() {
             </Pressable>
           </Pressable>
         </Pressable>
-      </Modal>
+      </FadeModal>
 
       {/* ================================================= */}
       {/* МОДАЛКА ТАЙМЕРА */}
       {/* ================================================= */}
 
-      <Modal
+      <FadeModal
         visible={timerModalVisible}
-        transparent
-        animationType="fade"
         onRequestClose={() => setTimerModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
@@ -1935,7 +1998,7 @@ export default function HomeScreen() {
             </Pressable>
           </View>
         </View>
-      </Modal>
+      </FadeModal>
     </View>
   );
 }
@@ -2549,7 +2612,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 32,
     alignItems: "center",
-    paddingHorizontal: 20,
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
+    paddingHorizontal: 16,
     paddingVertical: 30,
     shadowColor: "#9b6676",
     shadowOpacity: 0.08,
@@ -2641,22 +2707,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-end",
     justifyContent: "center",
-    gap: 20,
+    gap: 10,
+    width: "100%",
   },
 
   timeUnit: {
     alignItems: "center",
+    flexShrink: 1,
+    minWidth: 0,
   },
 
   timeNumber: {
     color: "#49333b",
-    fontSize: 27,
+    fontSize: 24,
     fontWeight: "800",
   },
 
   timeLabel: {
     color: "#a0838c",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
     marginTop: 2,
   },
@@ -2670,7 +2739,7 @@ const styles = StyleSheet.create({
 
   smallTimeUnit: {
     alignItems: "center",
-    minWidth: 55,
+    minWidth: 44,
   },
 
   smallTimeNumber: {
