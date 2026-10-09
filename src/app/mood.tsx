@@ -10,10 +10,11 @@ import {
   View,
 } from "react-native";
 
+import PageHeader from "@/components/page-header";
 import { supabase } from "@/lib/supabase";
 
 const MOOD_OPTIONS = [
-  { emoji: "🥰", label: "Люблю" },
+  { emoji: "🥰", label: "Влюблён(а)" },
   { emoji: "😊", label: "Хорошо" },
   { emoji: "😌", label: "Спокойно" },
   { emoji: "😐", label: "Нейтрально" },
@@ -251,7 +252,7 @@ export default function MoodScreen() {
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.pageTitle}>Настроение</Text>
+      <PageHeader title="Настроение" />
 
       <Text style={styles.pageSubtitle}>
         Поделись, как ты себя чувствуешь сегодня

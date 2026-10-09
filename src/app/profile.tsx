@@ -21,6 +21,7 @@ import {
   formatDateISO,
   formatDateRu,
 } from "@/components/date-field";
+import PageHeader from "@/components/page-header";
 import { supabase } from "@/lib/supabase";
 
 const GENDER_OPTIONS = ["Женский", "Мужской"];
@@ -353,7 +354,7 @@ export default function ProfileScreen() {
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <Text style={styles.pageTitle}>Профиль</Text>
+      <PageHeader title="Профиль" />
 
       {/* ============ ШАПКА ============ */}
 
