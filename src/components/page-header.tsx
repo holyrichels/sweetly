@@ -191,9 +191,13 @@ export default function PageHeader({ title }: { title: string }) {
         </View>
       </View>
 
-      <Text style={styles.title} numberOfLines={1}>
-        {title}
-      </Text>
+      <View style={styles.titleWrap} pointerEvents="none">
+        <View style={styles.titlePill}>
+          <Text style={styles.titleText} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.right}>
         <View style={styles.missCounter}>
@@ -267,17 +271,33 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  title: {
+  titleWrap: {
     position: "absolute",
     left: 96,
     right: 96,
     top: 0,
     bottom: 0,
-    textAlign: "center",
-    textAlignVertical: "center",
-    color: "#35242a",
-    fontSize: 20,
-    fontWeight: "800",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  titlePill: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    maxWidth: "100%",
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  titleText: {
+    color: "#704e59",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   right: {
