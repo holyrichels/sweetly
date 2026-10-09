@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +24,17 @@ function formatDateRu(value?: string | null) {
   });
 }
 
+function daysSince(value?: string | null) {
+  if (!value) return 0;
+
+  const start = new Date(`${value}T00:00:00`).getTime();
+
+  return Math.max(0, Math.floor((Date.now() - start) / 86400000));
+}
+
 export default function ProfileScreen() {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -41,6 +52,10 @@ export default function ProfileScreen() {
   const [couple, setCouple] = useState<any>(null);
 
   const [partnerName, setPartnerName] = useState<string | null>(null);
+
+  const [timersCount, setTimersCount] = useState(0);
+
+  const [missTotal, setMissTotal] = useState(0);
 
   useEffect(() => {
     load();
@@ -64,7 +79,6 @@ export default function ProfileScreen() {
 
       const rawEmail = session.user.email ?? null;
 
-      // Аккаунты, созданные через Telegram, имеют служебную почту, её не показываем
       setEmail(
         rawEmail && !rawEmail.endsWith("@telegram.user") ? rawEmail : null,
       );
@@ -90,10 +104,12 @@ export default function ProfileScreen() {
         return;
       }
 
+      const coupleId = member.couple_id;
+
       const { data: coupleRow } = await supabase
         .from("couples")
         .select("id, invite_code, relationship_status, relationship_date")
-        .eq("id", member.couple_id)
+        .eq("id", coupleId)
         .maybeSingle();
 
       setCouple(coupleRow ?? null);
@@ -101,7 +117,7 @@ export default function ProfileScreen() {
       const { data: members } = await supabase
         .from("couple_members")
         .select("user_id")
-        .eq("couple_id", member.couple_id);
+        .eq("couple_id", coupleId);
 
       const partnerId = members?.find((item) => item.user_id !== uid)?.user_id;
 
@@ -116,6 +132,21 @@ export default function ProfileScreen() {
       } else {
         setPartnerName(null);
       }
+
+      const { data: timers } = await supabase
+        .from("couple_timers")
+        .select("id")
+        .eq("couple_id", coupleId);
+
+      setTimersCount((timers?.length ?? 0) + 1);
+
+      const { data: miss } = await supabase
+        .from("couple_miss_counts")
+        .select("user_one_count, user_two_count")
+        .eq("couple_id", coupleId)
+        .maybeSingle();
+
+      setMissTotal((miss?.user_one_count ?? 0) + (miss?.user_two_count ?? 0));
     } finally {
       setLoading(false);
     }
@@ -161,17 +192,6 @@ export default function ProfileScreen() {
     }
   }
 
-  function confirmLogout() {
-    Alert.alert("Выйти из аккаунта?", "Войти можно снова в любой момент.", [
-      { text: "Отмена", style: "cancel" },
-      {
-        text: "Выйти",
-        style: "destructive",
-        onPress: () => supabase.auth.signOut(),
-      },
-    ]);
-  }
-
   if (loading) {
     return (
       <View style={styles.center}>
@@ -192,6 +212,8 @@ export default function ProfileScreen() {
 
   const initial = (name || email || "?").trim().charAt(0).toUpperCase();
 
+  const togetherDays = daysSince(couple?.relationship_date);
+
   return (
     <ScrollView
       style={styles.screen}
@@ -200,15 +222,15 @@ export default function ProfileScreen() {
     >
       <Text style={styles.pageTitle}>Профиль</Text>
 
-      {/* ============ ПОЛЬЗОВАТЕЛЬ ============ */}
+      {/* ============ ШАПКА ============ */}
 
-      <View style={styles.card}>
+      <View style={styles.headerCard}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{initial}</Text>
         </View>
 
         {editingName ? (
-          <View style={styles.editRow}>
+          <View style={styles.editWrap}>
             <TextInput
               style={styles.input}
               value={nameDraft}
@@ -239,69 +261,124 @@ export default function ProfileScreen() {
           </View>
         ) : (
           <>
-            <View style={styles.nameRow}>
+            <Pressable
+              style={styles.nameRow}
+              onPress={() => {
+                setNameDraft(name);
+                setEditingName(true);
+              }}
+            >
               <Text style={styles.name}>{name || "Без имени"}</Text>
-
-              <Pressable
-                onPress={() => {
-                  setNameDraft(name);
-                  setEditingName(true);
-                }}
-              >
-                <Text style={styles.editLink}>Изменить</Text>
-              </Pressable>
-            </View>
+              <Text style={styles.editIcon}>✎</Text>
+            </Pressable>
 
             {email ? <Text style={styles.email}>{email}</Text> : null}
           </>
         )}
       </View>
 
-      {/* ============ ПАРА ============ */}
+      {/* ============ ОТНОШЕНИЯ ============ */}
 
-      <Text style={styles.sectionLabel}>Ваша пара</Text>
+      <Text style={styles.sectionLabel}>Отношения</Text>
 
-      <View style={styles.card}>
+      <View style={styles.listCard}>
         {couple ? (
           <>
             <Row
-              label="Партнёр"
-              value={partnerName ?? "ещё не присоединился"}
-            />
-            <Row
-              label="Статус"
+              icon="♥"
+              title="Статус отношений"
               value={couple.relationship_status || "влюбленные"}
             />
             <Row
-              label="Вместе с"
+              icon="👤"
+              title="Партнёр"
+              value={partnerName ?? "ещё не присоединился"}
+            />
+            <Row
+              icon="📅"
+              title="Вместе с"
               value={formatDateRu(couple.relationship_date)}
             />
             {couple.invite_code ? (
-              <Row label="Код приглашения" value={couple.invite_code} />
-            ) : null}
+              <Row
+                icon="🔑"
+                title="Код приглашения"
+                value={couple.invite_code}
+                last
+              />
+            ) : (
+              <Row icon="♥" title="Пара" value="не создана" last />
+            )}
           </>
         ) : (
-          <Text style={styles.emptyText}>
-            Вы пока не в паре. Создайте пару или присоединитесь по коду на
-            главной.
-          </Text>
+          <Row icon="♥" title="Пара" value="не создана" last />
         )}
       </View>
 
-      {/* ============ ВЫХОД ============ */}
+      {/* ============ СТАТИСТИКА ============ */}
 
-      <Pressable style={styles.logoutButton} onPress={confirmLogout}>
-        <Text style={styles.logoutText}>Выйти из аккаунта</Text>
+      {couple ? (
+        <>
+          <Text style={styles.sectionLabel}>Статистика</Text>
+
+          <View style={styles.bigStatCard}>
+            <Text style={styles.bigStatLabel}>ДНЕЙ ВМЕСТЕ</Text>
+            <Text style={styles.bigStatNumber}>{togetherDays}</Text>
+          </View>
+
+          <View style={styles.smallStatRow}>
+            <View style={styles.smallStatCard}>
+              <Text style={styles.smallStatNumber}>{timersCount}</Text>
+              <Text style={styles.smallStatLabel}>Таймеров</Text>
+            </View>
+
+            <View style={styles.smallStatCard}>
+              <Text style={styles.smallStatNumber}>{missTotal}</Text>
+              <Text style={styles.smallStatLabel}>Скучаю</Text>
+            </View>
+          </View>
+        </>
+      ) : null}
+
+      {/* ============ НАСТРОЙКИ ============ */}
+
+      <Text style={styles.sectionLabel}>Другое</Text>
+
+      <Pressable
+        style={({ pressed }) => [styles.settingsRow, pressed && styles.pressed]}
+        onPress={() => router.push("/settings" as any)}
+      >
+        <View style={styles.rowIcon}>
+          <Text style={styles.rowIconText}>⚙️</Text>
+        </View>
+        <Text style={styles.settingsTitle}>Настройки</Text>
+        <Text style={styles.chevron}>›</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  icon,
+  title,
+  value,
+  last,
+}: {
+  icon: string;
+  title: string;
+  value: string;
+  last?: boolean;
+}) {
   return (
-    <View style={styles.row}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
+    <View style={[styles.row, last && styles.rowLast]}>
+      <View style={styles.rowIcon}>
+        <Text style={styles.rowIconText}>{icon}</Text>
+      </View>
+
+      <View style={styles.rowTextWrap}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        <Text style={styles.rowValue}>{value}</Text>
+      </View>
     </View>
   );
 }
@@ -355,18 +432,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  sectionLabel: {
-    color: "#624850",
-    fontSize: 14,
-    fontWeight: "700",
-    marginTop: 24,
-    marginBottom: 10,
+  pressed: {
+    opacity: 0.7,
   },
 
-  card: {
+  headerCard: {
     backgroundColor: "#fff",
-    borderRadius: 24,
-    padding: 18,
+    borderRadius: 26,
+    padding: 22,
+    alignItems: "center",
     shadowColor: "#9b6676",
     shadowOpacity: 0.08,
     shadowRadius: 15,
@@ -375,9 +449,9 @@ const styles = StyleSheet.create({
   },
 
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     backgroundColor: "#e98ca8",
     alignItems: "center",
     justifyContent: "center",
@@ -386,14 +460,14 @@ const styles = StyleSheet.create({
 
   avatarText: {
     color: "#ffffff",
-    fontSize: 26,
+    fontSize: 34,
     fontWeight: "800",
   },
 
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 8,
   },
 
   name: {
@@ -402,10 +476,10 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  editLink: {
+  editIcon: {
     color: "#e98ca8",
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 16,
+    fontWeight: "800",
   },
 
   email: {
@@ -414,7 +488,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  editRow: {
+  editWrap: {
+    width: "100%",
     gap: 12,
   },
 
@@ -464,44 +539,145 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  sectionLabel: {
+    color: "#624850",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 24,
+    marginBottom: 10,
+  },
+
+  listCard: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    overflow: "hidden",
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
   row: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: "#f5e6ec",
   },
 
-  rowLabel: {
+  rowLast: {
+    borderBottomWidth: 0,
+  },
+
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#fdeef3",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  rowIconText: {
+    fontSize: 16,
+  },
+
+  rowTextWrap: {
+    flex: 1,
+  },
+
+  rowTitle: {
     color: "#92767f",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
   },
 
   rowValue: {
     color: "#35242a",
-    fontSize: 14,
-    fontWeight: "800",
-    flexShrink: 1,
-    textAlign: "right",
-    marginLeft: 12,
-  },
-
-  logoutButton: {
-    marginTop: 28,
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#f3c9d4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  logoutText: {
-    color: "#d9536f",
     fontSize: 15,
     fontWeight: "800",
+    marginTop: 2,
+  },
+
+  bigStatCard: {
+    backgroundColor: "#e98ca8",
+    borderRadius: 24,
+    padding: 22,
+  },
+
+  bigStatLabel: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    opacity: 0.85,
+  },
+
+  bigStatNumber: {
+    color: "#ffffff",
+    fontSize: 48,
+    fontWeight: "800",
+    marginTop: 4,
+  },
+
+  smallStatRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+  },
+
+  smallStatCard: {
+    flex: 1,
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  smallStatNumber: {
+    color: "#35242a",
+    fontSize: 24,
+    fontWeight: "800",
+  },
+
+  smallStatLabel: {
+    color: "#92767f",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+
+  settingsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  settingsTitle: {
+    flex: 1,
+    color: "#35242a",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+
+  chevron: {
+    color: "#c98aa0",
+    fontSize: 24,
+    fontWeight: "700",
   },
 });
