@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
+import { SymbolView } from "expo-symbols";
 import {
   ActivityIndicator,
   Alert,
@@ -413,7 +414,11 @@ export default function ProfileScreen() {
               }}
             >
               <Text style={styles.name}>{name || "Без имени"}</Text>
-              <Text style={styles.editIcon}>✎</Text>
+              <SymbolView
+                name={{ ios: "pencil", android: "edit", web: "edit" }}
+                tintColor="#e98ca8"
+                size={16}
+              />
             </Pressable>
 
             {email ? <Text style={styles.email}>{email}</Text> : null}
@@ -867,7 +872,8 @@ const styles = StyleSheet.create({
 
   expandBox: {
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingTop: 14,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: "#f5e6ec",
   },
