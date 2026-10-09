@@ -12,16 +12,28 @@ import {
   View,
 } from "react-native";
 
+import {
+  CalendarGrid,
+  FadeIn,
+  formatDateISO,
+  formatDateRu,
+} from "@/components/date-field";
 import { supabase } from "@/lib/supabase";
 
-function formatDateRu(value?: string | null) {
-  if (!value) return "не указана";
+const GENDER_OPTIONS = ["Женский", "Мужской"];
 
-  return new Date(`${value}T00:00:00`).toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+function capitalizeFirst(text: string) {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
+function pluralDays(count: number) {
+  const last = count % 10;
+  const lastTwo = count % 100;
+
+  if (last === 1 && lastTwo !== 11) return "день";
+  if (last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14)) return "дня";
+
+  return "дней";
 }
 
 function daysSince(value?: string | null) {
@@ -30,6 +42,10 @@ function daysSince(value?: string | null) {
   const start = new Date(`${value}T00:00:00`).getTime();
 
   return Math.max(0, Math.floor((Date.now() - start) / 86400000));
+}
+
+function fmtDate(value?: string | null) {
+  return value ? formatDateRu(value) : null;
 }
 
 export default function ProfileScreen() {
@@ -43,11 +59,22 @@ export default function ProfileScreen() {
 
   const [name, setName] = useState("");
 
+  const [gender, setGender] = useState<string | null>(null);
+
+  const [birthday, setBirthday] = useState<string | null>(null);
+
+  const [partnerBirthday, setPartnerBirthday] = useState<string | null>(null);
+
   const [editingName, setEditingName] = useState(false);
 
   const [nameDraft, setNameDraft] = useState("");
 
   const [savingName, setSavingName] = useState(false);
+
+  // Какая строка сейчас раскрыта для редактирования: пол или день рождения
+  const [openField, setOpenField] = useState<"gender" | "birthday" | null>(
+    null,
+  );
 
   const [couple, setCouple] = useState<any>(null);
 
@@ -85,11 +112,13 @@ export default function ProfileScreen() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("name")
+        .select("name, gender, birthday")
         .eq("id", uid)
         .maybeSingle();
 
       setName(profile?.name ?? "");
+      setGender(profile?.gender ?? null);
+      setBirthday(profile?.birthday ?? null);
 
       const { data: member } = await supabase
         .from("couple_members")
@@ -100,6 +129,7 @@ export default function ProfileScreen() {
       if (!member) {
         setCouple(null);
         setPartnerName(null);
+        setPartnerBirthday(null);
 
         return;
       }
@@ -108,7 +138,7 @@ export default function ProfileScreen() {
 
       const { data: coupleRow } = await supabase
         .from("couples")
-        .select("id, invite_code, relationship_status, relationship_date")
+        .select("id, relationship_status, relationship_date")
         .eq("id", coupleId)
         .maybeSingle();
 
@@ -124,13 +154,15 @@ export default function ProfileScreen() {
       if (partnerId) {
         const { data: partnerProfile } = await supabase
           .from("profiles")
-          .select("name")
+          .select("name, birthday")
           .eq("id", partnerId)
           .maybeSingle();
 
         setPartnerName(partnerProfile?.name ?? "Партнёр");
+        setPartnerBirthday(partnerProfile?.birthday ?? null);
       } else {
         setPartnerName(null);
+        setPartnerBirthday(null);
       }
 
       const { data: timers } = await supabase
@@ -152,10 +184,38 @@ export default function ProfileScreen() {
     }
   }
 
+  // Сохраняем одно поле профиля. Если политики на UPDATE нет, сообщаем об этом.
+  async function saveProfileField(field: string, value: string | null) {
+    if (!userId) return false;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ [field]: value })
+      .eq("id", userId)
+      .select("id");
+
+    if (error) {
+      Alert.alert("Ошибка", error.message);
+
+      return false;
+    }
+
+    if (!data || data.length === 0) {
+      Alert.alert(
+        "Не удалось сохранить",
+        "Нет политики на изменение профиля в Supabase.",
+      );
+
+      return false;
+    }
+
+    return true;
+  }
+
   async function saveName() {
     const trimmed = nameDraft.trim();
 
-    if (!trimmed || !userId) {
+    if (!trimmed) {
       Alert.alert("Ошибка", "Имя не может быть пустым");
 
       return;
@@ -164,31 +224,25 @@ export default function ProfileScreen() {
     setSavingName(true);
 
     try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .update({ name: trimmed })
-        .eq("id", userId)
-        .select("id");
-
-      if (error) {
-        Alert.alert("Ошибка", error.message);
-
-        return;
+      if (await saveProfileField("name", trimmed)) {
+        setName(trimmed);
+        setEditingName(false);
       }
-
-      if (!data || data.length === 0) {
-        Alert.alert(
-          "Не удалось сохранить",
-          "Нет политики на изменение профиля в Supabase.",
-        );
-
-        return;
-      }
-
-      setName(trimmed);
-      setEditingName(false);
     } finally {
       setSavingName(false);
+    }
+  }
+
+  async function pickGender(value: string) {
+    if (await saveProfileField("gender", value)) {
+      setGender(value);
+      setOpenField(null);
+    }
+  }
+
+  async function pickBirthday(value: string) {
+    if (await saveProfileField("birthday", value)) {
+      setBirthday(value);
     }
   }
 
@@ -287,7 +341,9 @@ export default function ProfileScreen() {
             <Row
               icon="♥"
               title="Статус отношений"
-              value={couple.relationship_status || "влюбленные"}
+              value={capitalizeFirst(
+                couple.relationship_status || "влюбленные",
+              )}
             />
             <Row
               icon="👤"
@@ -296,23 +352,97 @@ export default function ProfileScreen() {
             />
             <Row
               icon="📅"
-              title="Вместе с"
-              value={formatDateRu(couple.relationship_date)}
+              title="Вместе"
+              value={`${togetherDays} ${pluralDays(togetherDays)} с ${fmtDate(couple.relationship_date)}`}
+              last
             />
-            {couple.invite_code ? (
-              <Row
-                icon="🔑"
-                title="Код приглашения"
-                value={couple.invite_code}
-                last
-              />
-            ) : (
-              <Row icon="♥" title="Пара" value="не создана" last />
-            )}
           </>
         ) : (
           <Row icon="♥" title="Пара" value="не создана" last />
         )}
+      </View>
+
+      {/* ============ ЛИЧНОЕ ============ */}
+
+      <Text style={styles.sectionLabel}>Личное</Text>
+
+      <View style={styles.listCard}>
+        <Pressable
+          onPress={() => setOpenField(openField === "gender" ? null : "gender")}
+        >
+          <Row icon="⚧" title="Пол" value={gender || "не указан"} editable />
+        </Pressable>
+
+        {openField === "gender" && (
+          <FadeIn>
+            <View style={styles.expandBox}>
+              <View style={styles.chipRow}>
+                {GENDER_OPTIONS.map((option) => {
+                  const active = gender === option;
+
+                  return (
+                    <Pressable
+                      key={option}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => pickGender(option)}
+                    >
+                      <Text
+                        style={[
+                          styles.chipText,
+                          active && styles.chipTextActive,
+                        ]}
+                      >
+                        {option}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </FadeIn>
+        )}
+
+        <Pressable
+          onPress={() =>
+            setOpenField(openField === "birthday" ? null : "birthday")
+          }
+        >
+          <Row
+            icon="🎂"
+            title="Мой день рождения"
+            value={fmtDate(birthday) ?? "не указан"}
+            editable
+          />
+        </Pressable>
+
+        {openField === "birthday" && (
+          <FadeIn>
+            <View style={styles.expandBox}>
+              <CalendarGrid
+                value={birthday ?? formatDateISO(new Date())}
+                onChange={pickBirthday}
+              />
+
+              <Pressable
+                style={styles.doneButton}
+                onPress={() => setOpenField(null)}
+              >
+                <Text style={styles.doneButtonText}>Готово</Text>
+              </Pressable>
+            </View>
+          </FadeIn>
+        )}
+
+        <Row
+          icon="🎁"
+          title="День рождения партнёра"
+          value={
+            partnerName
+              ? (fmtDate(partnerBirthday) ?? "не указан")
+              : "партнёр не присоединился"
+          }
+          last
+        />
       </View>
 
       {/* ============ СТАТИСТИКА ============ */}
@@ -363,11 +493,13 @@ function Row({
   title,
   value,
   last,
+  editable,
 }: {
   icon: string;
   title: string;
   value: string;
   last?: boolean;
+  editable?: boolean;
 }) {
   return (
     <View style={[styles.row, last && styles.rowLast]}>
@@ -379,6 +511,8 @@ function Row({
         <Text style={styles.rowTitle}>{title}</Text>
         <Text style={styles.rowValue}>{value}</Text>
       </View>
+
+      {editable ? <Text style={styles.editChevron}>⌄</Text> : null}
     </View>
   );
 }
@@ -600,6 +734,63 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     marginTop: 2,
+  },
+
+  editChevron: {
+    color: "#c98aa0",
+    fontSize: 16,
+    fontWeight: "800",
+    marginLeft: 8,
+  },
+
+  expandBox: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f5e6ec",
+  },
+
+  chipRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  chip: {
+    flex: 1,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: "#fff5f8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  chipActive: {
+    backgroundColor: "#e98ca8",
+  },
+
+  chipText: {
+    color: "#8a6b74",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  chipTextActive: {
+    color: "#ffffff",
+  },
+
+  doneButton: {
+    marginTop: 10,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "#e98ca8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  doneButtonText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "800",
   },
 
   bigStatCard: {

@@ -27,6 +27,10 @@ type CoupleMode = "menu" | "create" | "join";
 
 const SCREEN_HEIGHT = Dimensions.get("window").height;
 
+function capitalizeFirst(text: string) {
+  return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
 function formatDateISO(date: Date) {
   const year = date.getFullYear();
 
@@ -1739,7 +1743,7 @@ export default function HomeScreen() {
             onPress={() => setStatusModalVisible(true)}
           >
             <Text style={styles.statusPillText}>
-              {couple.relationship_status || "влюбленные"}
+              {capitalizeFirst(couple.relationship_status || "влюбленные")}
             </Text>
 
             <Text style={styles.statusArrow}>⌄</Text>
@@ -2088,7 +2092,7 @@ export default function HomeScreen() {
                         active && styles.statusTextActive,
                       ]}
                     >
-                      {item}
+                      {capitalizeFirst(item)}
                     </Text>
                   </Pressable>
                 );
