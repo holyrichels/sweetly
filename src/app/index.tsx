@@ -2104,10 +2104,6 @@ export default function HomeScreen() {
 
         <View style={styles.bottomArea}>
           <Text style={styles.bottomText}>Ваш маленький мир ❤️</Text>
-
-          <Pressable style={styles.logoutButton} onPress={logout}>
-            <Text style={styles.logoutButtonText}>Выйти из аккаунта</Text>
-          </Pressable>
         </View>
       </ScrollView>
 

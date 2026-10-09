@@ -1,4 +1,5 @@
 import { Slot, usePathname, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 const TABS = [
@@ -9,13 +10,60 @@ const TABS = [
   { route: "/profile", label: "Профиль", icon: "👤" },
 ];
 
+// Отступ сверху, который занимает интерфейс Telegram (кнопки «Закрыть» и «···»)
+// и системная полоса устройства. Telegram сообщает эти размеры сам.
+function useTelegramTopInset() {
+  const [top, setTop] = useState(0);
+
+  useEffect(() => {
+    let tg: any = null;
+    let attempts = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const update = () => {
+      if (!tg) return;
+      setTop(
+        (tg.safeAreaInset?.top ?? 0) + (tg.contentSafeAreaInset?.top ?? 0),
+      );
+    };
+
+    // Скрипт Telegram загружается асинхронно, поэтому ждём его появления
+    const attach = () => {
+      tg = (window as any).Telegram?.WebApp;
+
+      if (!tg) {
+        attempts += 1;
+
+        if (attempts < 40) timer = setTimeout(attach, 150);
+
+        return;
+      }
+
+      update();
+      tg.onEvent?.("safeAreaChanged", update);
+      tg.onEvent?.("contentSafeAreaChanged", update);
+    };
+
+    attach();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      tg?.offEvent?.("safeAreaChanged", update);
+      tg?.offEvent?.("contentSafeAreaChanged", update);
+    };
+  }, []);
+
+  return top;
+}
+
 export default function AppTabs() {
   const pathname = usePathname();
   const router = useRouter();
+  const topInset = useTelegramTopInset();
 
   return (
     <View style={styles.root}>
-      <View style={styles.content}>
+      <View style={[styles.content, { paddingTop: topInset }]}>
         <Slot />
       </View>
 

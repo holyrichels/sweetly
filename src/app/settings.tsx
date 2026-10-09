@@ -4,6 +4,7 @@ import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import {
     Alert,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -13,6 +14,26 @@ import {
 } from "react-native";
 
 import { supabase } from "@/lib/supabase";
+
+// На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
+function notify(title: string, message: string) {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
+
+function confirmAction(title: string, message: string, onConfirm: () => void) {
+  if (Platform.OS === "web") {
+    if (window.confirm(`${title}\n\n${message}`)) onConfirm();
+  } else {
+    Alert.alert(title, message, [
+      { text: "Отмена", style: "cancel" },
+      { text: "Подтвердить", style: "destructive", onPress: onConfirm },
+    ]);
+  }
+}
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -47,18 +68,18 @@ export default function SettingsScreen() {
 
     await Clipboard.setStringAsync(email);
 
-    Alert.alert("Скопировано", email);
+    notify("Скопировано", email);
   }
 
   async function savePassword() {
     if (newPassword.length < 6) {
-      Alert.alert("Слишком короткий пароль", "Минимум 6 символов");
+      notify("Слишком короткий пароль", "Минимум 6 символов");
 
       return;
     }
 
     if (newPassword !== repeatPassword) {
-      Alert.alert("Пароли не совпадают", "Введите одинаковый пароль дважды");
+      notify("Пароли не совпадают", "Введите одинаковый пароль дважды");
 
       return;
     }
@@ -71,7 +92,7 @@ export default function SettingsScreen() {
       });
 
       if (error) {
-        Alert.alert("Ошибка", error.message);
+        notify("Ошибка", error.message);
 
         return;
       }
@@ -79,43 +100,33 @@ export default function SettingsScreen() {
       setNewPassword("");
       setRepeatPassword("");
       setPasswordOpen(false);
-      Alert.alert("Готово", "Пароль изменён");
+      notify("Готово", "Пароль изменён");
     } finally {
       setSavingPassword(false);
     }
   }
 
-  function confirmLogout() {
-    Alert.alert("Выйти из аккаунта?", "Войти можно снова в любой момент.", [
-      { text: "Отмена", style: "cancel" },
-      {
-        text: "Выйти",
-        style: "destructive",
-        onPress: () => supabase.auth.signOut(),
+  function logout() {
+    confirmAction(
+      "Выйти из аккаунта?",
+      "Войти можно снова в любой момент.",
+      async () => {
+        await supabase.auth.signOut();
+        router.replace("/");
       },
-    ]);
+    );
   }
 
   function confirmDelete() {
-    Alert.alert(
+    confirmAction(
       "Удалить аккаунт?",
       "Все ваши данные будут удалены без возможности восстановления.",
-      [
-        { text: "Отмена", style: "cancel" },
-        {
-          text: "Продолжить",
-          style: "destructive",
-          onPress: () =>
-            Alert.alert("Точно удалить?", "Это действие нельзя отменить.", [
-              { text: "Нет", style: "cancel" },
-              {
-                text: "Удалить навсегда",
-                style: "destructive",
-                onPress: deleteAccount,
-              },
-            ]),
-        },
-      ],
+      () =>
+        confirmAction(
+          "Точно удалить?",
+          "Это действие нельзя отменить.",
+          deleteAccount,
+        ),
     );
   }
 
@@ -123,15 +134,13 @@ export default function SettingsScreen() {
     const { data, error } = await supabase.functions.invoke("delete-account");
 
     if (error || data?.error) {
-      Alert.alert(
-        "Не удалось удалить",
-        error?.message ?? data?.error ?? "Ошибка",
-      );
+      notify("Не удалось удалить", error?.message ?? data?.error ?? "Ошибка");
 
       return;
     }
 
     await supabase.auth.signOut();
+    router.replace("/");
   }
 
   return (
@@ -179,7 +188,7 @@ export default function SettingsScreen() {
               style={styles.row}
               onPress={() => setPasswordOpen((open) => !open)}
             >
-              <View style={[styles.icon, styles.iconAccent]}>
+              <View style={styles.icon}>
                 <Text style={styles.iconText}>🔒</Text>
               </View>
               <View style={styles.textWrap}>
@@ -221,7 +230,7 @@ export default function SettingsScreen() {
           </>
         )}
 
-        <Pressable style={[styles.row, styles.rowLast]} onPress={confirmLogout}>
+        <Pressable style={[styles.row, styles.rowLast]} onPress={logout}>
           <View style={styles.icon}>
             <Text style={styles.iconText}>↪</Text>
           </View>
@@ -234,7 +243,7 @@ export default function SettingsScreen() {
       <Text style={styles.sectionLabel}>Опасная зона</Text>
 
       <Pressable style={styles.dangerCard} onPress={confirmDelete}>
-        <View style={[styles.icon, styles.iconDanger]}>
+        <View style={styles.icon}>
           <Text style={styles.iconText}>🗑</Text>
         </View>
         <View style={styles.textWrap}>
