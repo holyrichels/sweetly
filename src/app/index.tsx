@@ -18,9 +18,7 @@ import {
   View,
 } from "react-native";
 
-import DateTimePicker, {
-  DateTimePickerAndroid,
-} from "@react-native-community/datetimepicker";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { SymbolView } from "expo-symbols";
 
 import { supabase } from "@/lib/supabase";
@@ -48,7 +46,6 @@ function parseDateISO(value: string) {
   return new Date();
 }
 
-// Барабан выбора даты (день / месяц / год) как в таймере на iPhone.
 // Значение хранится строкой ГГГГ-ММ-ДД, чтобы остальной код не менялся.
 function DateWheel({
   value,
@@ -57,31 +54,29 @@ function DateWheel({
   value: string;
   onChange: (value: string) => void;
 }) {
-  if (Platform.OS === "android") {
+  if (Platform.OS === "web") {
+    // На телефоне браузер сам открывает календарь с выбором дня, месяца и года
+    const WebDateInput = "input" as any;
+
     return (
-      <Pressable
-        style={[styles.input, styles.androidDateField]}
-        onPress={() =>
-          DateTimePickerAndroid.open({
-            value: parseDateISO(value),
-            mode: "date",
-            maximumDate: new Date(),
-            onChange: (_event, date) => {
-              if (date) {
-                onChange(formatDateISO(date));
-              }
-            },
-          })
-        }
-      >
-        <Text style={styles.androidDateText}>
-          {parseDateISO(value).toLocaleDateString("ru-RU", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
-        </Text>
-      </Pressable>
+      <WebDateInput
+        type="date"
+        value={value}
+        max={formatDateISO(new Date())}
+        onChange={(event: any) => onChange(event.target.value)}
+        style={{
+          width: "100%",
+          height: 48,
+          borderRadius: 14,
+          border: "1px solid #ead5dc",
+          padding: "0 12px",
+          fontSize: 16,
+          color: "#35242a",
+          backgroundColor: "#ffffff",
+          marginBottom: 12,
+          boxSizing: "border-box",
+        }}
+      />
     );
   }
 
