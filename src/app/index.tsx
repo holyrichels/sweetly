@@ -6,6 +6,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -272,6 +273,8 @@ function DateWheel({
   );
 }
 
+type TimerIconName = "back" | "next" | "edit" | "add" | "delete";
+
 const TIMER_ICONS: Record<
   TimerIconName,
   React.ComponentProps<typeof SymbolView>["name"]
@@ -418,7 +421,7 @@ export default function HomeScreen() {
   const [couple, setCouple] = useState<any>(null);
 
   const [profilesList, setProfilesList] = useState<
-    { id: string; name: string }[]
+    { id: string; name: string; avatar_url?: string | null }[]
   >([]);
 
   const [memberCount, setMemberCount] = useState(0);
@@ -620,6 +623,34 @@ export default function HomeScreen() {
   }, [session?.user?.id, couple?.id]);
 
   // =========================================================
+  // =========================================================
+  // REALTIME: изменения профилей (аватарки и имена партнёра)
+  // =========================================================
+
+  useEffect(() => {
+    if (!session?.user?.id || !couple?.id) return;
+
+    const profilesChannel = supabase
+      .channel(`profiles-updates-${couple.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "profiles",
+        },
+        () => {
+          loadCouple(session.user.id);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profilesChannel);
+    };
+  }, [session?.user?.id, couple?.id]);
+
+  // =========================================================
   // LOAD SESSION
   // =========================================================
 
@@ -779,7 +810,7 @@ export default function HomeScreen() {
       if (userIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from("profiles")
-          .select("id, name")
+          .select("id, name, avatar_url")
           .in("id", userIds);
 
         if (!profilesError) {
@@ -1181,6 +1212,14 @@ export default function HomeScreen() {
   }
 
   const myName = session?.user?.user_metadata?.name || name || "Вы";
+
+  const myAvatarUrl =
+    profilesList.find((profile) => profile.id === session?.user?.id)
+      ?.avatar_url || null;
+
+  const partnerAvatarUrl =
+    profilesList.find((profile) => profile.id !== session?.user?.id)
+      ?.avatar_url || null;
 
   const partnerName =
     profilesList.find((profile) => profile.id !== session?.user?.id)?.name ||
@@ -1730,11 +1769,27 @@ export default function HomeScreen() {
         <View style={styles.topBar}>
           <View style={styles.avatars}>
             <View style={styles.avatarBack}>
-              <Text style={styles.avatarText}>{getInitials(partnerName)}</Text>
+              {partnerAvatarUrl ? (
+                <Image
+                  source={{ uri: partnerAvatarUrl }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>
+                  {getInitials(partnerName)}
+                </Text>
+              )}
             </View>
 
             <View style={styles.avatarFront}>
-              <Text style={styles.avatarText}>{getInitials(myName)}</Text>
+              {myAvatarUrl ? (
+                <Image
+                  source={{ uri: myAvatarUrl }}
+                  style={styles.avatarImage}
+                />
+              ) : (
+                <Text style={styles.avatarText}>{getInitials(myName)}</Text>
+              )}
             </View>
           </View>
 
@@ -2514,6 +2569,12 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 15,
     fontWeight: "800",
+  },
+
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 24,
   },
 
   statusPill: {
