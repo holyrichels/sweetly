@@ -1,10 +1,89 @@
+import { useEffect, useState } from "react";
+
+import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
-import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 
 import { supabase } from "@/lib/supabase";
 
 export default function SettingsScreen() {
   const router = useRouter();
+
+  const [email, setEmail] = useState<string | null>(null);
+
+  const [isTelegramOnly, setIsTelegramOnly] = useState(false);
+
+  const [passwordOpen, setPasswordOpen] = useState(false);
+
+  const [newPassword, setNewPassword] = useState("");
+
+  const [repeatPassword, setRepeatPassword] = useState("");
+
+  const [savingPassword, setSavingPassword] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const raw = data.user?.email ?? null;
+
+      if (raw && raw.endsWith("@telegram.user")) {
+        setIsTelegramOnly(true);
+        setEmail(null);
+      } else {
+        setEmail(raw);
+      }
+    });
+  }, []);
+
+  async function copyEmail() {
+    if (!email) return;
+
+    await Clipboard.setStringAsync(email);
+
+    Alert.alert("Скопировано", email);
+  }
+
+  async function savePassword() {
+    if (newPassword.length < 6) {
+      Alert.alert("Слишком короткий пароль", "Минимум 6 символов");
+
+      return;
+    }
+
+    if (newPassword !== repeatPassword) {
+      Alert.alert("Пароли не совпадают", "Введите одинаковый пароль дважды");
+
+      return;
+    }
+
+    setSavingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        Alert.alert("Ошибка", error.message);
+
+        return;
+      }
+
+      setNewPassword("");
+      setRepeatPassword("");
+      setPasswordOpen(false);
+      Alert.alert("Готово", "Пароль изменён");
+    } finally {
+      setSavingPassword(false);
+    }
+  }
 
   function confirmLogout() {
     Alert.alert("Выйти из аккаунта?", "Войти можно снова в любой момент.", [
@@ -17,18 +96,155 @@ export default function SettingsScreen() {
     ]);
   }
 
+  function confirmDelete() {
+    Alert.alert(
+      "Удалить аккаунт?",
+      "Все ваши данные будут удалены без возможности восстановления.",
+      [
+        { text: "Отмена", style: "cancel" },
+        {
+          text: "Продолжить",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert("Точно удалить?", "Это действие нельзя отменить.", [
+              { text: "Нет", style: "cancel" },
+              {
+                text: "Удалить навсегда",
+                style: "destructive",
+                onPress: deleteAccount,
+              },
+            ]),
+        },
+      ],
+    );
+  }
+
+  async function deleteAccount() {
+    const { data, error } = await supabase.functions.invoke("delete-account");
+
+    if (error || data?.error) {
+      Alert.alert(
+        "Не удалось удалить",
+        error?.message ?? data?.error ?? "Ошибка",
+      );
+
+      return;
+    }
+
+    await supabase.auth.signOut();
+  }
+
   return (
-    <View style={styles.screen}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
       <Pressable style={styles.back} onPress={() => router.back()}>
         <Text style={styles.backText}>‹ Назад</Text>
       </Pressable>
 
       <Text style={styles.title}>Настройки</Text>
 
-      <Pressable style={styles.logoutButton} onPress={confirmLogout}>
-        <Text style={styles.logoutText}>Выйти из аккаунта</Text>
+      <Text style={styles.sectionLabel}>Аккаунт</Text>
+
+      <View style={styles.listCard}>
+        {email ? (
+          <Pressable style={styles.row} onPress={copyEmail}>
+            <View style={styles.icon}>
+              <Text style={styles.iconText}>@</Text>
+            </View>
+            <View style={styles.textWrap}>
+              <Text style={styles.value}>{email}</Text>
+              <Text style={styles.hint}>
+                Почта аккаунта — нажмите, чтобы скопировать
+              </Text>
+            </View>
+          </Pressable>
+        ) : (
+          <View style={styles.row}>
+            <View style={styles.icon}>
+              <Text style={styles.iconText}>✈️</Text>
+            </View>
+            <View style={styles.textWrap}>
+              <Text style={styles.value}>Вход через Telegram</Text>
+              <Text style={styles.hint}>Почты у аккаунта нет</Text>
+            </View>
+          </View>
+        )}
+
+        {!isTelegramOnly && (
+          <>
+            <Pressable
+              style={styles.row}
+              onPress={() => setPasswordOpen((open) => !open)}
+            >
+              <View style={[styles.icon, styles.iconAccent]}>
+                <Text style={styles.iconText}>🔒</Text>
+              </View>
+              <View style={styles.textWrap}>
+                <Text style={styles.value}>Сменить пароль</Text>
+                <Text style={styles.hint}>Придумайте новый пароль</Text>
+              </View>
+              <Text style={styles.chevron}>{passwordOpen ? "⌃" : "›"}</Text>
+            </Pressable>
+
+            {passwordOpen && (
+              <View style={styles.expandBox}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Новый пароль"
+                  placeholderTextColor="#b9a2aa"
+                  secureTextEntry
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Повторите пароль"
+                  placeholderTextColor="#b9a2aa"
+                  secureTextEntry
+                  value={repeatPassword}
+                  onChangeText={setRepeatPassword}
+                />
+                <Pressable
+                  style={styles.primaryButton}
+                  onPress={savePassword}
+                  disabled={savingPassword}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {savingPassword ? "Сохраняем..." : "Сохранить пароль"}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
+          </>
+        )}
+
+        <Pressable style={[styles.row, styles.rowLast]} onPress={confirmLogout}>
+          <View style={styles.icon}>
+            <Text style={styles.iconText}>↪</Text>
+          </View>
+          <View style={styles.textWrap}>
+            <Text style={styles.value}>Выйти из аккаунта</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      <Text style={styles.sectionLabel}>Опасная зона</Text>
+
+      <Pressable style={styles.dangerCard} onPress={confirmDelete}>
+        <View style={[styles.icon, styles.iconDanger]}>
+          <Text style={styles.iconText}>🗑</Text>
+        </View>
+        <View style={styles.textWrap}>
+          <Text style={styles.dangerTitle}>Удалить аккаунт</Text>
+          <Text style={styles.hint}>
+            Вместе со всеми записями, без возврата
+          </Text>
+        </View>
       </Pressable>
-    </View>
+    </ScrollView>
   );
 }
 
@@ -36,8 +252,12 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: "#fff5f8",
+  },
+
+  content: {
     paddingHorizontal: 18,
     paddingTop: 65,
+    paddingBottom: 70,
     width: "100%",
     maxWidth: 520,
     alignSelf: "center",
@@ -59,20 +279,137 @@ const styles = StyleSheet.create({
     color: "#35242a",
     fontSize: 28,
     fontWeight: "800",
-    marginBottom: 24,
+    marginBottom: 8,
   },
 
-  logoutButton: {
-    height: 50,
-    borderRadius: 16,
-    backgroundColor: "#ffffff",
+  sectionLabel: {
+    color: "#624850",
+    fontSize: 14,
+    fontWeight: "700",
+    marginTop: 22,
+    marginBottom: 10,
+  },
+
+  listCard: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    overflow: "hidden",
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f5e6ec",
+  },
+
+  rowLast: {
+    borderBottomWidth: 0,
+  },
+
+  icon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#fdeef3",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  iconAccent: {
+    backgroundColor: "#e98ca8",
+  },
+
+  iconDanger: {
+    backgroundColor: "#d9536f",
+  },
+
+  iconText: {
+    fontSize: 16,
+    color: "#35242a",
+    fontWeight: "800",
+  },
+
+  textWrap: {
+    flex: 1,
+  },
+
+  value: {
+    color: "#35242a",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  hint: {
+    color: "#92767f",
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  chevron: {
+    color: "#c98aa0",
+    fontSize: 22,
+    fontWeight: "700",
+    marginLeft: 8,
+  },
+
+  expandBox: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 16,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f5e6ec",
+  },
+
+  input: {
+    height: 46,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#f3c9d4",
+    borderColor: "#ead5dc",
+    paddingHorizontal: 14,
+    fontSize: 15,
+    color: "#35242a",
+    backgroundColor: "#ffffff",
+  },
+
+  primaryButton: {
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: "#e98ca8",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  logoutText: {
+  primaryButtonText: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  dangerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  dangerTitle: {
     color: "#d9536f",
     fontSize: 15,
     fontWeight: "800",
