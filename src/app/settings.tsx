@@ -3,17 +3,21 @@ import { useEffect, useState } from "react";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import {
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  Alert,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 import { supabase } from "@/lib/supabase";
+
+// Имя бота без @. Поменяй, если выбрал другой username в BotFather.
+const BOT_USERNAME = "sweetly_couple_bot";
 
 // На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
 function notify(title: string, message: string) {
@@ -50,6 +54,17 @@ export default function SettingsScreen() {
 
   const [savingPassword, setSavingPassword] = useState(false);
 
+  const [telegramLinked, setTelegramLinked] = useState(false);
+
+  const [linkingTelegram, setLinkingTelegram] = useState(false);
+
+  useEffect(() => {
+    supabase.functions
+      .invoke("notify-partner", { body: { action: "link_status" } })
+      .then(({ data }) => setTelegramLinked(data?.linked === true))
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       const raw = data.user?.email ?? null;
@@ -62,6 +77,30 @@ export default function SettingsScreen() {
       }
     });
   }, []);
+
+  // Создаём одноразовый код и открываем бота с ним. Бот связывает Telegram после «Старт».
+  async function linkTelegram() {
+    setLinkingTelegram(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke(
+        "notify-partner",
+        {
+          body: { action: "create_link_code" },
+        },
+      );
+
+      if (error || !data?.code) {
+        notify("Ошибка", error?.message ?? "Не удалось создать ссылку");
+
+        return;
+      }
+
+      await Linking.openURL(`https://t.me/${BOT_USERNAME}?start=${data.code}`);
+    } finally {
+      setLinkingTelegram(false);
+    }
+  }
 
   async function copyEmail() {
     if (!email) return;
@@ -229,6 +268,25 @@ export default function SettingsScreen() {
             )}
           </>
         )}
+
+        <Pressable
+          style={styles.row}
+          onPress={telegramLinked ? undefined : linkTelegram}
+          disabled={telegramLinked || linkingTelegram}
+        >
+          <View style={styles.icon}>
+            <Text style={styles.iconText}>✈️</Text>
+          </View>
+          <View style={styles.textWrap}>
+            <Text style={styles.value}>Telegram</Text>
+            <Text style={styles.hint}>
+              {telegramLinked
+                ? "Уведомления от партнёра приходят в бота"
+                : "Нажмите, затем «Старт» в боте, чтобы получать уведомления"}
+            </Text>
+          </View>
+          {!telegramLinked && <Text style={styles.chevron}>›</Text>}
+        </Pressable>
 
         <Pressable style={[styles.row, styles.rowLast]} onPress={logout}>
           <View style={styles.icon}>
