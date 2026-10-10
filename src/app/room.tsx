@@ -92,6 +92,19 @@ export default function RoomScreen() {
 
   const scrollRef = useRef<ScrollView>(null);
 
+  // Актуальные значения для обработчиков плеера (они не должны видеть старые данные)
+  const roomRef = useRef<RoomState | null>(null);
+
+  const userIdRef = useRef<string | null>(null);
+
+  const coupleIdRef = useRef<string | null>(null);
+
+  roomRef.current = room;
+
+  userIdRef.current = userId;
+
+  coupleIdRef.current = coupleId;
+
   useEffect(() => {
     init();
   }, []);
@@ -209,6 +222,9 @@ export default function RoomScreen() {
   useEffect(() => {
     if (!isWeb || !room?.video_id) return;
 
+    // Своё изменение плеер уже показывает, применять его второй раз не нужно
+    if (room.updated_by && room.updated_by === userIdRef.current) return;
+
     let cancelled = false;
 
     (async () => {
@@ -242,6 +258,7 @@ export default function RoomScreen() {
 
         loadedVideoRef.current = room.video_id;
       } else if (loadedVideoRef.current !== room.video_id) {
+        // Партнёр сменил видео: загружаем новое с нужной позиции
         playerRef.current.loadVideoById({
           videoId: room.video_id,
           startSeconds: targetPosition,
@@ -271,8 +288,11 @@ export default function RoomScreen() {
 
   // Наш плеер: отправляем партнёру, когда мы нажали play, pause
   function onLocalStateChange(event: any) {
-    if (applyingRemote.current || !userId || !coupleId || !room?.video_id)
-      return;
+    const current = roomRef.current;
+    const uid = userIdRef.current;
+    const cid = coupleIdRef.current;
+
+    if (applyingRemote.current || !uid || !cid || !current?.video_id) return;
 
     const YT = (window as any).YT;
     const isPlaying = event.data === YT.PlayerState.PLAYING;
@@ -280,15 +300,24 @@ export default function RoomScreen() {
 
     if (!isPlaying && !isPaused) return;
 
+    const position = playerRef.current?.getCurrentTime?.() ?? 0;
+
+    // Если состояние уже такое же, как в базе, ничего не отправляем (защита от эха)
+    const sameAsRemote =
+      current.is_playing === isPlaying &&
+      Math.abs(position - current.position_seconds) < 1.5;
+
+    if (sameAsRemote) return;
+
     supabase
       .from("room_state")
       .upsert(
         {
-          couple_id: coupleId,
-          video_id: room.video_id,
+          couple_id: cid,
+          video_id: current.video_id,
           is_playing: isPlaying,
-          position_seconds: playerRef.current?.getCurrentTime?.() ?? 0,
-          updated_by: userId,
+          position_seconds: position,
+          updated_by: uid,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "couple_id" },
