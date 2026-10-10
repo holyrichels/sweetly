@@ -200,6 +200,11 @@ export default function MoodScreen() {
         setMyMood(previousMood);
 
         Alert.alert("Ошибка", error.message);
+      } else {
+        // Уведомляем партнёра в Telegram, ошибка уведомления не мешает приложению
+        supabase.functions
+          .invoke("notify-partner", { body: { kind: "mood", mood: emoji } })
+          .catch(() => {});
       }
     } finally {
       setSaving(false);

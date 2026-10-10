@@ -651,6 +651,23 @@ export default function HomeScreen() {
   }, [session?.user?.id, couple?.id]);
 
   // =========================================================
+  // =========================================================
+  // Привязка Telegram к аккаунту (только когда открыто в боте)
+  // =========================================================
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || !session?.user?.id) return;
+
+    const initData = (window as any).Telegram?.WebApp?.initData;
+
+    if (!initData) return;
+
+    supabase.functions
+      .invoke("notify-partner", { body: { action: "link", initData } })
+      .catch(() => {});
+  }, [session?.user?.id]);
+
+  // =========================================================
   // LOAD SESSION
   // =========================================================
 
@@ -920,6 +937,11 @@ export default function HomeScreen() {
 
         return;
       }
+
+      // Уведомляем партнёра в Telegram
+      supabase.functions
+        .invoke("notify-partner", { body: { kind: "miss" } })
+        .catch(() => {});
 
       if (data) {
         const userId = session.user.id;
