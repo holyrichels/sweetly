@@ -9,17 +9,21 @@ const TABS = [
   { route: "/profile", label: "Профиль", icon: "👤" },
 ];
 
-// Отступ сверху на вебе: место под кнопки Telegram («Закрыть» и «···»).
-// Фиксированное значение, не зависит от данных Telegram.
-const TOP_OFFSET = 96;
+// Отступ сверху на вебе: место под кнопки Telegram («Закрыть» и «···»),
+// которые заканчиваются примерно на 85px. У главной свой верхний отступ экрана
+// (55px против 65px у остальных), поэтому её отступ отдельный.
+const TOP_OFFSET = 20;
+const MAIN_TOP_OFFSET = 40;
 
 export default function AppTabs() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const topOffset = pathname === "/" ? MAIN_TOP_OFFSET : TOP_OFFSET;
+
   return (
     <View style={styles.root}>
-      <View style={[styles.content, { paddingTop: TOP_OFFSET }]}>
+      <View style={[styles.content, { paddingTop: topOffset }]}>
         <Slot />
       </View>
 
