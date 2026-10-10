@@ -24,8 +24,8 @@ function loadTelegramScript(): Promise<void> {
   });
 }
 
-// Работает только когда страница открыта кнопкой из бота.
-// В обычном браузере initData пустой, и функция тихо ничего не делает.
+// Вход через Telegram работает только для уже привязанного аккаунта.
+// Если привязки нет, ничего не делаем и показываем обычный экран входа.
 async function signInWithTelegramWeb(): Promise<void> {
   if (Platform.OS !== "web") return;
 
@@ -54,9 +54,11 @@ async function signInWithTelegramWeb(): Promise<void> {
     throw new Error(result.error ?? "Ошибка входа через Telegram");
   }
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email: result.email,
-    password: result.password,
+  if (!result.linked) return;
+
+  const { error } = await supabase.auth.verifyOtp({
+    token_hash: result.token_hash,
+    type: "magiclink",
   });
 
   if (error) throw error;
