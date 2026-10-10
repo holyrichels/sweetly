@@ -1,15 +1,15 @@
 {
   "expo": {
-    "name": "couple-app",
-    "slug": "couple-app",
+    "name": "sweetly",
+    "slug": "sweetly",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "coupleapp",
+    "scheme": "sweetly",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.holyrichels.coupleapp",
+      "bundleIdentifier": "com.holyrichels.sweetly",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
