@@ -1,116 +1,349 @@
-// Вход через Telegram только для уже привязанного аккаунта.
-// Если Telegram не привязан, создавать новый пустой аккаунт не нужно:
-// приложение покажет обычный экран входа, а привязка произойдёт после входа по почте.
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { useEffect, useState } from "react";
 
-const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN")!;
-const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
-const MAX_AGE_SECONDS = 60 * 60 * 24;
-const encoder = new TextEncoder();
+import { supabase } from "@/lib/supabase";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+type ProfileItem = { id: string; name: string; avatar_url?: string | null };
 
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "Content-Type": "application/json" },
-  });
-}
+function getInitials(value?: string) {
+  if (!value) return "?";
 
-function toHex(buffer: ArrayBuffer): string {
-  return [...new Uint8Array(buffer)]
-    .map((b) => b.toString(16).padStart(2, "0"))
+  return value
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? "")
     .join("");
 }
 
-async function hmac(key: BufferSource, message: string): Promise<ArrayBuffer> {
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    key,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  return crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(message));
-}
+// Общая шапка страниц: аватарки слева, название по центру, «Скучаю» справа.
+export default function PageHeader({ title }: { title: string }) {
+  const [userId, setUserId] = useState<string | null>(null);
 
-async function verifyInitData(
-  initData: string,
-): Promise<{ id: number } | null> {
-  const params = new URLSearchParams(initData);
-  const receivedHash = params.get("hash");
-  if (!receivedHash) return null;
+  const [coupleId, setCoupleId] = useState<string | null>(null);
 
-  params.delete("hash");
-  const dataCheckString = [...params.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([key, value]) => `${key}=${value}`)
-    .join("\n");
+  const [profiles, setProfiles] = useState<ProfileItem[]>([]);
 
-  const secretKey = await hmac(encoder.encode("WebAppData"), BOT_TOKEN);
-  if (toHex(await hmac(secretKey, dataCheckString)) !== receivedHash)
-    return null;
+  const [myMiss, setMyMiss] = useState(0);
 
-  const authDate = Number(params.get("auth_date") ?? 0);
-  if (Date.now() / 1000 - authDate > MAX_AGE_SECONDS) return null;
+  const [partnerMiss, setPartnerMiss] = useState(0);
 
-  const userRaw = params.get("user");
-  if (!userRaw) return null;
+  const [busy, setBusy] = useState(false);
 
-  return JSON.parse(userRaw) as { id: number };
-}
+  useEffect(() => {
+    init();
+  }, []);
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  async function init() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  try {
-    const body = await req.json();
-    const tgUser = await verifyInitData(String(body.initData ?? ""));
+    if (!session) return;
 
-    if (!tgUser?.id) return json({ error: "invalid telegram data" }, 401);
+    const uid = session.user.id;
 
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    setUserId(uid);
 
-    const { data: link } = await admin
-      .from("telegram_links")
-      .select("user_id")
-      .eq("telegram_id", tgUser.id)
+    const { data: member } = await supabase
+      .from("couple_members")
+      .select("couple_id")
+      .eq("user_id", uid)
       .maybeSingle();
 
-    // Telegram ещё не привязан к аккаунту приложения: вход не выдаём
-    if (!link) return json({ linked: false });
+    if (!member) return;
 
-    const { data: userData, error: userError } =
-      await admin.auth.admin.getUserById(link.user_id);
+    setCoupleId(member.couple_id);
 
-    if (userError || !userData.user?.email)
-      throw userError ?? new Error("user not found");
+    await loadAll(member.couple_id, uid);
+  }
 
-    // Одноразовая ссылка входа для привязанного аккаунта, пароль не нужен
-    const { data: linkData, error: linkError } =
-      await admin.auth.admin.generateLink({
-        type: "magiclink",
-        email: userData.user.email,
+  async function loadAll(cid: string, uid: string) {
+    const { data: members } = await supabase
+      .from("couple_members")
+      .select("user_id")
+      .eq("couple_id", cid);
+
+    const ids = members?.map((item) => item.user_id) ?? [];
+
+    if (ids.length > 0) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, name, avatar_url")
+        .in("id", ids);
+
+      setProfiles(data ?? []);
+    }
+
+    const { data: miss } = await supabase
+      .from("couple_miss_counts")
+      .select("*")
+      .eq("couple_id", cid)
+      .maybeSingle();
+
+    if (!miss) {
+      setMyMiss(0);
+      setPartnerMiss(0);
+
+      return;
+    }
+
+    if (miss.user_one_id === uid) {
+      setMyMiss(miss.user_one_count);
+      setPartnerMiss(miss.user_two_count);
+    } else {
+      setMyMiss(miss.user_two_count);
+      setPartnerMiss(miss.user_one_count);
+    }
+  }
+
+  // Realtime: счётчик и аватарки обновляются сразу у обоих
+  useEffect(() => {
+    if (!coupleId || !userId) return;
+
+    const channel = supabase
+      .channel(`header-${coupleId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "couple_miss_counts",
+          filter: `couple_id=eq.${coupleId}`,
+        },
+        () => {
+          loadAll(coupleId, userId);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "profiles" },
+        () => {
+          loadAll(coupleId, userId);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [coupleId, userId]);
+
+  async function pressMiss() {
+    if (!coupleId || !userId || busy) return;
+
+    setBusy(true);
+
+    setMyMiss((value) => value + 1);
+
+    try {
+      const { data, error } = await supabase.rpc("increment_miss_count", {
+        target_couple_id: coupleId,
       });
 
-    if (linkError || !linkData.properties?.hashed_token)
-      throw linkError ?? new Error("no token");
+      if (error) {
+        setMyMiss((value) => Math.max(0, value - 1));
 
-    return json({
-      linked: true,
-      token_hash: linkData.properties.hashed_token,
-      type: "magiclink",
-    });
-  } catch (error) {
-    return json({ error: String(error) }, 500);
+        Alert.alert("Ошибка", error.message);
+
+        return;
+      }
+
+      // Уведомляем партнёра в Telegram
+      supabase.functions
+        .invoke("notify-partner", { body: { kind: "miss" } })
+        .catch(() => {});
+
+      if (data) {
+        if (data.user_one_id === userId) {
+          setMyMiss(data.user_one_count);
+          setPartnerMiss(data.user_two_count);
+        } else {
+          setMyMiss(data.user_two_count);
+          setPartnerMiss(data.user_one_count);
+        }
+      }
+    } finally {
+      setBusy(false);
+    }
   }
+
+  const me = profiles.find((item) => item.id === userId);
+
+  const partner = profiles.find((item) => item.id !== userId);
+
+  return (
+    <View style={styles.header}>
+      <View style={styles.avatars}>
+        <View style={styles.avatarBack}>
+          {partner?.avatar_url ? (
+            <Image
+              source={{ uri: partner.avatar_url }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={styles.avatarText}>{getInitials(partner?.name)}</Text>
+          )}
+        </View>
+
+        <View style={styles.avatarFront}>
+          {me?.avatar_url ? (
+            <Image source={{ uri: me.avatar_url }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{getInitials(me?.name)}</Text>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.titleWrap} pointerEvents="none">
+        <View style={styles.titlePill}>
+          <Text style={styles.titleText} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.right}>
+        <View style={styles.missCounter}>
+          <Text style={styles.missLabel}>Скучаю</Text>
+          <Text style={styles.missValue}>
+            {myMiss}/{partnerMiss}
+          </Text>
+        </View>
+
+        <Pressable style={styles.heartButton} onPress={pressMiss}>
+          <Text style={styles.heartText}>♥</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: 58,
+    marginBottom: 22,
+  },
+
+  avatars: {
+    width: 78,
+    height: 58,
+    position: "relative",
+  },
+
+  avatarBack: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#f4c2d1",
+    position: "absolute",
+    left: 0,
+    top: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#fff5f8",
+    overflow: "hidden",
+  },
+
+  avatarFront: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#e98ca8",
+    position: "absolute",
+    left: 27,
+    top: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#fff5f8",
+    overflow: "hidden",
+  },
+
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+
+  avatarText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "800",
+  },
+
+  titleWrap: {
+    position: "absolute",
+    left: 96,
+    right: 96,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  titlePill: {
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    maxWidth: "100%",
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  titleText: {
+    color: "#704e59",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  right: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+
+  missCounter: {
+    alignItems: "flex-end",
+  },
+
+  missLabel: {
+    color: "#a0838c",
+    fontSize: 10,
+    fontWeight: "700",
+  },
+
+  missValue: {
+    color: "#6d4b55",
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 2,
+  },
+
+  heartButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  heartText: {
+    color: "#e98ca8",
+    fontSize: 20,
+  },
 });
