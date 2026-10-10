@@ -150,11 +150,6 @@ export default function PageHeader({ title }: { title: string }) {
         return;
       }
 
-      // Уведомляем партнёра в Telegram
-      supabase.functions
-        .invoke("notify-partner", { body: { kind: "miss" } })
-        .catch(() => {});
-
       if (data) {
         if (data.user_one_id === userId) {
           setMyMiss(data.user_one_count);
