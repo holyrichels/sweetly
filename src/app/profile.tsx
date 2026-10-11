@@ -96,11 +96,7 @@ export default function ProfileScreen() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      if (!session) {
-        setLoading(false);
-
-        return;
-      }
+      if (!session) return;
 
       const uid = session.user.id;
 
@@ -110,22 +106,27 @@ export default function ProfileScreen() {
 
       setEmail(rawEmail && !rawEmail.endsWith("@telegram.user") ? rawEmail : null);
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("name, gender, birthday, avatar_url")
-        .eq("id", uid)
-        .maybeSingle();
+      // Свой профиль и членство в паре запрашиваем одновременно
+      const [profileRes, memberRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("name, gender, birthday, avatar_url")
+          .eq("id", uid)
+          .maybeSingle(),
+        supabase.from("couple_members").select("couple_id").eq("user_id", uid).maybeSingle(),
+      ]);
+
+      const profile = profileRes.data;
 
       setName(profile?.name ?? "");
       setAvatarUrl(profile?.avatar_url ?? null);
       setGender(profile?.gender ?? null);
       setBirthday(profile?.birthday ?? null);
 
-      const { data: member } = await supabase
-        .from("couple_members")
-        .select("couple_id")
-        .eq("user_id", uid)
-        .maybeSingle();
+      // Свой профиль уже на экране, остальное догружается
+      setLoading(false);
+
+      const member = memberRes.data;
 
       if (!member) {
         setCouple(null);
@@ -137,49 +138,42 @@ export default function ProfileScreen() {
 
       const coupleId = member.couple_id;
 
-      const { data: coupleRow } = await supabase
-        .from("couples")
-        .select("id, relationship_status, relationship_date")
-        .eq("id", coupleId)
-        .maybeSingle();
+      const [coupleRes, membersRes, timersRes, missRes] = await Promise.all([
+        supabase
+          .from("couples")
+          .select("id, relationship_status, relationship_date")
+          .eq("id", coupleId)
+          .maybeSingle(),
+        supabase.from("couple_members").select("user_id").eq("couple_id", coupleId),
+        supabase.from("couple_timers").select("id").eq("couple_id", coupleId),
+        supabase
+          .from("couple_miss_counts")
+          .select("user_one_count, user_two_count")
+          .eq("couple_id", coupleId)
+          .maybeSingle(),
+      ]);
 
-      setCouple(coupleRow ?? null);
+      setCouple(coupleRes.data ?? null);
+      setTimersCount((timersRes.data?.length ?? 0) + 1);
+      setMissTotal((missRes.data?.user_one_count ?? 0) + (missRes.data?.user_two_count ?? 0));
 
-      const { data: members } = await supabase
-        .from("couple_members")
-        .select("user_id")
-        .eq("couple_id", coupleId);
+      const partnerId = membersRes.data?.find((item) => item.user_id !== uid)?.user_id;
 
-      const partnerId = members?.find((item) => item.user_id !== uid)?.user_id;
-
-      if (partnerId) {
-        const { data: partnerProfile } = await supabase
-          .from("profiles")
-          .select("name, birthday")
-          .eq("id", partnerId)
-          .maybeSingle();
-
-        setPartnerName(partnerProfile?.name ?? "Партнёр");
-        setPartnerBirthday(partnerProfile?.birthday ?? null);
-      } else {
+      if (!partnerId) {
         setPartnerName(null);
         setPartnerBirthday(null);
+
+        return;
       }
 
-      const { data: timers } = await supabase
-        .from("couple_timers")
-        .select("id")
-        .eq("couple_id", coupleId);
-
-      setTimersCount((timers?.length ?? 0) + 1);
-
-      const { data: miss } = await supabase
-        .from("couple_miss_counts")
-        .select("user_one_count, user_two_count")
-        .eq("couple_id", coupleId)
+      const { data: partnerProfile } = await supabase
+        .from("profiles")
+        .select("name, birthday")
+        .eq("id", partnerId)
         .maybeSingle();
 
-      setMissTotal((miss?.user_one_count ?? 0) + (miss?.user_two_count ?? 0));
+      setPartnerName(partnerProfile?.name ?? "Партнёр");
+      setPartnerBirthday(partnerProfile?.birthday ?? null);
     } finally {
       setLoading(false);
     }

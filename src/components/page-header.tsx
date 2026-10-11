@@ -61,12 +61,13 @@ export default function PageHeader({ title }: { title: string }) {
   }
 
   async function loadAll(cid: string, uid: string) {
-    const { data: members } = await supabase
-      .from("couple_members")
-      .select("user_id")
-      .eq("couple_id", cid);
+    // Участников и счётчик запрашиваем одновременно
+    const [membersRes, missRes] = await Promise.all([
+      supabase.from("couple_members").select("user_id").eq("couple_id", cid),
+      supabase.from("couple_miss_counts").select("*").eq("couple_id", cid).maybeSingle(),
+    ]);
 
-    const ids = members?.map((item) => item.user_id) ?? [];
+    const ids = membersRes.data?.map((item) => item.user_id) ?? [];
 
     if (ids.length > 0) {
       const { data } = await supabase
@@ -77,11 +78,7 @@ export default function PageHeader({ title }: { title: string }) {
       setProfiles(data ?? []);
     }
 
-    const { data: miss } = await supabase
-      .from("couple_miss_counts")
-      .select("*")
-      .eq("couple_id", cid)
-      .maybeSingle();
+    const miss = missRes.data;
 
     if (!miss) {
       setMyMiss(0);
