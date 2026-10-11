@@ -5,7 +5,7 @@ const TABS = [
   { route: "/", label: "Главная", icon: "🏠" },
   { route: "/room", label: "Комната", icon: "🛋️" },
   { route: "/mood", label: "Настроение", icon: "🙂" },
-  { route: "/chat", label: "Чат", icon: "💬" },
+  { route: "/memories", label: "Воспоминания", icon: "📸" },
   { route: "/profile", label: "Профиль", icon: "👤" },
 ];
 
@@ -37,12 +37,8 @@ export default function AppTabs() {
               style={styles.item}
               onPress={() => router.navigate(tab.route as any)}
             >
-              <Text style={[styles.icon, active && styles.iconActive]}>
-                {tab.icon}
-              </Text>
-              <Text style={[styles.label, active && styles.labelActive]}>
-                {tab.label}
-              </Text>
+              <Text style={[styles.icon, active && styles.iconActive]}>{tab.icon}</Text>
+              <Text style={[styles.label, active && styles.labelActive]}>{tab.label}</Text>
             </Pressable>
           );
         })}
