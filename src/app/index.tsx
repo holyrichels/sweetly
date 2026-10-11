@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -22,6 +22,7 @@ import {
 import { SymbolView } from "expo-symbols";
 
 import SecureImage from "@/components/secure-image";
+import { getAppData, refreshAppData, useAppData, type ProfileData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "register";
@@ -401,7 +402,7 @@ function FadeModal({
 }
 
 export default function HomeScreen() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!getAppData().ready);
 
   const [session, setSession] = useState<any>(null);
 
@@ -478,6 +479,33 @@ export default function HomeScreen() {
   const [timerFormDate, setTimerFormDate] = useState("");
 
   const [timerSaving, setTimerSaving] = useState(false);
+
+  // Данные пары приходят из общего хранилища, без отдельных запросов
+  const appData = useAppData();
+
+  useLayoutEffect(() => {
+    setLoading(!appData.ready);
+
+    setSession(
+      appData.userId ? { user: { id: appData.userId, email: appData.email } } : null,
+    );
+
+    setCouple(appData.couple);
+
+    setMemberCount(appData.partner ? 2 : appData.coupleId ? 1 : 0);
+
+    setProfilesList(
+      [appData.me, appData.partner]
+        .filter((item): item is ProfileData => item !== null)
+        .map((item) => ({ id: item.id, name: item.name, avatar_url: item.avatar_url })),
+    );
+
+    setCustomTimers(appData.timers);
+
+    setMyMissCount(appData.missMine);
+
+    setPartnerMissCount(appData.missPartner);
+  }, [appData]);
 
   // =========================================================
   // TIMER
@@ -750,149 +778,27 @@ export default function HomeScreen() {
   // LOAD COUPLE
   // =========================================================
 
-  async function loadCouple(userId: string) {
-    try {
-      const { data: member, error: memberError } = await supabase
-        .from("couple_members")
-        .select("couple_id")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (memberError) {
-        console.log("Ошибка поиска пары:", memberError.message);
-
-        return;
-      }
-
-      if (!member) {
-        setCouple(null);
-        setProfilesList([]);
-        setMemberCount(0);
-
-        return;
-      }
-
-      const { data: coupleData, error: coupleError } = await supabase
-        .from("couples")
-        .select("*")
-        .eq("id", member.couple_id)
-        .maybeSingle();
-
-      if (coupleError) {
-        console.log("Ошибка загрузки пары:", coupleError.message);
-
-        return;
-      }
-
-      if (!coupleData) {
-        setCouple(null);
-
-        return;
-      }
-
-      setCouple(coupleData);
-
-      // Загружаем участников
-
-      const { data: members, error: membersError } = await supabase
-        .from("couple_members")
-        .select("user_id")
-        .eq("couple_id", member.couple_id);
-
-      if (membersError) {
-        console.log("Ошибка участников:", membersError.message);
-
-        return;
-      }
-
-      const userIds = members?.map((item) => item.user_id) ?? [];
-
-      setMemberCount(userIds.length);
-
-      // Загружаем имена
-
-      if (userIds.length > 0) {
-        const { data: profiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, name, avatar_url")
-          .in("id", userIds);
-
-        if (!profilesError) {
-          setProfilesList(profiles ?? []);
-        }
-      }
-
-      // Загружаем Скучаю
-
-      await loadMissCount(member.couple_id, userId);
-
-      // Загружаем таймеры
-
-      await loadTimers(member.couple_id);
-    } catch (error) {
-      console.log("Load couple error:", error);
-    }
+  async function loadCouple(_userId: string) {
+    // Все данные пары обновляются в общем хранилище, экран подхватит их сам
+    await refreshAppData();
   }
 
   // =========================================================
   // LOAD TIMERS
   // =========================================================
 
-  async function loadTimers(coupleId: string) {
-    const { data, error } = await supabase
-      .from("couple_timers")
-      .select("id, title, start_date")
-      .eq("couple_id", coupleId)
-      .order("created_at", { ascending: true });
+  async function loadTimers(_coupleId: string) {
+    await refreshAppData();
 
-    if (error) {
-      console.log("Ошибка загрузки таймеров:", error.message);
-
-      return [];
-    }
-
-    setCustomTimers(data ?? []);
-
-    return data ?? [];
+    return getAppData().timers;
   }
 
   // =========================================================
   // LOAD MISS COUNT
   // =========================================================
 
-  async function loadMissCount(coupleId: string, userId: string) {
-    try {
-      const { data, error } = await supabase
-        .from("couple_miss_counts")
-        .select("*")
-        .eq("couple_id", coupleId)
-        .maybeSingle();
-
-      if (error) {
-        console.log("Ошибка Скучаю:", error.message);
-
-        return;
-      }
-
-      if (!data) {
-        setMyMissCount(0);
-        setPartnerMissCount(0);
-
-        return;
-      }
-
-      if (data.user_one_id === userId) {
-        setMyMissCount(data.user_one_count);
-
-        setPartnerMissCount(data.user_two_count);
-      } else {
-        setMyMissCount(data.user_two_count);
-
-        setPartnerMissCount(data.user_one_count);
-      }
-    } catch (error) {
-      console.log("Miss count error:", error);
-    }
+  async function loadMissCount(_coupleId: string, _userId: string) {
+    await refreshAppData();
   }
 
   // =========================================================

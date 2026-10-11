@@ -49,6 +49,7 @@ export type AppData = {
   memories: MemoryData[];
   moods: { user_id: string; mood: string }[];
   room: RoomData;
+  timers: { id: string; title: string; start_date: string }[];
 };
 
 const emptyData: AppData = {
@@ -65,6 +66,7 @@ const emptyData: AppData = {
   memories: [],
   moods: [],
   room: null,
+  timers: [],
 };
 
 let data: AppData = emptyData;
@@ -153,7 +155,11 @@ async function loadAll() {
         .eq("id", coupleId)
         .maybeSingle(),
       supabase.from("couple_members").select("user_id").eq("couple_id", coupleId),
-      supabase.from("couple_timers").select("id").eq("couple_id", coupleId),
+      supabase
+        .from("couple_timers")
+        .select("id, title, start_date")
+        .eq("couple_id", coupleId)
+        .order("created_at", { ascending: true }),
       supabase
         .from("couple_miss_counts")
         .select("*")
@@ -227,6 +233,7 @@ async function loadAll() {
       partner,
       couple: (coupleRes.data as CoupleData) ?? null,
       timersCount: (timersRes.data?.length ?? 0) + 1,
+      timers: (timersRes.data as { id: string; title: string; start_date: string }[]) ?? [],
       missMine,
       missPartner,
       memories: (memoriesRes.data as MemoryData[]) ?? [],
@@ -265,6 +272,7 @@ export function startAppRealtime(userId: string): () => void {
     .on("postgres_changes", { event: "*", schema: "public", table: "couple_timers" }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "couple_memories" }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "couple_moods" }, scheduleRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "couple_timers" }, scheduleRefresh)
     .subscribe();
 
   return () => {
