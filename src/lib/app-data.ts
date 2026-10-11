@@ -113,6 +113,16 @@ async function loadAll() {
       supabase.from("couple_members").select("couple_id").eq("user_id", uid).maybeSingle(),
     ]);
 
+    // Если запрос упал, не стираем уже загруженные данные
+    if (meRes.error || memberRes.error) {
+      console.log("App data error:", meRes.error ?? memberRes.error);
+
+      data = { ...data, ready: true };
+      emit();
+
+      return;
+    }
+
     const me = (meRes.data as ProfileData | null) ?? null;
 
     const coupleId = memberRes.data?.couple_id ?? null;
@@ -144,6 +154,15 @@ async function loadAll() {
         .order("memory_date", { ascending: false })
         .order("created_at", { ascending: false }),
     ]);
+
+    if (coupleRes.error || membersRes.error || timersRes.error || missRes.error || memoriesRes.error) {
+      console.log("App data error:", coupleRes.error ?? membersRes.error ?? timersRes.error ?? missRes.error ?? memoriesRes.error);
+
+      data = { ...data, ready: true };
+      emit();
+
+      return;
+    }
 
     const partnerId = membersRes.data?.find((item) => item.user_id !== uid)?.user_id ?? null;
 
