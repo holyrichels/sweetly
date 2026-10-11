@@ -678,7 +678,7 @@ const styles = StyleSheet.create({
 
   viewerTop: {
     position: "absolute",
-    top: 50,
+    bottom: 56,
     left: 18,
     right: 18,
     zIndex: 2,
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
 
   viewerCaption: {
     position: "absolute",
-    bottom: 40,
+    bottom: 120,
     left: 20,
     right: 20,
     color: "#ffffff",
