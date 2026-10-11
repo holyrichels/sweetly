@@ -1778,19 +1778,11 @@ export default function HomeScreen() {
         <View style={styles.topBar}>
           <View style={styles.avatars}>
             <View style={styles.avatarBack}>
-              {partnerAvatarUrl ? (
-                <SecureImage bucket="avatars" path={partnerAvatarUrl} style={styles.avatarImage} />
-              ) : (
-                <Text style={styles.avatarText}>{getInitials(partnerName)}</Text>
-              )}
+              <SecureImage bucket="avatars" path={partnerAvatarUrl} style={styles.avatarImage} fallback={<Text style={styles.avatarText}>{getInitials(partnerName)}</Text>} />
             </View>
 
             <View style={styles.avatarFront}>
-              {myAvatarUrl ? (
-                <SecureImage bucket="avatars" path={myAvatarUrl} style={styles.avatarImage} />
-              ) : (
-                <Text style={styles.avatarText}>{getInitials(myName)}</Text>
-              )}
+              <SecureImage bucket="avatars" path={myAvatarUrl} style={styles.avatarImage} fallback={<Text style={styles.avatarText}>{getInitials(myName)}</Text>} />
             </View>
           </View>
 

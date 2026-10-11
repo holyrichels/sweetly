@@ -343,13 +343,7 @@ export default function ProfileScreen() {
 
       <View style={styles.headerCard}>
         <Pressable style={styles.avatarWrap} onPress={pickAvatar}>
-          {avatarUrl ? (
-            <SecureImage bucket="avatars" path={avatarUrl} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initial}</Text>
-            </View>
-          )}
+          <SecureImage bucket="avatars" path={avatarUrl} style={styles.avatarImage} fallback={<View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>} />
 
           <View style={styles.avatarBadge}>
             <Text style={styles.avatarBadgeText}>

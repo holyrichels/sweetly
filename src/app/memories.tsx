@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -13,10 +14,11 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { useVideoPlayer, VideoView } from "expo-video";
 
 import PageHeader from "@/components/page-header";
-import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import SecureImage from "@/components/secure-image";
+import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import { supabase } from "@/lib/supabase";
 
 type Memory = {
@@ -25,6 +27,13 @@ type Memory = {
   photo_path: string;
   caption: string;
   memory_date: string;
+  media_type: "image" | "video";
+};
+
+type PickedMedia = {
+  uri: string;
+  type: "image" | "video";
+  mimeType: string;
 };
 
 // На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
@@ -47,6 +56,22 @@ function confirmAction(title: string, message: string, onConfirm: () => void) {
   }
 }
 
+// Плеер для полноэкранного просмотра видео
+function VideoPlayerView({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri, (instance) => {
+    instance.loop = false;
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={styles.fullMedia}
+      nativeControls
+      contentFit="contain"
+    />
+  );
+}
+
 export default function MemoriesScreen() {
   const [loading, setLoading] = useState(true);
 
@@ -58,9 +83,7 @@ export default function MemoriesScreen() {
 
   const [creating, setCreating] = useState(false);
 
-  const [pickedUri, setPickedUri] = useState<string | null>(null);
-
-  const [pickedBase64, setPickedBase64] = useState<string | null>(null);
+  const [picked, setPicked] = useState<PickedMedia | null>(null);
 
   const [caption, setCaption] = useState("");
 
@@ -69,6 +92,9 @@ export default function MemoriesScreen() {
   const [showCalendar, setShowCalendar] = useState(false);
 
   const [saving, setSaving] = useState(false);
+
+  // Что сейчас открыто на весь экран
+  const [viewing, setViewing] = useState<{ memory: Memory; url: string } | null>(null);
 
   useEffect(() => {
     init();
@@ -105,12 +131,12 @@ export default function MemoriesScreen() {
   async function loadMemories(cid: string) {
     const { data } = await supabase
       .from("couple_memories")
-      .select("id, created_by, photo_path, caption, memory_date")
+      .select("id, created_by, photo_path, caption, memory_date, media_type")
       .eq("couple_id", cid)
       .order("memory_date", { ascending: false })
       .order("created_at", { ascending: false });
 
-    setMemories(data ?? []);
+    setMemories((data ?? []) as Memory[]);
   }
 
   // Realtime: новые и удалённые воспоминания появляются у обоих сразу
@@ -133,39 +159,45 @@ export default function MemoriesScreen() {
     };
   }, [coupleId]);
 
-  async function pickPhoto() {
+  async function pickMedia() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted && permission.canAskAgain !== false) {
-      notify("Нужен доступ", "Разрешите доступ к фото, чтобы добавить воспоминание.");
+      notify("Нужен доступ", "Разрешите доступ к фото и видео, чтобы добавить воспоминание.");
 
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ["images", "videos"],
       quality: 0.7,
-      base64: true,
+      // Видео длиннее 2 минут не берём, чтобы не грузить слишком большие файлы
+      videoMaxDuration: 120,
     });
 
-    if (result.canceled || !result.assets?.[0]?.base64) return;
+    if (result.canceled || !result.assets?.[0]) return;
 
-    setPickedUri(result.assets[0].uri);
-    setPickedBase64(result.assets[0].base64);
+    const asset = result.assets[0];
+    const type = asset.type === "video" ? "video" : "image";
+
+    setPicked({
+      uri: asset.uri,
+      type,
+      mimeType: asset.mimeType ?? (type === "video" ? "video/mp4" : "image/jpeg"),
+    });
   }
 
   function resetForm() {
     setCreating(false);
-    setPickedUri(null);
-    setPickedBase64(null);
+    setPicked(null);
     setCaption("");
     setMemoryDate(formatDateISO(new Date()));
     setShowCalendar(false);
   }
 
   async function saveMemory() {
-    if (!coupleId || !userId || !pickedBase64) {
-      notify("Нет фото", "Выберите фото для воспоминания.");
+    if (!coupleId || !userId || !picked) {
+      notify("Нет файла", "Выберите фото или видео для воспоминания.");
 
       return;
     }
@@ -173,18 +205,16 @@ export default function MemoriesScreen() {
     setSaving(true);
 
     try {
-      const binary = atob(pickedBase64);
-      const bytes = new Uint8Array(binary.length);
+      // Читаем файл целиком и отправляем в хранилище с правильным типом
+      const response = await fetch(picked.uri);
+      const bytes = await response.arrayBuffer();
 
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-
-      const path = `${coupleId}/${Date.now()}.jpg`;
+      const extension = picked.mimeType.split("/")[1]?.split("+")[0] ?? (picked.type === "video" ? "mp4" : "jpg");
+      const path = `${coupleId}/${Date.now()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from("memories")
-        .upload(path, bytes, { contentType: "image/jpeg" });
+        .upload(path, bytes, { contentType: picked.mimeType });
 
       if (uploadError) {
         notify("Ошибка", uploadError.message);
@@ -198,6 +228,7 @@ export default function MemoriesScreen() {
         photo_path: path,
         caption: caption.trim(),
         memory_date: memoryDate,
+        media_type: picked.type,
       });
 
       if (error) {
@@ -215,8 +246,23 @@ export default function MemoriesScreen() {
     }
   }
 
+  // Открываем воспоминание полностью: получаем временную ссылку на файл
+  async function openMemory(memory: Memory) {
+    const { data, error } = await supabase.storage
+      .from("memories")
+      .createSignedUrl(memory.photo_path, 3600);
+
+    if (error || !data?.signedUrl) {
+      notify("Ошибка", error?.message ?? "Не удалось открыть файл");
+
+      return;
+    }
+
+    setViewing({ memory, url: data.signedUrl });
+  }
+
   function removeMemory(memory: Memory) {
-    confirmAction("Удалить воспоминание?", "Фото и подпись будут удалены.", async () => {
+    confirmAction("Удалить воспоминание?", "Фото или видео и подпись будут удалены.", async () => {
       await supabase.storage.from("memories").remove([memory.photo_path]);
 
       const { error } = await supabase.from("couple_memories").delete().eq("id", memory.id);
@@ -226,6 +272,8 @@ export default function MemoriesScreen() {
 
         return;
       }
+
+      setViewing(null);
 
       if (coupleId) await loadMemories(coupleId);
     });
@@ -255,92 +303,130 @@ export default function MemoriesScreen() {
   );
 
   return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
-      <PageHeader title="Воспоминания" />
+    <>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <PageHeader title="Воспоминания" />
 
-      {!creating ? (
-        <Pressable style={styles.addButton} onPress={() => setCreating(true)}>
-          <Text style={styles.addButtonText}>+ Добавить воспоминание</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.formCard}>
-          <Pressable style={styles.photoBox} onPress={pickPhoto}>
-            {pickedUri ? (
-              <Image source={{ uri: pickedUri }} style={styles.photoPreview} />
-            ) : (
-              <Text style={styles.photoHint}>📷 Выбрать фото</Text>
-            )}
+        {!creating ? (
+          <Pressable style={styles.addButton} onPress={() => setCreating(true)}>
+            <Text style={styles.addButtonText}>+ Добавить воспоминание</Text>
           </Pressable>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Подпись"
-            placeholderTextColor="#b9a2aa"
-            value={caption}
-            onChangeText={setCaption}
-          />
-
-          <Pressable style={styles.dateField} onPress={() => setShowCalendar((v) => !v)}>
-            <Text style={styles.dateFieldText}>{formatDateRu(memoryDate)}</Text>
-            <Text style={styles.dateFieldIcon}>{showCalendar ? "▴" : "▾"}</Text>
-          </Pressable>
-
-          {showCalendar && (
-            <FadeIn>
-              <CalendarGrid value={memoryDate} onChange={setMemoryDate} />
-            </FadeIn>
-          )}
-
-          <View style={styles.formButtons}>
-            <Pressable style={styles.secondaryButton} onPress={resetForm}>
-              <Text style={styles.secondaryButtonText}>Отмена</Text>
-            </Pressable>
-
-            <Pressable style={styles.primaryButton} onPress={saveMemory} disabled={saving}>
-              <Text style={styles.primaryButtonText}>{saving ? "Сохраняем..." : "Сохранить"}</Text>
-            </Pressable>
-          </View>
-        </View>
-      )}
-
-      {memories.length === 0 ? (
-        <Text style={styles.emptyListText}>
-          Здесь будут ваши совместные фото. Добавьте первое воспоминание.
-        </Text>
-      ) : (
-        years.map((year) => (
-          <View key={year}>
-            <Text style={styles.yearLabel}>{year}</Text>
-
-            {memories
-              .filter((m) => m.memory_date.startsWith(year))
-              .map((memory) => (
-                <View key={memory.id} style={styles.card}>
-                  <SecureImage bucket="memories" path={memory.photo_path} style={styles.cardImage} />
-
-                  <View style={styles.cardBody}>
-                    <Text style={styles.cardDate}>
-                      {formatDateRu(memory.memory_date)}
-                    </Text>
-
-                    {memory.caption ? <Text style={styles.cardCaption}>{memory.caption}</Text> : null}
-
-                    {memory.created_by === userId && (
-                      <Pressable onPress={() => removeMemory(memory)}>
-                        <Text style={styles.deleteText}>Удалить</Text>
-                      </Pressable>
-                    )}
-                  </View>
+        ) : (
+          <View style={styles.formCard}>
+            <Pressable style={styles.mediaBox} onPress={pickMedia}>
+              {picked?.type === "image" ? (
+                <Image source={{ uri: picked.uri }} style={styles.mediaPreview} />
+              ) : picked?.type === "video" ? (
+                <View style={styles.videoPicked}>
+                  <Text style={styles.playIcon}>▶</Text>
+                  <Text style={styles.videoPickedText}>Видео выбрано, нажмите, чтобы заменить</Text>
                 </View>
-              ))}
+              ) : (
+                <Text style={styles.mediaHint}>📷 Выбрать фото или видео</Text>
+              )}
+            </Pressable>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Подпись"
+              placeholderTextColor="#b9a2aa"
+              value={caption}
+              onChangeText={setCaption}
+            />
+
+            <Pressable style={styles.dateField} onPress={() => setShowCalendar((v) => !v)}>
+              <Text style={styles.dateFieldText}>{formatDateRu(memoryDate)}</Text>
+              <Text style={styles.dateFieldIcon}>{showCalendar ? "▴" : "▾"}</Text>
+            </Pressable>
+
+            {showCalendar && (
+              <FadeIn>
+                <CalendarGrid value={memoryDate} onChange={setMemoryDate} />
+              </FadeIn>
+            )}
+
+            <View style={styles.formButtons}>
+              <Pressable style={styles.secondaryButton} onPress={resetForm}>
+                <Text style={styles.secondaryButtonText}>Отмена</Text>
+              </Pressable>
+
+              <Pressable style={styles.primaryButton} onPress={saveMemory} disabled={saving}>
+                <Text style={styles.primaryButtonText}>{saving ? "Загружаем..." : "Сохранить"}</Text>
+              </Pressable>
+            </View>
           </View>
-        ))
-      )}
-    </ScrollView>
+        )}
+
+        {memories.length === 0 ? (
+          <Text style={styles.emptyListText}>
+            Здесь будут ваши совместные фото и видео. Добавьте первое воспоминание.
+          </Text>
+        ) : (
+          years.map((year) => (
+            <View key={year}>
+              <Text style={styles.yearLabel}>{year}</Text>
+
+              {memories
+                .filter((m) => m.memory_date.startsWith(year))
+                .map((memory) => (
+                  <Pressable key={memory.id} style={styles.card} onPress={() => openMemory(memory)}>
+                    {memory.media_type === "video" ? (
+                      <View style={styles.videoThumb}>
+                        <Text style={styles.playIcon}>▶</Text>
+                        <Text style={styles.videoThumbText}>Видео</Text>
+                      </View>
+                    ) : (
+                      <SecureImage bucket="memories" path={memory.photo_path} style={styles.cardImage} />
+                    )}
+
+                    <View style={styles.cardBody}>
+                      <Text style={styles.cardDate}>{formatDateRu(memory.memory_date)}</Text>
+
+                      {memory.caption ? <Text style={styles.cardCaption}>{memory.caption}</Text> : null}
+                    </View>
+                  </Pressable>
+                ))}
+            </View>
+          ))
+        )}
+      </ScrollView>
+
+      {/* ============ ПОЛНОЭКРАННЫЙ ПРОСМОТР ============ */}
+
+      <Modal
+        visible={viewing !== null}
+        animationType="fade"
+        onRequestClose={() => setViewing(null)}
+      >
+        <View style={styles.viewer}>
+          <View style={styles.viewerTop}>
+            <Pressable style={styles.viewerButton} onPress={() => setViewing(null)}>
+              <Text style={styles.viewerButtonText}>✕</Text>
+            </Pressable>
+
+            {viewing && userId === viewing.memory.created_by ? (
+              <Pressable style={styles.viewerButton} onPress={() => removeMemory(viewing.memory)}>
+                <Text style={styles.viewerButtonText}>🗑</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
+          {viewing?.memory.media_type === "video" ? (
+            <VideoPlayerView uri={viewing.url} />
+          ) : viewing ? (
+            <Image source={{ uri: viewing.url }} style={styles.fullMedia} resizeMode="contain" />
+          ) : null}
+
+          {viewing?.memory.caption ? (
+            <Text style={styles.viewerCaption}>{viewing.memory.caption}</Text>
+          ) : null}
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -414,7 +500,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  photoBox: {
+  mediaBox: {
     height: 200,
     borderRadius: 16,
     backgroundColor: "#fdeef3",
@@ -423,15 +509,31 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  photoPreview: {
+  mediaPreview: {
     width: "100%",
     height: "100%",
   },
 
-  photoHint: {
+  mediaHint: {
     color: "#b49ba3",
     fontSize: 15,
     fontWeight: "700",
+  },
+
+  videoPicked: {
+    alignItems: "center",
+    gap: 8,
+  },
+
+  videoPickedText: {
+    color: "#8a6b74",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+
+  playIcon: {
+    color: "#e98ca8",
+    fontSize: 34,
   },
 
   input: {
@@ -534,7 +636,21 @@ const styles = StyleSheet.create({
   cardImage: {
     width: "100%",
     aspectRatio: 4 / 3,
-    backgroundColor: "#fdeef3",
+  },
+
+  videoThumb: {
+    width: "100%",
+    aspectRatio: 4 / 3,
+    backgroundColor: "#35242a",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+
+  videoThumbText: {
+    color: "#fbe3ec",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   cardBody: {
@@ -554,10 +670,50 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
-  deleteText: {
-    color: "#d9536f",
-    fontSize: 12,
+  viewer: {
+    flex: 1,
+    backgroundColor: "#120a0e",
+    justifyContent: "center",
+  },
+
+  viewerTop: {
+    position: "absolute",
+    top: 50,
+    left: 18,
+    right: 18,
+    zIndex: 2,
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  viewerButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  viewerButtonText: {
+    color: "#ffffff",
+    fontSize: 18,
     fontWeight: "800",
-    marginTop: 6,
+  },
+
+  fullMedia: {
+    width: "100%",
+    height: "100%",
+  },
+
+  viewerCaption: {
+    position: "absolute",
+    bottom: 40,
+    left: 20,
+    right: 20,
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "700",
+    textAlign: "center",
   },
 });

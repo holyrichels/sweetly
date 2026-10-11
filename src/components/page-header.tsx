@@ -178,19 +178,11 @@ export default function PageHeader({ title }: { title: string }) {
     <View style={styles.header}>
       <View style={styles.avatars}>
         <View style={styles.avatarBack}>
-          {partner?.avatar_url ? (
-            <SecureImage bucket="avatars" path={partner.avatar_url} style={styles.avatarImage} />
-          ) : (
-            <Text style={styles.avatarText}>{getInitials(partner?.name)}</Text>
-          )}
+          <SecureImage bucket="avatars" path={partner?.avatar_url} style={styles.avatarImage} fallback={<Text style={styles.avatarText}>{getInitials(partner?.name)}</Text>} />
         </View>
 
         <View style={styles.avatarFront}>
-          {me?.avatar_url ? (
-            <SecureImage bucket="avatars" path={me.avatar_url} style={styles.avatarImage} />
-          ) : (
-            <Text style={styles.avatarText}>{getInitials(me?.name)}</Text>
-          )}
+          <SecureImage bucket="avatars" path={me?.avatar_url} style={styles.avatarImage} fallback={<Text style={styles.avatarText}>{getInitials(me?.name)}</Text>} />
         </View>
       </View>
 
