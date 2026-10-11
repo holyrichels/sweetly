@@ -1,16 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 import {
   ActivityIndicator,
   Alert,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  Pressable,
 } from "react-native";
 
 import PageHeader from "@/components/page-header";
+import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
 const MOOD_OPTIONS = [
@@ -25,7 +26,7 @@ const MOOD_OPTIONS = [
 ];
 
 export default function MoodScreen() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!getAppData().ready);
 
   const [session, setSession] = useState<any>(null);
 
@@ -40,106 +41,32 @@ export default function MoodScreen() {
   const [saving, setSaving] = useState(false);
 
   // =========================================================
-  // AUTH + LOAD
+  // ДАННЫЕ: берём из общего хранилища, без отдельных запросов
   // =========================================================
 
-  useEffect(() => {
-    load();
+  const appData = useAppData();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
+  useLayoutEffect(() => {
+    setLoading(!appData.ready);
 
-      if (newSession) {
-        loadCoupleAndMoods(newSession.user.id);
-      } else {
-        setCoupleId(null);
-        setMyMood(null);
-        setPartnerMood(null);
-      }
-    });
+    setSession(appData.userId ? { user: { id: appData.userId } } : null);
 
-    return () => subscription.unsubscribe();
-  }, []);
+    setCoupleId(appData.coupleId);
 
-  async function load() {
-    try {
-      const {
-        data: { session: currentSession },
-      } = await supabase.auth.getSession();
+    setPartnerName(appData.partner?.name || "Партнёр");
 
-      setSession(currentSession);
+    const mine = appData.moods.find((item) => item.user_id === appData.userId)?.mood ?? null;
 
-      if (currentSession) {
-        await loadCoupleAndMoods(currentSession.user.id);
-      }
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadCoupleAndMoods(userId: string) {
-    try {
-      const { data: member } = await supabase
-        .from("couple_members")
-        .select("couple_id")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (!member) {
-        setCoupleId(null);
-
-        return;
-      }
-
-      setCoupleId(member.couple_id);
-
-      const { data: members } = await supabase
-        .from("couple_members")
-        .select("user_id")
-        .eq("couple_id", member.couple_id);
-
-      const userIds = members?.map((item) => item.user_id) ?? [];
-
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, name")
-          .in("id", userIds);
-
-        const partner = profiles?.find((profile) => profile.id !== userId);
-
-        if (partner?.name) {
-          setPartnerName(partner.name);
-        }
-      }
-
-      await loadMoods(member.couple_id, userId);
-    } catch (error) {
-      console.log("Load mood error:", error);
-    }
-  }
-
-  async function loadMoods(coupleIdValue: string, userId: string) {
-    const { data: moods, error } = await supabase
-      .from("couple_moods")
-      .select("user_id, mood")
-      .eq("couple_id", coupleIdValue);
-
-    if (error) {
-      console.log("Ошибка загрузки настроения:", error.message);
-
-      return;
-    }
-
-    const mine = moods?.find((item) => item.user_id === userId)?.mood ?? null;
-
-    const partner =
-      moods?.find((item) => item.user_id !== userId)?.mood ?? null;
+    const partner = appData.moods.find((item) => item.user_id !== appData.userId)?.mood ?? null;
 
     setMyMood(mine);
+
     setPartnerMood(partner);
+  }, [appData]);
+
+  // Обновление после изменений: список настроений приходит из хранилища
+  async function loadMoods(_coupleIdValue: string, _userId: string) {
+    await refreshAppData();
   }
 
   // =========================================================
@@ -301,7 +228,10 @@ export default function MoodScreen() {
               <Text style={styles.moodEmoji}>{option.emoji}</Text>
 
               <Text
-                style={[styles.moodLabel, selected && styles.moodLabelSelected]}
+                style={[
+                  styles.moodLabel,
+                  selected && styles.moodLabelSelected,
+                ]}
               >
                 {option.label}
               </Text>

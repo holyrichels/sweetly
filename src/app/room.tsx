@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -13,6 +13,7 @@ import {
 } from "react-native";
 
 import PageHeader from "@/components/page-header";
+import { getAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
 type RoomState = {
@@ -32,9 +33,7 @@ type Message = {
 
 // Достаём ID видео из обычной ссылки, короткой youtu.be и ссылки shorts
 function extractYoutubeId(input: string): string | null {
-  const match = input.match(
-    /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/,
-  );
+  const match = input.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
   return match ? match[1] : null;
 }
 
@@ -65,7 +64,7 @@ function loadYoutubeApi(): Promise<void> {
 export default function RoomScreen() {
   const isWeb = Platform.OS === "web";
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!getAppData().ready);
 
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -105,9 +104,20 @@ export default function RoomScreen() {
 
   coupleIdRef.current = coupleId;
 
+  const appData = useAppData();
+
+  // Пара, пользователь и состояние видео приходят из общего хранилища сразу
+  useLayoutEffect(() => {
+    setLoading(!appData.ready);
+    setUserId(appData.userId);
+    setCoupleId(appData.coupleId);
+    setRoom(appData.room as RoomState | null);
+  }, [appData]);
+
+  // Сообщения чата загружаем один раз, когда известна пара
   useEffect(() => {
-    init();
-  }, []);
+    if (appData.coupleId) loadMessages(appData.coupleId);
+  }, [appData.coupleId]);
 
   async function init() {
     try {
@@ -170,31 +180,19 @@ export default function RoomScreen() {
       .channel(`room-${coupleId}`, { config: { presence: { key: userId } } })
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "room_state",
-          filter: `couple_id=eq.${coupleId}`,
-        },
+        { event: "*", schema: "public", table: "room_state", filter: `couple_id=eq.${coupleId}` },
         (payload: any) => {
           if (payload.new) setRoom(payload.new as RoomState);
         },
       )
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "room_messages",
-          filter: `couple_id=eq.${coupleId}`,
-        },
+        { event: "INSERT", schema: "public", table: "room_messages", filter: `couple_id=eq.${coupleId}` },
         (payload: any) => {
           const message = payload.new as Message;
 
           setMessages((previous) =>
-            previous.some((item) => item.id === message.id)
-              ? previous
-              : [...previous, message],
+            previous.some((item) => item.id === message.id) ? previous : [...previous, message],
           );
         },
       )
@@ -233,10 +231,7 @@ export default function RoomScreen() {
       if (cancelled) return;
 
       // Сколько прошло с последнего изменения, чтобы догнать время
-      const elapsed = Math.max(
-        0,
-        (Date.now() - new Date(room.updated_at).getTime()) / 1000,
-      );
+      const elapsed = Math.max(0, (Date.now() - new Date(room.updated_at).getTime()) / 1000);
       const targetPosition = room.is_playing
         ? room.position_seconds + elapsed
         : room.position_seconds;
@@ -398,9 +393,7 @@ export default function RoomScreen() {
       <View style={styles.center}>
         <Text style={styles.emptyEmoji}>🛋️</Text>
         <Text style={styles.emptyTitle}>Комната пока пуста</Text>
-        <Text style={styles.emptyText}>
-          Сначала создайте пару или присоединитесь по коду.
-        </Text>
+        <Text style={styles.emptyText}>Сначала создайте пару или присоединитесь по коду.</Text>
       </View>
     );
   }
@@ -411,8 +404,7 @@ export default function RoomScreen() {
         <Text style={styles.emptyEmoji}>🎬</Text>
         <Text style={styles.emptyTitle}>Совместный просмотр</Text>
         <Text style={styles.emptyText}>
-          Пока открывается в браузере или в Telegram. В приложении на iPhone
-          добавим позже.
+          Пока открывается в браузере или в Telegram. В приложении на iPhone добавим позже.
         </Text>
       </View>
     );
@@ -435,9 +427,7 @@ export default function RoomScreen() {
           ) : (
             <View style={styles.playerEmpty}>
               <Text style={styles.playerEmptyIcon}>▶</Text>
-              <Text style={styles.playerEmptyText}>
-                Вставьте ссылку на видео
-              </Text>
+              <Text style={styles.playerEmptyText}>Вставьте ссылку на видео</Text>
             </View>
           )}
         </View>
@@ -474,14 +464,10 @@ export default function RoomScreen() {
             ref={scrollRef}
             style={styles.chatList}
             contentContainerStyle={styles.chatListContent}
-            onContentSizeChange={() =>
-              scrollRef.current?.scrollToEnd({ animated: false })
-            }
+            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
           >
             {messages.length === 0 ? (
-              <Text style={styles.chatEmpty}>
-                Здесь пока пусто. Напишите первым.
-              </Text>
+              <Text style={styles.chatEmpty}>Здесь пока пусто. Напишите первым.</Text>
             ) : (
               messages.map((message) => {
                 const mine = message.user_id === userId;
@@ -489,14 +475,9 @@ export default function RoomScreen() {
                 return (
                   <View
                     key={message.id}
-                    style={[
-                      styles.bubble,
-                      mine ? styles.bubbleMine : styles.bubbleOther,
-                    ]}
+                    style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
                   >
-                    <Text
-                      style={[styles.bubbleText, mine && styles.bubbleTextMine]}
-                    >
+                    <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>
                       {message.text}
                     </Text>
                   </View>
@@ -516,11 +497,7 @@ export default function RoomScreen() {
             onSubmitEditing={sendMessage}
           />
 
-          <Pressable
-            style={styles.sendButton}
-            onPress={sendMessage}
-            disabled={sending}
-          >
+          <Pressable style={styles.sendButton} onPress={sendMessage} disabled={sending}>
             <Text style={styles.sendIcon}>➤</Text>
           </Pressable>
         </View>

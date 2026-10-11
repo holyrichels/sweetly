@@ -26,6 +26,14 @@ export type MemoryData = {
   media_type: "image" | "video";
 };
 
+export type RoomData = {
+  video_id: string | null;
+  is_playing: boolean;
+  position_seconds: number;
+  updated_by: string | null;
+  updated_at: string;
+} | null;
+
 export type AppData = {
   // true, когда первая загрузка завершена (даже если пары нет)
   ready: boolean;
@@ -39,6 +47,8 @@ export type AppData = {
   missMine: number;
   missPartner: number;
   memories: MemoryData[];
+  moods: { user_id: string; mood: string }[];
+  room: RoomData;
 };
 
 const emptyData: AppData = {
@@ -53,6 +63,8 @@ const emptyData: AppData = {
   missMine: 0,
   missPartner: 0,
   memories: [],
+  moods: [],
+  room: null,
 };
 
 let data: AppData = emptyData;
@@ -134,7 +146,7 @@ async function loadAll() {
       return;
     }
 
-    const [coupleRes, membersRes, timersRes, missRes, memoriesRes] = await Promise.all([
+    const [coupleRes, membersRes, timersRes, missRes, memoriesRes, moodsRes, roomRes] = await Promise.all([
       supabase
         .from("couples")
         .select("id, relationship_status, relationship_date, invite_code")
@@ -153,6 +165,12 @@ async function loadAll() {
         .eq("couple_id", coupleId)
         .order("memory_date", { ascending: false })
         .order("created_at", { ascending: false }),
+      supabase.from("couple_moods").select("user_id, mood").eq("couple_id", coupleId),
+      supabase
+        .from("room_state")
+        .select("video_id, is_playing, position_seconds, updated_by, updated_at")
+        .eq("couple_id", coupleId)
+        .maybeSingle(),
     ]);
 
     if (coupleRes.error || membersRes.error || timersRes.error || missRes.error || memoriesRes.error) {
@@ -212,6 +230,8 @@ async function loadAll() {
       missMine,
       missPartner,
       memories: (memoriesRes.data as MemoryData[]) ?? [],
+      moods: (moodsRes.data as { user_id: string; mood: string }[]) ?? [],
+      room: (roomRes.data as RoomData) ?? null,
     };
 
     emit();
@@ -244,6 +264,7 @@ export function startAppRealtime(userId: string): () => void {
     .on("postgres_changes", { event: "*", schema: "public", table: "couple_miss_counts" }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "couple_timers" }, scheduleRefresh)
     .on("postgres_changes", { event: "*", schema: "public", table: "couple_memories" }, scheduleRefresh)
+    .on("postgres_changes", { event: "*", schema: "public", table: "couple_moods" }, scheduleRefresh)
     .subscribe();
 
   return () => {
