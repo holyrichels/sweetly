@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import SecureImage from "@/components/secure-image";
+import { refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
 type ProfileItem = { id: string; name: string; avatar_url?: string | null };
@@ -20,129 +21,34 @@ function getInitials(value?: string) {
 
 // Общая шапка страниц: аватарки слева, название по центру, «Скучаю» справа.
 export default function PageHeader({ title }: { title: string }) {
-  const [userId, setUserId] = useState<string | null>(null);
+  // Всё нужное (пара, аватарки, счётчик) уже есть в общем хранилище
+  const appData = useAppData();
 
-  const [coupleId, setCoupleId] = useState<string | null>(null);
+  const userId = appData.userId;
 
-  const [profiles, setProfiles] = useState<ProfileItem[]>([]);
+  const coupleId = appData.coupleId;
 
-  const [myMiss, setMyMiss] = useState(0);
+  const me = appData.me;
 
-  const [partnerMiss, setPartnerMiss] = useState(0);
+  const partner = appData.partner;
+
+  const myMiss = appData.missMine;
+
+  const partnerMiss = appData.missPartner;
 
   const [busy, setBusy] = useState(false);
-
-  useEffect(() => {
-    init();
-  }, []);
-
-  async function init() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) return;
-
-    const uid = session.user.id;
-
-    setUserId(uid);
-
-    const { data: member } = await supabase
-      .from("couple_members")
-      .select("couple_id")
-      .eq("user_id", uid)
-      .maybeSingle();
-
-    if (!member) return;
-
-    setCoupleId(member.couple_id);
-
-    await loadAll(member.couple_id, uid);
-  }
-
-  async function loadAll(cid: string, uid: string) {
-    // Участников и счётчик запрашиваем одновременно
-    const [membersRes, missRes] = await Promise.all([
-      supabase.from("couple_members").select("user_id").eq("couple_id", cid),
-      supabase.from("couple_miss_counts").select("*").eq("couple_id", cid).maybeSingle(),
-    ]);
-
-    const ids = membersRes.data?.map((item) => item.user_id) ?? [];
-
-    if (ids.length > 0) {
-      const { data } = await supabase
-        .from("profiles")
-        .select("id, name, avatar_url")
-        .in("id", ids);
-
-      setProfiles(data ?? []);
-    }
-
-    const miss = missRes.data;
-
-    if (!miss) {
-      setMyMiss(0);
-      setPartnerMiss(0);
-
-      return;
-    }
-
-    if (miss.user_one_id === uid) {
-      setMyMiss(miss.user_one_count);
-      setPartnerMiss(miss.user_two_count);
-    } else {
-      setMyMiss(miss.user_two_count);
-      setPartnerMiss(miss.user_one_count);
-    }
-  }
-
-  // Realtime: счётчик и аватарки обновляются сразу у обоих
-  useEffect(() => {
-    if (!coupleId || !userId) return;
-
-    const channel = supabase
-      .channel(`header-${coupleId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "couple_miss_counts",
-          filter: `couple_id=eq.${coupleId}`,
-        },
-        () => {
-          loadAll(coupleId, userId);
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "profiles" },
-        () => {
-          loadAll(coupleId, userId);
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [coupleId, userId]);
 
   async function pressMiss() {
     if (!coupleId || !userId || busy) return;
 
     setBusy(true);
 
-    setMyMiss((value) => value + 1);
-
     try {
-      const { data, error } = await supabase.rpc("increment_miss_count", {
+      const { error } = await supabase.rpc("increment_miss_count", {
         target_couple_id: coupleId,
       });
 
       if (error) {
-        setMyMiss((value) => Math.max(0, value - 1));
-
         Alert.alert("Ошибка", error.message);
 
         return;
@@ -153,23 +59,11 @@ export default function PageHeader({ title }: { title: string }) {
         .invoke("notify-partner", { body: { kind: "miss" } })
         .catch(() => {});
 
-      if (data) {
-        if (data.user_one_id === userId) {
-          setMyMiss(data.user_one_count);
-          setPartnerMiss(data.user_two_count);
-        } else {
-          setMyMiss(data.user_two_count);
-          setPartnerMiss(data.user_one_count);
-        }
-      }
+      await refreshAppData();
     } finally {
       setBusy(false);
     }
   }
-
-  const me = profiles.find((item) => item.id === userId);
-
-  const partner = profiles.find((item) => item.id !== userId);
 
   return (
     <View style={styles.header}>

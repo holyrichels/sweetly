@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -18,6 +18,7 @@ import { SymbolView } from "expo-symbols";
 import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import PageHeader from "@/components/page-header";
 import SecureImage from "@/components/secure-image";
+import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
 const GENDER_OPTIONS = ["Женский", "Мужской"];
@@ -51,7 +52,7 @@ function fmtDate(value?: string | null) {
 export default function ProfileScreen() {
   const router = useRouter();
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!getAppData().ready);
 
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -86,98 +87,23 @@ export default function ProfileScreen() {
 
   const [missTotal, setMissTotal] = useState(0);
 
-  useEffect(() => {
-    load();
-  }, []);
+  const appData = useAppData();
 
-  async function load() {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) return;
-
-      const uid = session.user.id;
-
-      setUserId(uid);
-
-      const rawEmail = session.user.email ?? null;
-
-      setEmail(rawEmail && !rawEmail.endsWith("@telegram.user") ? rawEmail : null);
-
-      // Свой профиль и членство в паре запрашиваем одновременно
-      const [profileRes, memberRes] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("name, gender, birthday, avatar_url")
-          .eq("id", uid)
-          .maybeSingle(),
-        supabase.from("couple_members").select("couple_id").eq("user_id", uid).maybeSingle(),
-      ]);
-
-      const profile = profileRes.data;
-
-      setName(profile?.name ?? "");
-      setAvatarUrl(profile?.avatar_url ?? null);
-      setGender(profile?.gender ?? null);
-      setBirthday(profile?.birthday ?? null);
-
-      // Свой профиль уже на экране, остальное догружается
-      setLoading(false);
-
-      const member = memberRes.data;
-
-      if (!member) {
-        setCouple(null);
-        setPartnerName(null);
-        setPartnerBirthday(null);
-
-        return;
-      }
-
-      const coupleId = member.couple_id;
-
-      const [coupleRes, membersRes, timersRes, missRes] = await Promise.all([
-        supabase
-          .from("couples")
-          .select("id, relationship_status, relationship_date")
-          .eq("id", coupleId)
-          .maybeSingle(),
-        supabase.from("couple_members").select("user_id").eq("couple_id", coupleId),
-        supabase.from("couple_timers").select("id").eq("couple_id", coupleId),
-        supabase
-          .from("couple_miss_counts")
-          .select("user_one_count, user_two_count")
-          .eq("couple_id", coupleId)
-          .maybeSingle(),
-      ]);
-
-      setCouple(coupleRes.data ?? null);
-      setTimersCount((timersRes.data?.length ?? 0) + 1);
-      setMissTotal((missRes.data?.user_one_count ?? 0) + (missRes.data?.user_two_count ?? 0));
-
-      const partnerId = membersRes.data?.find((item) => item.user_id !== uid)?.user_id;
-
-      if (!partnerId) {
-        setPartnerName(null);
-        setPartnerBirthday(null);
-
-        return;
-      }
-
-      const { data: partnerProfile } = await supabase
-        .from("profiles")
-        .select("name, birthday")
-        .eq("id", partnerId)
-        .maybeSingle();
-
-      setPartnerName(partnerProfile?.name ?? "Партнёр");
-      setPartnerBirthday(partnerProfile?.birthday ?? null);
-    } finally {
-      setLoading(false);
-    }
-  }
+  // Копируем общие данные в состояние экрана до отрисовки, без промежуточных пустых плашек
+  useLayoutEffect(() => {
+    setLoading(!appData.ready);
+    setUserId(appData.userId);
+    setEmail(appData.email);
+    setName(appData.me?.name ?? "");
+    setAvatarUrl(appData.me?.avatar_url ?? null);
+    setGender(appData.me?.gender ?? null);
+    setBirthday(appData.me?.birthday ?? null);
+    setCouple(appData.couple);
+    setPartnerName(appData.partner ? appData.partner.name || "Партнёр" : null);
+    setPartnerBirthday(appData.partner?.birthday ?? null);
+    setTimersCount(appData.coupleId ? appData.timersCount : 0);
+    setMissTotal(appData.missMine + appData.missPartner);
+  }, [appData]);
 
   // Сохраняем одно поле профиля. Если политики на UPDATE нет, сообщаем об этом.
   async function saveProfileField(field: string, value: string | null) {

@@ -1,25 +1,26 @@
-import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect, useState } from "react";
-import { Platform, useColorScheme } from "react-native";
+import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect, useState } from 'react';
+import { Platform, useColorScheme } from 'react-native';
 
-import { AnimatedSplashOverlay } from "@/components/animated-icon";
-import AppTabs from "@/components/app-tabs";
-import { supabase } from "@/lib/supabase";
+import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import AppTabs from '@/components/app-tabs';
+import { supabase } from '@/lib/supabase';
+import { clearAppData, refreshAppData, startAppRealtime } from '@/lib/app-data';
 
 SplashScreen.preventAutoHideAsync();
 
-const SUPABASE_URL = "https://lodzbjnakrweelsotnim.supabase.co";
-const SUPABASE_KEY = "sb_publishable_tCl2mvi0SCdq1HVYBL6lgA_YlbMIEFJ";
+const SUPABASE_URL = 'https://lodzbjnakrweelsotnim.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_tCl2mvi0SCdq1HVYBL6lgA_YlbMIEFJ';
 
 function loadTelegramScript(): Promise<void> {
   if ((window as any).Telegram?.WebApp) return Promise.resolve();
 
   return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-web-app.js";
+    const script = document.createElement('script');
+    script.src = 'https://telegram.org/js/telegram-web-app.js';
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Не загрузился скрипт Telegram"));
+    script.onerror = () => reject(new Error('Не загрузился скрипт Telegram'));
     document.head.appendChild(script);
   });
 }
@@ -27,7 +28,7 @@ function loadTelegramScript(): Promise<void> {
 // Вход через Telegram работает только для уже привязанного аккаунта.
 // Если привязки нет, ничего не делаем и показываем обычный экран входа.
 async function signInWithTelegramWeb(): Promise<void> {
-  if (Platform.OS !== "web") return;
+  if (Platform.OS !== 'web') return;
 
   await loadTelegramScript();
 
@@ -40,9 +41,9 @@ async function signInWithTelegramWeb(): Promise<void> {
   tg.expand();
 
   const response = await fetch(`${SUPABASE_URL}/functions/v1/telegram-auth`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       apikey: SUPABASE_KEY,
     },
     body: JSON.stringify({ initData }),
@@ -51,14 +52,14 @@ async function signInWithTelegramWeb(): Promise<void> {
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(result.error ?? "Ошибка входа через Telegram");
+    throw new Error(result.error ?? 'Ошибка входа через Telegram');
   }
 
   if (!result.linked) return;
 
   const { error } = await supabase.auth.verifyOtp({
     token_hash: result.token_hash,
-    type: "magiclink",
+    type: 'magiclink',
   });
 
   if (error) throw error;
@@ -89,7 +90,7 @@ export default function TabLayout() {
       try {
         await signInWithTelegramWeb();
       } catch (error) {
-        console.log("Telegram login error:", error);
+        console.log('Telegram login error:', error);
       }
 
       if (active) setChecked(true);
@@ -107,8 +108,21 @@ export default function TabLayout() {
     };
   }, []);
 
+  // Общие данные пары грузим сразу после входа, чтобы страницы открывались готовыми
+  useEffect(() => {
+    if (!session?.user?.id) {
+      clearAppData();
+
+      return;
+    }
+
+    refreshAppData();
+
+    return startAppRealtime(session.user.id);
+  }, [session?.user?.id]);
+
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
       {session ? <AppTabs /> : checked ? <Slot /> : null}
     </ThemeProvider>

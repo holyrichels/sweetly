@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useState } from "react";
 
 import {
   ActivityIndicator,
@@ -19,6 +19,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 import PageHeader from "@/components/page-header";
 import SecureImage from "@/components/secure-image";
 import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
+import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
 type Memory = {
@@ -73,7 +74,7 @@ function VideoPlayerView({ uri }: { uri: string }) {
 }
 
 export default function MemoriesScreen() {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!getAppData().ready);
 
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -96,9 +97,14 @@ export default function MemoriesScreen() {
   // Что сейчас открыто на весь экран
   const [viewing, setViewing] = useState<{ memory: Memory; url: string } | null>(null);
 
-  useEffect(() => {
-    init();
-  }, []);
+  const appData = useAppData();
+
+  useLayoutEffect(() => {
+    setLoading(!appData.ready);
+    setUserId(appData.userId);
+    setCoupleId(appData.coupleId);
+    setMemories(appData.memories as Memory[]);
+  }, [appData]);
 
   async function init() {
     try {
@@ -128,15 +134,9 @@ export default function MemoriesScreen() {
     }
   }
 
-  async function loadMemories(cid: string) {
-    const { data } = await supabase
-      .from("couple_memories")
-      .select("id, created_by, photo_path, caption, memory_date, media_type")
-      .eq("couple_id", cid)
-      .order("memory_date", { ascending: false })
-      .order("created_at", { ascending: false });
-
-    setMemories((data ?? []) as Memory[]);
+  async function loadMemories(_cid: string) {
+    // Список обновляется в общем хранилище и сразу приходит сюда
+    await refreshAppData();
   }
 
   // Realtime: новые и удалённые воспоминания появляются у обоих сразу
