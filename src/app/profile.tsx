@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
 
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
-import { SymbolView } from "expo-symbols";
 import {
   ActivityIndicator,
   Alert,
@@ -14,14 +11,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import { SymbolView } from "expo-symbols";
 
-import {
-  CalendarGrid,
-  FadeIn,
-  formatDateISO,
-  formatDateRu,
-} from "@/components/date-field";
+import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import PageHeader from "@/components/page-header";
+import SecureImage from "@/components/secure-image";
 import { supabase } from "@/lib/supabase";
 
 const GENDER_OPTIONS = ["Женский", "Мужской"];
@@ -80,9 +76,7 @@ export default function ProfileScreen() {
   const [savingName, setSavingName] = useState(false);
 
   // Какая строка сейчас раскрыта для редактирования: пол или день рождения
-  const [openField, setOpenField] = useState<"gender" | "birthday" | null>(
-    null,
-  );
+  const [openField, setOpenField] = useState<"gender" | "birthday" | null>(null);
 
   const [couple, setCouple] = useState<any>(null);
 
@@ -114,9 +108,7 @@ export default function ProfileScreen() {
 
       const rawEmail = session.user.email ?? null;
 
-      setEmail(
-        rawEmail && !rawEmail.endsWith("@telegram.user") ? rawEmail : null,
-      );
+      setEmail(rawEmail && !rawEmail.endsWith("@telegram.user") ? rawEmail : null);
 
       const { data: profile } = await supabase
         .from("profiles")
@@ -261,10 +253,7 @@ export default function ProfileScreen() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permission.granted && permission.canAskAgain !== false) {
-      Alert.alert(
-        "Нужен доступ",
-        "Разрешите доступ к фото, чтобы выбрать аватарку.",
-      );
+      Alert.alert("Нужен доступ", "Разрешите доступ к фото, чтобы выбрать аватарку.");
 
       return;
     }
@@ -292,7 +281,8 @@ export default function ProfileScreen() {
         bytes[i] = binary.charCodeAt(i);
       }
 
-      const path = `${userId}/avatar.jpg`;
+      // Новое имя файла при каждой загрузке, чтобы не показывать старую картинку из кэша
+      const path = `${userId}/${Date.now()}.jpg`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
@@ -307,17 +297,10 @@ export default function ProfileScreen() {
         return;
       }
 
-      const { data: urlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(path);
-
-      // Добавляем метку времени, чтобы новая картинка не подменялась старым кэшем
-      const url = `${urlData.publicUrl}?t=${Date.now()}`;
-
-      const saved = await saveProfileField("avatar_url", url);
+      const saved = await saveProfileField("avatar_url", path);
 
       if (saved) {
-        setAvatarUrl(url);
+        setAvatarUrl(path);
       }
     } catch (error) {
       Alert.alert("Ошибка", (error as Error).message);
@@ -361,7 +344,7 @@ export default function ProfileScreen() {
       <View style={styles.headerCard}>
         <Pressable style={styles.avatarWrap} onPress={pickAvatar}>
           {avatarUrl ? (
-            <Image source={{ uri: avatarUrl }} style={styles.avatarImage} />
+            <SecureImage bucket="avatars" path={avatarUrl} style={styles.avatarImage} />
           ) : (
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initial}</Text>
@@ -437,9 +420,7 @@ export default function ProfileScreen() {
             <Row
               icon="♥"
               title="Статус отношений"
-              value={capitalizeFirst(
-                couple.relationship_status || "влюбленные",
-              )}
+              value={capitalizeFirst(couple.relationship_status || "влюбленные")}
             />
             <Row
               icon="👤"
@@ -463,9 +444,7 @@ export default function ProfileScreen() {
       <Text style={styles.sectionLabel}>Личное</Text>
 
       <View style={styles.listCard}>
-        <Pressable
-          onPress={() => setOpenField(openField === "gender" ? null : "gender")}
-        >
+        <Pressable onPress={() => setOpenField(openField === "gender" ? null : "gender")}>
           <Row icon="⚧" title="Пол" value={gender || "не указан"} editable />
         </Pressable>
 
@@ -482,12 +461,7 @@ export default function ProfileScreen() {
                       style={[styles.chip, active && styles.chipActive]}
                       onPress={() => pickGender(option)}
                     >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          active && styles.chipTextActive,
-                        ]}
-                      >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
                         {option}
                       </Text>
                     </Pressable>
@@ -499,9 +473,7 @@ export default function ProfileScreen() {
         )}
 
         <Pressable
-          onPress={() =>
-            setOpenField(openField === "birthday" ? null : "birthday")
-          }
+          onPress={() => setOpenField(openField === "birthday" ? null : "birthday")}
         >
           <Row
             icon="🎂"
@@ -519,10 +491,7 @@ export default function ProfileScreen() {
                 onChange={pickBirthday}
               />
 
-              <Pressable
-                style={styles.doneButton}
-                onPress={() => setOpenField(null)}
-              >
+              <Pressable style={styles.doneButton} onPress={() => setOpenField(null)}>
                 <Text style={styles.doneButtonText}>Готово</Text>
               </Pressable>
             </View>
@@ -534,7 +503,7 @@ export default function ProfileScreen() {
           title="День рождения партнёра"
           value={
             partnerName
-              ? (fmtDate(partnerBirthday) ?? "не указан")
+              ? fmtDate(partnerBirthday) ?? "не указан"
               : "партнёр не присоединился"
           }
           last

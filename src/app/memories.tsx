@@ -16,6 +16,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import PageHeader from "@/components/page-header";
 import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
+import SecureImage from "@/components/secure-image";
 import { supabase } from "@/lib/supabase";
 
 type Memory = {
@@ -44,10 +45,6 @@ function confirmAction(title: string, message: string, onConfirm: () => void) {
       { text: "Удалить", style: "destructive", onPress: onConfirm },
     ]);
   }
-}
-
-function getPhotoUrl(path: string) {
-  return supabase.storage.from("memories").getPublicUrl(path).data.publicUrl;
 }
 
 export default function MemoriesScreen() {
@@ -323,7 +320,7 @@ export default function MemoriesScreen() {
               .filter((m) => m.memory_date.startsWith(year))
               .map((memory) => (
                 <View key={memory.id} style={styles.card}>
-                  <Image source={{ uri: getPhotoUrl(memory.photo_path) }} style={styles.cardImage} />
+                  <SecureImage bucket="memories" path={memory.photo_path} style={styles.cardImage} />
 
                   <View style={styles.cardBody}>
                     <Text style={styles.cardDate}>

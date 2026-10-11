@@ -21,6 +21,7 @@ import {
 
 import { SymbolView } from "expo-symbols";
 
+import SecureImage from "@/components/secure-image";
 import { supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "register";
@@ -84,18 +85,8 @@ function FadeIn({ children }: { children: React.ReactNode }) {
 }
 
 const MONTH_NAMES = [
-  "Янв",
-  "Фев",
-  "Мар",
-  "Апр",
-  "Май",
-  "Июн",
-  "Июл",
-  "Авг",
-  "Сен",
-  "Окт",
-  "Ноя",
-  "Дек",
+  "Янв", "Фев", "Мар", "Апр", "Май", "Июн",
+  "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек",
 ];
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -280,11 +271,7 @@ const TIMER_ICONS: Record<
   React.ComponentProps<typeof SymbolView>["name"]
 > = {
   back: { ios: "chevron.left", android: "chevron_left", web: "chevron_left" },
-  next: {
-    ios: "chevron.right",
-    android: "chevron_right",
-    web: "chevron_right",
-  },
+  next: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
   edit: { ios: "pencil", android: "edit", web: "edit" },
   add: { ios: "plus", android: "add", web: "add" },
   delete: { ios: "trash", android: "delete", web: "delete" },
@@ -623,7 +610,7 @@ export default function HomeScreen() {
   }, [session?.user?.id, couple?.id]);
 
   // =========================================================
-  // =========================================================
+    // =========================================================
   // REALTIME: изменения профилей (аватарки и имена партнёра)
   // =========================================================
 
@@ -651,7 +638,7 @@ export default function HomeScreen() {
   }, [session?.user?.id, couple?.id]);
 
   // =========================================================
-  // =========================================================
+    // =========================================================
   // Привязка Telegram к аккаунту (только когда открыто в боте)
   // =========================================================
 
@@ -1236,12 +1223,12 @@ export default function HomeScreen() {
   const myName = session?.user?.user_metadata?.name || name || "Вы";
 
   const myAvatarUrl =
-    profilesList.find((profile) => profile.id === session?.user?.id)
-      ?.avatar_url || null;
+    profilesList.find((profile) => profile.id === session?.user?.id)?.avatar_url ||
+    null;
 
   const partnerAvatarUrl =
-    profilesList.find((profile) => profile.id !== session?.user?.id)
-      ?.avatar_url || null;
+    profilesList.find((profile) => profile.id !== session?.user?.id)?.avatar_url ||
+    null;
 
   const partnerName =
     profilesList.find((profile) => profile.id !== session?.user?.id)?.name ||
@@ -1792,23 +1779,15 @@ export default function HomeScreen() {
           <View style={styles.avatars}>
             <View style={styles.avatarBack}>
               {partnerAvatarUrl ? (
-                <Image
-                  source={{ uri: partnerAvatarUrl }}
-                  style={styles.avatarImage}
-                />
+                <SecureImage bucket="avatars" path={partnerAvatarUrl} style={styles.avatarImage} />
               ) : (
-                <Text style={styles.avatarText}>
-                  {getInitials(partnerName)}
-                </Text>
+                <Text style={styles.avatarText}>{getInitials(partnerName)}</Text>
               )}
             </View>
 
             <View style={styles.avatarFront}>
               {myAvatarUrl ? (
-                <Image
-                  source={{ uri: myAvatarUrl }}
-                  style={styles.avatarImage}
-                />
+                <SecureImage bucket="avatars" path={myAvatarUrl} style={styles.avatarImage} />
               ) : (
                 <Text style={styles.avatarText}>{getInitials(myName)}</Text>
               )}
@@ -2126,6 +2105,7 @@ export default function HomeScreen() {
 
         <View style={styles.bottomArea}>
           <Text style={styles.bottomText}>Ваш маленький мир ❤️</Text>
+
         </View>
       </ScrollView>
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
+import SecureImage from "@/components/secure-image";
 import { supabase } from "@/lib/supabase";
 
 type ProfileItem = { id: string; name: string; avatar_url?: string | null };
@@ -150,6 +151,11 @@ export default function PageHeader({ title }: { title: string }) {
         return;
       }
 
+      // Уведомляем партнёра в Telegram
+      supabase.functions
+        .invoke("notify-partner", { body: { kind: "miss" } })
+        .catch(() => {});
+
       if (data) {
         if (data.user_one_id === userId) {
           setMyMiss(data.user_one_count);
@@ -173,10 +179,7 @@ export default function PageHeader({ title }: { title: string }) {
       <View style={styles.avatars}>
         <View style={styles.avatarBack}>
           {partner?.avatar_url ? (
-            <Image
-              source={{ uri: partner.avatar_url }}
-              style={styles.avatarImage}
-            />
+            <SecureImage bucket="avatars" path={partner.avatar_url} style={styles.avatarImage} />
           ) : (
             <Text style={styles.avatarText}>{getInitials(partner?.name)}</Text>
           )}
@@ -184,7 +187,7 @@ export default function PageHeader({ title }: { title: string }) {
 
         <View style={styles.avatarFront}>
           {me?.avatar_url ? (
-            <Image source={{ uri: me.avatar_url }} style={styles.avatarImage} />
+            <SecureImage bucket="avatars" path={me.avatar_url} style={styles.avatarImage} />
           ) : (
             <Text style={styles.avatarText}>{getInitials(me?.name)}</Text>
           )}
