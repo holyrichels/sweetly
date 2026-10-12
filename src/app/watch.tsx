@@ -62,6 +62,15 @@ function loadYoutubeApi(): Promise<void> {
   return youtubeApiPromise;
 }
 
+// На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
+function notify(title: string, message: string) {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
+
 export default function WatchScreen() {
   const router = useRouter();
   const isWeb = Platform.OS === "web";
@@ -382,6 +391,92 @@ export default function WatchScreen() {
     }
   }
 
+  // Прогресс видео для полосы и времени
+  const [progress, setProgress] = useState({ current: 0, duration: 0 });
+
+  useEffect(() => {
+    if (!isWeb || !room?.video_id) return;
+
+    const timer = setInterval(() => {
+      const player = playerRef.current;
+
+      if (!player?.getCurrentTime) return;
+
+      setProgress({
+        current: player.getCurrentTime() ?? 0,
+        duration: player.getDuration?.() ?? 0,
+      });
+    }, 500);
+
+    return () => clearInterval(timer);
+  }, [isWeb, room?.video_id]);
+
+  // Сохраняем состояние, чтобы партнёр увидел перемотку и паузу
+  function saveRoom(isPlaying: boolean, position: number) {
+    const current = roomRef.current;
+
+    const uid = userIdRef.current;
+
+    const cid = coupleIdRef.current;
+
+    if (!current?.video_id || !uid || !cid) return;
+
+    supabase
+      .from("room_state")
+      .upsert(
+        {
+          couple_id: cid,
+          video_id: current.video_id,
+          is_playing: isPlaying,
+          position_seconds: position,
+          updated_by: uid,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "couple_id" },
+      )
+      .then(() => {});
+  }
+
+  function togglePlay() {
+    const player = playerRef.current;
+
+    if (!player) return;
+
+    if (roomRef.current?.is_playing) {
+      player.pauseVideo();
+    } else {
+      player.playVideo();
+    }
+  }
+
+  function seekBy(seconds: number) {
+    const player = playerRef.current;
+
+    if (!player) return;
+
+    const target = Math.max(0, (player.getCurrentTime?.() ?? 0) + seconds);
+
+    player.seekTo(target, true);
+
+    saveRoom(roomRef.current?.is_playing ?? false, target);
+  }
+
+  function formatTime(total: number) {
+    const value = Math.floor(total);
+
+    const hours = Math.floor(value / 3600);
+
+    const minutes = Math.floor((value % 3600) / 60);
+
+    const seconds = String(value % 60).padStart(2, "0");
+
+    if (hours > 0) {
+      return `${hours}:${String(minutes).padStart(2, "0")}:${seconds}`;
+    }
+
+    return `${minutes}:${seconds}`;
+  }
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -410,6 +505,12 @@ export default function WatchScreen() {
     );
   }
 
+  const isPlaying = room?.is_playing ?? false;
+
+  const hasVideo = !!room?.video_id;
+
+  const ratio = progress.duration > 0 ? Math.min(1, progress.current / progress.duration) : 0;
+
   return (
     <ScrollView
       style={styles.screen}
@@ -437,7 +538,7 @@ export default function WatchScreen() {
           </Text>
         </View>
 
-        {room?.video_id ? (
+        {hasVideo ? (
           <View nativeID="room-player" style={styles.player} />
         ) : (
           <View style={styles.playerEmpty}>
@@ -448,6 +549,47 @@ export default function WatchScreen() {
             </View>
           </View>
         )}
+      </View>
+
+      {/* ============ НАЗВАНИЕ И ПРОГРЕСС ============ */}
+
+      <Text style={styles.videoTitle}>Видео с YouTube</Text>
+
+      <View style={styles.progressTrack}>
+        <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+      </View>
+
+      <View style={styles.timeRow}>
+        <Text style={styles.timeText}>{formatTime(progress.current)}</Text>
+        <Text style={styles.timeText}>{formatTime(progress.duration)}</Text>
+      </View>
+
+      {/* ============ УПРАВЛЕНИЕ ============ */}
+
+      <View style={styles.controlsRow}>
+        <Pressable style={styles.seekButton} onPress={() => seekBy(-12)} disabled={!hasVideo}>
+          <Svg width={26} height={26} viewBox="0 0 24 24">
+            <Path d="M4 12a8 8 0 102.3-5.7M4 4v4h4" fill="none" stroke="#3B1F2B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </Pressable>
+
+        <Pressable style={styles.mainButton} onPress={togglePlay} disabled={!hasVideo}>
+          {isPlaying ? (
+            <Svg width={30} height={30} viewBox="0 0 24 24">
+              <Path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="#FFFFFF" />
+            </Svg>
+          ) : (
+            <Svg width={30} height={30} viewBox="0 0 24 24">
+              <Path d="M8 5v14l11-7z" fill="#FFFFFF" />
+            </Svg>
+          )}
+        </Pressable>
+
+        <Pressable style={styles.seekButton} onPress={() => seekBy(12)} disabled={!hasVideo}>
+          <Svg width={26} height={26} viewBox="0 0 24 24">
+            <Path d="M20 12a8 8 0 11-2.3-5.7M20 4v4h-4" fill="none" stroke="#3B1F2B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </Pressable>
       </View>
 
       {/* ============ ССЫЛКА ============ */}
@@ -467,53 +609,25 @@ export default function WatchScreen() {
         </Pressable>
       </View>
 
-      {/* ============ ЧАТ ============ */}
+      {/* ============ РЕАКЦИИ ============ */}
 
-      <Text style={styles.sectionLabel}>ЧАТ</Text>
-
-      <View style={styles.chatCard}>
-        <ScrollView
-          ref={scrollRef}
-          style={styles.chatList}
-          contentContainerStyle={styles.chatListContent}
-          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
-        >
-          {messages.length === 0 ? (
-            <Text style={styles.chatEmpty}>Здесь пока пусто. Напишите первым.</Text>
-          ) : (
-            messages.map((message) => {
-              const mine = message.user_id === userId;
-
-              return (
-                <View
-                  key={message.id}
-                  style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
-                >
-                  <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>
-                    {message.text}
-                  </Text>
-                </View>
-              );
-            })
-          )}
-        </ScrollView>
-
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.messageInput}
-            placeholder="Написать..."
-            placeholderTextColor="#B49BA3"
-            value={messageDraft}
-            onChangeText={setMessageDraft}
-            onSubmitEditing={sendMessage}
-          />
-
-          <Pressable style={styles.sendButton} onPress={sendMessage} disabled={sending}>
-            <Svg width={18} height={18} viewBox="0 0 24 24">
-              <Path d="M3 11l18-8-8 18-2-8-8-2z" fill="#FFFFFF" />
+      <View style={styles.reactionsRow}>
+        {[
+          "M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z",
+          "M12 3a9 9 0 100 18 9 9 0 000-18zM8 14s1.5 2.5 4 2.5S16 14 16 14M9 9.5h.01M15 9.5h.01",
+          "M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2-4.5-4.4 6.2-.9z",
+          "M7 11v9H4v-9zM7 11l4-7c1.5 0 2.5 1 2.5 2.5V10h5.5c1 0 1.8.9 1.6 2l-1.3 7c-.2 1-1 1.8-2 1.8H7",
+        ].map((d, index) => (
+          <Pressable
+            key={index}
+            style={styles.reactionPill}
+            onPress={() => notify("Скоро", "Реакции появятся в следующем обновлении")}
+          >
+            <Svg width={24} height={24} viewBox="0 0 24 24">
+              <Path d={d} fill="none" stroke="#C23A62" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </Pressable>
-        </View>
+        ))}
       </View>
     </ScrollView>
   );
@@ -562,24 +676,25 @@ const styles = StyleSheet.create({
   },
 
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
 
   title: {
+    flex: 1,
     color: "#3B1F2B",
     fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 30,
+    fontSize: 32,
   },
 
   playerCard: {
     width: "100%",
     aspectRatio: 16 / 9,
-    borderRadius: 24,
+    borderRadius: 28,
     backgroundColor: "#3B1F2B",
     overflow: "hidden",
   },
@@ -596,9 +711,9 @@ const styles = StyleSheet.create({
   },
 
   playCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
@@ -607,56 +722,114 @@ const styles = StyleSheet.create({
 
   syncPill: {
     position: "absolute",
-    top: 12,
-    left: 12,
+    top: 14,
+    left: 14,
     zIndex: 2,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(255,255,255,0.14)",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.16)",
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
 
   syncDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#B49BA3",
+    backgroundColor: "#F4B1C0",
   },
 
   syncDotOnline: {
-    backgroundColor: "#4CD08A",
+    backgroundColor: "#F4B1C0",
   },
 
   syncText: {
     color: "#FFFFFF",
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Manrope_700Bold",
+  },
+
+  videoTitle: {
+    color: "#3B1F2B",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 20,
+    marginTop: 18,
+  },
+
+  progressTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#F2D5DD",
+    marginTop: 12,
+    overflow: "hidden",
+  },
+
+  progressFill: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#C23A62",
+  },
+
+  timeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+
+  timeText: {
+    color: "#7A5A66",
+    fontSize: 14,
+  },
+
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 22,
+    marginTop: 22,
+  },
+
+  seekButton: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  mainButton: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: "#C23A62",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   linkRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginTop: 16,
+    gap: 12,
+    marginTop: 22,
   },
 
   linkInput: {
     flex: 1,
-    height: 48,
-    borderRadius: 24,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: "#FFFFFF",
-    paddingHorizontal: 18,
-    fontSize: 14,
+    paddingHorizontal: 22,
+    fontSize: 15,
     color: "#3B1F2B",
   },
 
   connectButton: {
-    height: 48,
-    paddingHorizontal: 20,
-    borderRadius: 24,
+    height: 52,
+    paddingHorizontal: 26,
+    borderRadius: 26,
     backgroundColor: "#3B1F2B",
     alignItems: "center",
     justifyContent: "center",
@@ -664,82 +837,22 @@ const styles = StyleSheet.create({
 
   connectText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: "Manrope_700Bold",
   },
 
-  sectionLabel: {
-    color: "#7A5A66",
-    fontSize: 14,
-    fontFamily: "Manrope_700Bold",
-    letterSpacing: 0.4,
-    marginTop: 22,
-    marginBottom: 10,
-  },
-
-  chatCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 16,
-    height: 340,
-  },
-
-  chatList: { flex: 1 },
-
-  chatListContent: { gap: 8, paddingBottom: 6 },
-
-  chatEmpty: {
-    color: "#B49BA3",
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 100,
-  },
-
-  bubble: {
-    maxWidth: "78%",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-
-  bubbleMine: {
-    alignSelf: "flex-end",
-    backgroundColor: "#C23A62",
-    borderBottomRightRadius: 4,
-  },
-
-  bubbleOther: {
-    alignSelf: "flex-start",
-    backgroundColor: "#FFE6DB",
-    borderBottomLeftRadius: 4,
-  },
-
-  bubbleText: { color: "#3B1F2B", fontSize: 14 },
-
-  bubbleTextMine: { color: "#FFFFFF" },
-
-  inputRow: {
+  reactionsRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 12,
+    justifyContent: "space-between",
+    marginTop: 18,
   },
 
-  messageInput: {
+  reactionPill: {
     flex: 1,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FFF1F0",
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: "#3B1F2B",
-  },
-
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#C23A62",
+    height: 56,
+    marginHorizontal: 4,
+    borderRadius: 28,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
