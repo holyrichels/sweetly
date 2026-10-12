@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import Svg, { Path } from "react-native-svg";
 
 import {
   ActivityIndicator,
@@ -275,7 +276,7 @@ const TIMER_ICONS: Record<
   next: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
   edit: { ios: "pencil", android: "edit", web: "edit" },
   add: { ios: "plus", android: "add", web: "add" },
-  delete: { ios: "trash", android: "delete", web: "delete" },
+  delete: { ios: "xmark", android: "close", web: "close" },
 };
 
 // Круглая кнопка таймера в стиле кнопки «Старт» на iPhone
@@ -1684,14 +1685,20 @@ export default function HomeScreen() {
         <View style={styles.topBar}>
           <Text style={styles.brand}>Sweetly</Text>
 
-          <View style={styles.missContainer}>
-            <View style={styles.missCounter}>
-              <Text style={styles.missLabel}>Скучаю</Text>
+          <Pressable
+            style={[styles.missPill, missLoading && styles.missPillDisabled]}
+            onPress={pressMiss}
+          >
+            <Svg width={20} height={20} viewBox="0 0 24 24">
+              <Path
+                d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"
+                fill="#C23A62"
+              />
+            </Svg>
 
-              <Text style={styles.missValue}>
-                {myMissCount}/{partnerMissCount}
-              </Text>
-            </View>
+            <Text style={styles.missPillText}>Скучаю</Text>
+          </Pressable>
+        </View>
 
             <Pressable
               style={[
@@ -2458,6 +2465,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  missPill: {
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    paddingLeft: 14,
+    paddingRight: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    shadowColor: "#9b6676",
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+  },
+
+  missPillText: {
+    color: "#3B1F2B",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 15,
+  },
+
+  missPillDisabled: {
+    opacity: 0.6,
+  },
+
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -2615,6 +2648,7 @@ const styles = StyleSheet.create({
   },
 
   todayButtonText: {
+    fontFamily: "Manrope_700Bold",
     color: "#fff",
     fontSize: 11,
     fontWeight: "800",
@@ -2641,6 +2675,7 @@ const styles = StyleSheet.create({
   },
 
   dayWeek: {
+    fontFamily: "Manrope_700Bold",
     color: "#a78b94",
     fontSize: 9,
     fontWeight: "800",
@@ -2652,6 +2687,7 @@ const styles = StyleSheet.create({
   },
 
   dayNumber: {
+    fontFamily: "PlayfairDisplay_700Bold",
     color: "#49333b",
     fontSize: 20,
     fontWeight: "800",

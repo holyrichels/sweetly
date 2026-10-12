@@ -1,508 +1,118 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "expo-router";
+import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import SecureImage from "@/components/secure-image";
+import { useAppData } from "@/lib/app-data";
 
-import PageHeader from "@/components/page-header";
-import { getAppData, useAppData } from "@/lib/app-data";
-import { supabase } from "@/lib/supabase";
-
-type RoomState = {
-  video_id: string | null;
-  is_playing: boolean;
-  position_seconds: number;
-  updated_by: string | null;
-  updated_at: string;
-};
-
-type Message = {
-  id: string;
-  user_id: string;
-  text: string;
-  created_at: string;
-};
-
-// Достаём ID видео из обычной ссылки, короткой youtu.be и ссылки shorts
-function extractYoutubeId(input: string): string | null {
-  const match = input.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
-  return match ? match[1] : null;
-}
-
-// Загружаем API плеера YouTube один раз
-let youtubeApiPromise: Promise<void> | null = null;
-
-function loadYoutubeApi(): Promise<void> {
-  if ((window as any).YT?.Player) return Promise.resolve();
-
-  if (!youtubeApiPromise) {
-    youtubeApiPromise = new Promise((resolve) => {
-      const previous = (window as any).onYouTubeIframeAPIReady;
-
-      (window as any).onYouTubeIframeAPIReady = () => {
-        previous?.();
-        resolve();
-      };
-
-      const script = document.createElement("script");
-      script.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(script);
-    });
+// На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
+function notify(title: string, message: string) {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
   }
-
-  return youtubeApiPromise;
 }
+
+const SHARED = [
+  { title: "Планы", desc: "Что хотите сделать вместе", d: "M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zM3 10h18M8 3v4M16 3v4" },
+  { title: "Желания", desc: "Подарки и мечты друг друга", d: "M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7c-3 0-4-4-1.5-4S12 7 12 7zM12 7c3 0 4-4 1.5-4S12 7 12 7z" },
+  { title: "Места", desc: "Куда съездить и где побывать", d: "M12 21s-6-5.5-6-11a6 6 0 0112 0c0 5.5-6 11-6 11zM10 10a2 2 0 104 0 2 2 0 10-4 0" },
+  { title: "Заметки", desc: "Мелочи, которые важно помнить", d: "M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5" },
+];
 
 export default function RoomScreen() {
-  const isWeb = Platform.OS === "web";
-
-  const [loading, setLoading] = useState(!getAppData().ready);
-
-  const [userId, setUserId] = useState<string | null>(null);
-
-  const [coupleId, setCoupleId] = useState<string | null>(null);
-
-  const [room, setRoom] = useState<RoomState | null>(null);
-
-  const [messages, setMessages] = useState<Message[]>([]);
-
-  const [partnerOnline, setPartnerOnline] = useState(false);
-
-  const [linkDraft, setLinkDraft] = useState("");
-
-  const [messageDraft, setMessageDraft] = useState("");
-
-  const [sending, setSending] = useState(false);
-
-  // Плеер и флаг, чтобы не отправлять обратно то, что пришло от партнёра
-  const playerRef = useRef<any>(null);
-
-  const applyingRemote = useRef(false);
-
-  const loadedVideoRef = useRef<string | null>(null);
-
-  const scrollRef = useRef<ScrollView>(null);
-
-  // Актуальные значения для обработчиков плеера (они не должны видеть старые данные)
-  const roomRef = useRef<RoomState | null>(null);
-
-  const userIdRef = useRef<string | null>(null);
-
-  const coupleIdRef = useRef<string | null>(null);
-
-  roomRef.current = room;
-
-  userIdRef.current = userId;
-
-  coupleIdRef.current = coupleId;
+  const router = useRouter();
 
   const appData = useAppData();
 
-  // Пара, пользователь и состояние видео приходят из общего хранилища сразу
-  useLayoutEffect(() => {
-    setLoading(!appData.ready);
-    setUserId(appData.userId);
-    setCoupleId(appData.coupleId);
-    setRoom(appData.room as RoomState | null);
-  }, [appData]);
-
-  // Сообщения чата загружаем один раз, когда известна пара
-  useEffect(() => {
-    if (appData.coupleId) loadMessages(appData.coupleId);
-  }, [appData.coupleId]);
-
-  async function init() {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session) return;
-
-      const uid = session.user.id;
-
-      setUserId(uid);
-
-      const { data: member } = await supabase
-        .from("couple_members")
-        .select("couple_id")
-        .eq("user_id", uid)
-        .maybeSingle();
-
-      if (!member) return;
-
-      setCoupleId(member.couple_id);
-
-      await loadRoom(member.couple_id);
-      await loadMessages(member.couple_id);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function loadRoom(cid: string) {
-    const { data } = await supabase
-      .from("room_state")
-      .select("video_id, is_playing, position_seconds, updated_by, updated_at")
-      .eq("couple_id", cid)
-      .maybeSingle();
-
-    setRoom(data ?? null);
-  }
-
-  async function loadMessages(cid: string) {
-    const { data } = await supabase
-      .from("room_messages")
-      .select("id, user_id, text, created_at")
-      .eq("couple_id", cid)
-      .order("created_at", { ascending: true })
-      .limit(200);
-
-    setMessages(data ?? []);
-  }
-
-  // =========================================================
-  // REALTIME: состояние видео, чат и присутствие партнёра
-  // =========================================================
-
-  useEffect(() => {
-    if (!coupleId || !userId) return;
-
-    const channel = supabase
-      .channel(`room-${coupleId}`, { config: { presence: { key: userId } } })
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "room_state", filter: `couple_id=eq.${coupleId}` },
-        (payload: any) => {
-          if (payload.new) setRoom(payload.new as RoomState);
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "room_messages", filter: `couple_id=eq.${coupleId}` },
-        (payload: any) => {
-          const message = payload.new as Message;
-
-          setMessages((previous) =>
-            previous.some((item) => item.id === message.id) ? previous : [...previous, message],
-          );
-        },
-      )
-      .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
-        const others = Object.keys(state).filter((key) => key !== userId);
-
-        setPartnerOnline(others.length > 0);
-      })
-      .subscribe(async (status: string) => {
-        if (status === "SUBSCRIBED") {
-          await channel.track({ online_at: new Date().toISOString() });
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [coupleId, userId]);
-
-  // =========================================================
-  // ПЛЕЕР: применяем состояние, которое пришло от партнёра
-  // =========================================================
-
-  useEffect(() => {
-    if (!isWeb || !room?.video_id) return;
-
-    // Своё изменение плеер уже показывает, применять его второй раз не нужно
-    if (room.updated_by && room.updated_by === userIdRef.current) return;
-
-    let cancelled = false;
-
-    (async () => {
-      await loadYoutubeApi();
-
-      if (cancelled) return;
-
-      // Сколько прошло с последнего изменения, чтобы догнать время
-      const elapsed = Math.max(0, (Date.now() - new Date(room.updated_at).getTime()) / 1000);
-      const targetPosition = room.is_playing
-        ? room.position_seconds + elapsed
-        : room.position_seconds;
-
-      applyingRemote.current = true;
-
-      const YT = (window as any).YT;
-
-      if (!playerRef.current) {
-        playerRef.current = new YT.Player("room-player", {
-          height: "100%",
-          width: "100%",
-          videoId: room.video_id,
-          playerVars: { playsinline: 1, rel: 0 },
-          events: {
-            onStateChange: onLocalStateChange,
-          },
-        });
-
-        loadedVideoRef.current = room.video_id;
-      } else if (loadedVideoRef.current !== room.video_id) {
-        // Партнёр сменил видео: загружаем новое с нужной позиции
-        playerRef.current.loadVideoById({
-          videoId: room.video_id,
-          startSeconds: targetPosition,
-        });
-
-        loadedVideoRef.current = room.video_id;
-      } else {
-        playerRef.current.seekTo(targetPosition, true);
-
-        if (room.is_playing) {
-          playerRef.current.playVideo();
-        } else {
-          playerRef.current.pauseVideo();
-        }
-      }
-
-      // Даём плееру время прислать свои события, и не реагируем на них как на свои
-      setTimeout(() => {
-        applyingRemote.current = false;
-      }, 1200);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [room?.video_id, room?.is_playing, room?.updated_at, isWeb]);
-
-  // Наш плеер: отправляем партнёру, когда мы нажали play, pause
-  function onLocalStateChange(event: any) {
-    const current = roomRef.current;
-    const uid = userIdRef.current;
-    const cid = coupleIdRef.current;
-
-    if (applyingRemote.current || !uid || !cid || !current?.video_id) return;
-
-    const YT = (window as any).YT;
-    const isPlaying = event.data === YT.PlayerState.PLAYING;
-    const isPaused = event.data === YT.PlayerState.PAUSED;
-
-    if (!isPlaying && !isPaused) return;
-
-    const position = playerRef.current?.getCurrentTime?.() ?? 0;
-
-    // Если состояние уже такое же, как в базе, ничего не отправляем (защита от эха)
-    const sameAsRemote =
-      current.is_playing === isPlaying &&
-      Math.abs(position - current.position_seconds) < 1.5;
-
-    if (sameAsRemote) return;
-
-    supabase
-      .from("room_state")
-      .upsert(
-        {
-          couple_id: cid,
-          video_id: current.video_id,
-          is_playing: isPlaying,
-          position_seconds: position,
-          updated_by: uid,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "couple_id" },
-      )
-      .then(() => {});
-  }
-
-  // Ставим видео на двоих
-  async function startVideo() {
-    if (!coupleId || !userId) return;
-
-    const videoId = extractYoutubeId(linkDraft.trim());
-
-    if (!videoId) {
-      Alert.alert("Не нашли видео", "Вставьте ссылку на YouTube");
-
-      return;
-    }
-
-    const { error } = await supabase.from("room_state").upsert(
-      {
-        couple_id: coupleId,
-        video_id: videoId,
-        is_playing: false,
-        position_seconds: 0,
-        updated_by: userId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "couple_id" },
-    );
-
-    if (error) {
-      Alert.alert("Ошибка", error.message);
-
-      return;
-    }
-
-    setLinkDraft("");
-  }
-
-  async function sendMessage() {
-    const text = messageDraft.trim();
-
-    if (!text || !coupleId || !userId || sending) return;
-
-    setSending(true);
-
-    try {
-      const { data, error } = await supabase
-        .from("room_messages")
-        .insert({ couple_id: coupleId, user_id: userId, text })
-        .select("id, user_id, text, created_at")
-        .single();
-
-      if (error) {
-        Alert.alert("Ошибка", error.message);
-
-        return;
-      }
-
-      setMessages((previous) => [...previous, data as Message]);
-      setMessageDraft("");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#C23A62" />
-      </View>
-    );
-  }
-
-  if (!coupleId) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyEmoji}>🛋️</Text>
-        <Text style={styles.emptyTitle}>Комната пока пуста</Text>
-        <Text style={styles.emptyText}>Сначала создайте пару или присоединитесь по коду.</Text>
-      </View>
-    );
-  }
-
-  if (!isWeb) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyEmoji}>🎬</Text>
-        <Text style={styles.emptyTitle}>Совместный просмотр</Text>
-        <Text style={styles.emptyText}>
-          Пока открывается в браузере или в Telegram. В приложении на iPhone добавим позже.
-        </Text>
-      </View>
-    );
-  }
+  const partnerName = appData.partner?.name || "партнёром";
 
   return (
-    <View style={styles.screen}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <PageHeader title="Комната" />
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}
+    >
+      <Text style={styles.title}>Комната</Text>
+      <Text style={styles.subtitle}>Ваше общее пространство</Text>
 
-        {/* ============ ПЛЕЕР ============ */}
+      {/* ============ ПАРА ============ */}
 
-        <View style={styles.playerCard}>
-          {room?.video_id ? (
-            <View nativeID="room-player" style={styles.player} />
-          ) : (
-            <View style={styles.playerEmpty}>
-              <Text style={styles.playerEmptyIcon}>▶</Text>
-              <Text style={styles.playerEmptyText}>Вставьте ссылку на видео</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.statusRow}>
-          <Text style={styles.statusText}>
-            {partnerOnline ? "вы вдвоём" : "вы один"}
-          </Text>
-        </View>
-
-        <View style={styles.linkRow}>
-          <TextInput
-            style={styles.linkInput}
-            placeholder="Ссылка на YouTube"
-            placeholderTextColor="#b9a2aa"
-            value={linkDraft}
-            onChangeText={setLinkDraft}
-            autoCapitalize="none"
-          />
-
-          <Pressable style={styles.primaryButton} onPress={startVideo}>
-            <Text style={styles.primaryButtonText}>Включить</Text>
-          </Pressable>
-        </View>
-
-        {/* ============ ЧАТ ============ */}
-
-        <View style={styles.chatCard}>
-          <View style={styles.chatHeader}>
-            <Text style={styles.chatTitle}>Чат</Text>
+      <View style={styles.pairCard}>
+        <View style={styles.avatars}>
+          <View style={styles.avatarBack}>
+            <SecureImage
+              bucket="avatars"
+              path={appData.partner?.avatar_url}
+              style={styles.avatarImage}
+            />
           </View>
 
-          <ScrollView
-            ref={scrollRef}
-            style={styles.chatList}
-            contentContainerStyle={styles.chatListContent}
-            onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
+          <View style={styles.avatarFront}>
+            <SecureImage
+              bucket="avatars"
+              path={appData.me?.avatar_url}
+              style={styles.avatarImage}
+            />
+          </View>
+        </View>
+
+        <View style={styles.pairText}>
+          <Text style={styles.pairTitle}>Вы с {partnerName}</Text>
+          <Text style={styles.pairSub}>Всё важное — в одном месте</Text>
+        </View>
+      </View>
+
+      {/* ============ СМОТРЕТЬ ВМЕСТЕ ============ */}
+
+      <Pressable style={styles.watchCard} onPress={() => router.push("/watch" as any)}>
+        <View style={styles.playCircle}>
+          <Svg width={24} height={24} viewBox="0 0 24 24">
+            <Path d="M8 5v14l11-7z" fill="#FFFFFF" />
+          </Svg>
+        </View>
+
+        <View style={styles.watchText}>
+          <Text style={styles.watchTitle}>Смотреть вместе</Text>
+          <Text style={styles.watchSub}>Одно видео на двоих</Text>
+        </View>
+
+        <Svg width={22} height={22} viewBox="0 0 24 24">
+          <Path d="M9 6l6 6-6 6" fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        </Svg>
+      </Pressable>
+
+      {/* ============ ЧТО У ВАС ОБЩЕГО ============ */}
+
+      <Text style={styles.sectionLabel}>ЧТО У ВАС ОБЩЕГО</Text>
+
+      <View style={styles.grid}>
+        {SHARED.map((item) => (
+          <Pressable
+            key={item.title}
+            style={styles.gridCard}
+            onPress={() => notify("Скоро", `Раздел «${item.title}» появится в следующем обновлении`)}
           >
-            {messages.length === 0 ? (
-              <Text style={styles.chatEmpty}>Здесь пока пусто. Напишите первым.</Text>
-            ) : (
-              messages.map((message) => {
-                const mine = message.user_id === userId;
+            <View style={styles.gridIcon}>
+              <Svg width={22} height={22} viewBox="0 0 24 24">
+                <Path d={item.d} fill="none" stroke="#C23A62" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" />
+              </Svg>
+            </View>
 
-                return (
-                  <View
-                    key={message.id}
-                    style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}
-                  >
-                    <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>
-                      {message.text}
-                    </Text>
-                  </View>
-                );
-              })
-            )}
-          </ScrollView>
-        </View>
-
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.messageInput}
-            placeholder="Написать..."
-            placeholderTextColor="#b9a2aa"
-            value={messageDraft}
-            onChangeText={setMessageDraft}
-            onSubmitEditing={sendMessage}
-          />
-
-          <Pressable style={styles.sendButton} onPress={sendMessage} disabled={sending}>
-            <Text style={styles.sendIcon}>➤</Text>
+            <Text style={styles.gridTitle}>{item.title}</Text>
+            <Text style={styles.gridDesc}>{item.desc}</Text>
           </Pressable>
-        </View>
-      </ScrollView>
-    </View>
+        ))}
+      </View>
+
+      <Pressable
+        style={styles.addButton}
+        onPress={() => notify("Скоро", "Добавление появится в следующем обновлении")}
+      >
+        <Text style={styles.addText}>+  Добавить в комнату</Text>
+      </Pressable>
+    </ScrollView>
   );
 }
 
@@ -513,219 +123,187 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 22,
     paddingTop: 55,
-    paddingBottom: 40,
+    paddingBottom: 70,
     width: "100%",
     maxWidth: 520,
     alignSelf: "center",
   },
 
-  center: {
-    flex: 1,
-    backgroundColor: "#FFF1F0",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-  },
-
-  emptyEmoji: {
-    fontSize: 40,
-    marginBottom: 14,
-  },
-
-  emptyTitle: {
+  title: {
     color: "#3B1F2B",
-    fontSize: 20,
-    fontWeight: "800",
-    marginBottom: 8,
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 40,
   },
 
-  emptyText: {
+  subtitle: {
     color: "#7A5A66",
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
+    fontSize: 16,
+    marginTop: 4,
+    marginBottom: 22,
   },
 
-  playerCard: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-    borderRadius: 24,
+  pairCard: {
+    backgroundColor: "#C23A62",
+    borderRadius: 28,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  avatars: {
+    width: 90,
+    height: 58,
+  },
+
+  avatarBack: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#FFFFFF",
+    position: "absolute",
+    left: 0,
+    top: 1,
     overflow: "hidden",
-    backgroundColor: "#3B1F2B",
-    shadowColor: "#9b6676",
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    borderWidth: 3,
+    borderColor: "#C23A62",
   },
 
-  player: {
+  avatarFront: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#FFE6DB",
+    position: "absolute",
+    left: 28,
+    top: 1,
+    overflow: "hidden",
+    borderWidth: 3,
+    borderColor: "#C23A62",
+  },
+
+  avatarImage: {
     width: "100%",
     height: "100%",
   },
 
-  playerEmpty: {
+  pairText: {
     flex: 1,
+    marginLeft: 6,
+  },
+
+  pairTitle: {
+    color: "#FFFFFF",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 20,
+  },
+
+  pairSub: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    opacity: 0.85,
+    marginTop: 4,
+  },
+
+  watchCard: {
+    marginTop: 14,
+    backgroundColor: "#3B1F2B",
+    borderRadius: 28,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+
+  playCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
+    paddingLeft: 3,
   },
 
-  playerEmptyIcon: {
-    color: "#C23A62",
-    fontSize: 36,
-    marginBottom: 10,
+  watchText: {
+    flex: 1,
   },
 
-  playerEmptyText: {
-    color: "#fbe3ec",
+  watchTitle: {
+    color: "#FFFFFF",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 20,
+  },
+
+  watchSub: {
+    color: "#FFFFFF",
     fontSize: 14,
-    fontWeight: "700",
+    opacity: 0.7,
+    marginTop: 2,
   },
 
-  statusRow: {
-    alignItems: "center",
-    marginTop: 12,
-  },
-
-  statusText: {
+  sectionLabel: {
     color: "#7A5A66",
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 14,
+    fontFamily: "Manrope_700Bold",
+    letterSpacing: 0.4,
+    marginTop: 24,
+    marginBottom: 12,
   },
 
-  linkRow: {
+  grid: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 12,
-    alignItems: "center",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
   },
 
-  linkInput: {
-    flex: 1,
-    height: 46,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#E3B7C2",
-    paddingHorizontal: 14,
-    fontSize: 14,
-    color: "#3B1F2B",
-    backgroundColor: "#ffffff",
-  },
-
-  primaryButton: {
-    height: 46,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    backgroundColor: "#C23A62",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  primaryButtonText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-
-  chatCard: {
-    marginTop: 18,
-    backgroundColor: "#ffffff",
+  gridCard: {
+    width: "48%",
+    backgroundColor: "#FFFFFF",
     borderRadius: 24,
-    padding: 16,
-    height: 360,
-    shadowColor: "#9b6676",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    padding: 18,
+    minHeight: 170,
   },
 
-  chatHeader: {
-    marginBottom: 8,
-  },
-
-  chatTitle: {
-    color: "#3B1F2B",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-
-  chatList: {
-    flex: 1,
-  },
-
-  chatListContent: {
-    gap: 8,
-    paddingBottom: 6,
-  },
-
-  chatEmpty: {
-    color: "#b49ba3",
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 110,
-  },
-
-  bubble: {
-    maxWidth: "78%",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-
-  bubbleMine: {
-    alignSelf: "flex-end",
-    backgroundColor: "#C23A62",
-    borderBottomRightRadius: 4,
-  },
-
-  bubbleOther: {
-    alignSelf: "flex-start",
-    backgroundColor: "#FFE6DB",
-    borderBottomLeftRadius: 4,
-  },
-
-  bubbleText: {
-    color: "#3B1F2B",
-    fontSize: 14,
-  },
-
-  bubbleTextMine: {
-    color: "#ffffff",
-  },
-
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 12,
-  },
-
-  messageInput: {
-    flex: 1,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: "#E3B7C2",
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: "#3B1F2B",
-    backgroundColor: "#ffffff",
-  },
-
-  sendButton: {
+  gridIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#C23A62",
+    backgroundColor: "#FFE6DB",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+
+  gridTitle: {
+    color: "#3B1F2B",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 18,
+  },
+
+  gridDesc: {
+    color: "#7A5A66",
+    fontSize: 14,
+    marginTop: 4,
+    lineHeight: 19,
+  },
+
+  addButton: {
+    marginTop: 16,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: "#E3B7C2",
     alignItems: "center",
     justifyContent: "center",
   },
 
-  sendIcon: {
-    color: "#ffffff",
-    fontSize: 18,
+  addText: {
+    color: "#C23A62",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 16,
   },
 });

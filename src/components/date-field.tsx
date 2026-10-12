@@ -232,6 +232,7 @@ const styles = StyleSheet.create({
   },
 
   chipText: {
+    fontFamily: "Manrope_700Bold",
     color: "#8a6b74",
     fontSize: 13,
     fontWeight: "700",
@@ -247,6 +248,7 @@ const styles = StyleSheet.create({
   },
 
   weekText: {
+    fontFamily: "Manrope_700Bold",
     flex: 1,
     textAlign: "center",
     color: "#b49ba3",
@@ -273,6 +275,7 @@ const styles = StyleSheet.create({
   },
 
   dayText: {
+    fontFamily: "PlayfairDisplay_700Bold",
     color: "#3B1F2B",
     fontSize: 15,
     fontWeight: "600",
