@@ -1700,17 +1700,6 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-            <Pressable
-              style={[
-                styles.heartButton,
-                missLoading && styles.heartButtonDisabled,
-              ]}
-              onPress={pressMiss}
-            >
-              <Text style={styles.heartText}>♥</Text>
-            </Pressable>
-          </View>
-        </View>
 
         {/* ================================================= */}
         {/* ДНИ — ГОРИЗОНТАЛЬНАЯ ЛЕНТА */}
