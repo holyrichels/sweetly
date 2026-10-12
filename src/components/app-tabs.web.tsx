@@ -1,17 +1,21 @@
+import { useEffect, useState } from "react";
 import { Slot, usePathname, useRouter } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import Svg, { Path } from "react-native-svg";
 
+import { SWEETLY } from "@/constants/sweetly-theme";
+
+// Иконки из макета (линейные, 24x24)
 const TABS = [
-  { route: "/", label: "Главная", icon: "🏠" },
-  { route: "/room", label: "Комната", icon: "🛋️" },
-  { route: "/mood", label: "Настроение", icon: "🙂" },
-  { route: "/memories", label: "Воспоминания", icon: "📸" },
-  { route: "/profile", label: "Профиль", icon: "👤" },
+  { route: "/", label: "Главная", d: "M3 11l9-8 9 8M5 10v10h14V10" },
+  { route: "/room", label: "Комната", d: "M5 21V5a2 2 0 012-2h10a2 2 0 012 2v16M3 21h18M15 12.5h.01" },
+  { route: "/mood", label: "Настроение", d: "M3 12a9 9 0 1018 0 9 9 0 10-18 0M8 14s1.5 2.5 4 2.5S16 14 16 14M9 9.5h.01M15 9.5h.01" },
+  { route: "/memories", label: "Воспоминания", d: "M6 5h12a3 3 0 013 3v8a3 3 0 01-3 3H6a3 3 0 01-3-3V8a3 3 0 013-3zM7.5 10.5a1.5 1.5 0 103 0 1.5 1.5 0 10-3 0M21 16l-5-5-8 8" },
+  { route: "/profile", label: "Профиль", d: "M8 8a4 4 0 108 0 4 4 0 10-8 0M4 21c1-4 4.5-6 8-6s7 2 8 6" },
 ];
 
-// Отступ сверху на вебе: место под кнопки Telegram («Закрыть» и «···»),
-// которые заканчиваются примерно на 85px. У главной свой верхний отступ экрана
-// (55px против 65px у остальных), поэтому её отступ отдельный.
+// Отступ сверху на вебе: место под кнопки Telegram («Закрыть» и «···»).
+// У главной свой верхний отступ экрана, поэтому её отступ отдельный.
 const TOP_OFFSET = 20;
 const MAIN_TOP_OFFSET = 40;
 
@@ -30,6 +34,7 @@ export default function AppTabs() {
       <View style={styles.bar}>
         {TABS.map((tab) => {
           const active = pathname === tab.route;
+          const color = active ? SWEETLY.accent : SWEETLY.muted;
 
           return (
             <Pressable
@@ -37,8 +42,19 @@ export default function AppTabs() {
               style={styles.item}
               onPress={() => router.navigate(tab.route as any)}
             >
-              <Text style={[styles.icon, active && styles.iconActive]}>{tab.icon}</Text>
-              <Text style={[styles.label, active && styles.labelActive]}>{tab.label}</Text>
+              <Svg width={24} height={24} viewBox="0 0 24 24">
+                <Path
+                  d={tab.d}
+                  fill="none"
+                  stroke={color}
+                  strokeWidth={active ? 2 : 1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </Svg>
+              <Text style={[styles.label, { color, fontWeight: active ? "700" : "600" }]}>
+                {tab.label}
+              </Text>
             </Pressable>
           );
         })}
@@ -50,38 +66,34 @@ export default function AppTabs() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: SWEETLY.background,
   },
+
   content: {
     flex: 1,
   },
+
   bar: {
+    height: 88,
     flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#f0dde4",
-    paddingTop: 8,
-    paddingBottom: 14,
+    justifyContent: "space-around",
+    alignItems: "center",
+    backgroundColor: SWEETLY.card,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
   },
+
   item: {
-    flex: 1,
+    width: 66,
+    height: 60,
     alignItems: "center",
     justifyContent: "center",
+    gap: 3,
   },
-  icon: {
-    fontSize: 20,
-    opacity: 0.55,
-  },
-  iconActive: {
-    opacity: 1,
-  },
+
   label: {
-    fontSize: 10,
-    color: "#a0838c",
-    marginTop: 2,
-    fontWeight: "700",
-  },
-  labelActive: {
-    color: "#e98ca8",
+    fontSize: 11,
   },
 });
