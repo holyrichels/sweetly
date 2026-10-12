@@ -1,10 +1,10 @@
-// Цвета и размеры из макета Sweetly (вариант A · Blush)
+// Дизайн-система Sweetly, вариант «Blush». Все цвета и размеры меняются здесь.
 export const SWEETLY = {
   // Фоны
   background: '#FFF1F0',
   card: '#FFFFFF',
-  soft: '#FFE6DB',
-  softPink: '#F9D3DC',
+  peach: '#FFD9C9',
+  divider: '#F3DCDD',
 
   // Текст
   text: '#3B1F2B',
@@ -15,11 +15,14 @@ export const SWEETLY = {
   accentLight: '#E87A94',
   accentPale: '#F4B1C0',
 
-  // Линии
-  border: '#E3B7C2',
+  // Служебные
+  dashed: '#D98BA0',
+  error: '#B5304F',
+  toggleOff: '#D9C3CA',
+  plum: '#3B1F2B',
 };
 
-// Шрифты: Manrope для текста, Playfair Display для заголовков и цифр
+// Шрифты: Playfair Display для заголовков и больших цифр, Manrope для остального
 export const FONTS = {
   text: 'Manrope_500Medium',
   textBold: 'Manrope_700Bold',
@@ -27,8 +30,15 @@ export const FONTS = {
   displayItalic: 'PlayfairDisplay_600SemiBold_Italic',
 };
 
-export const RADIUS = {
-  card: 32,
-  button: 22,
-  pill: 999,
+// Размеры из макета
+export const SIZE = {
+  screenPadding: 22,
+  gap: 14,
+  cardRadius: 28,
+  smallCardRadius: 22,
+  buttonHeight: 56,
+  pillHeight: 52,
+  circleButton: 48,
+  tabBarHeight: 88,
+  minTouch: 44,
 };

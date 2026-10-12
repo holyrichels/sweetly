@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Slot, ThemeProvider, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
@@ -135,12 +135,28 @@ export default function TabLayout() {
     return startAppRealtime(session.user.id);
   }, [checked, session?.user?.id]);
 
+  const pathname = usePathname();
+
+  const router = useRouter();
+
+  // Экраны первого запуска показываются без панели вкладок
+  const ONBOARDING = ['/welcome', '/login', '/register', '/start-date', '/connect'];
+
+  const onboarding = ONBOARDING.includes(pathname);
+
+  // Не вошёл — сразу на приветствие
+  useEffect(() => {
+    if (checked && !session && pathname === '/') {
+      router.replace('/welcome' as any);
+    }
+  }, [checked, session, pathname]);
+
   if (!fontsLoaded) return null;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
-      {session ? <AppTabs /> : checked ? <Slot /> : null}
+      {session && !onboarding ? <AppTabs /> : checked ? <Slot /> : null}
     </ThemeProvider>
   );
 }
