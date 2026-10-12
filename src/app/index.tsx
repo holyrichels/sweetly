@@ -2705,6 +2705,7 @@ const styles = StyleSheet.create({
   },
 
   timerSwitcherRow: {
+    marginTop: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",

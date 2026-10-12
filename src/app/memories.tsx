@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
+import Svg, { Path } from "react-native-svg";
 
 import {
   ActivityIndicator,
@@ -16,7 +17,6 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { useVideoPlayer, VideoView } from "expo-video";
 
-import PageHeader from "@/components/page-header";
 import SecureImage from "@/components/secure-image";
 import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
@@ -279,6 +279,8 @@ export default function MemoriesScreen() {
     });
   }
 
+  const [filter, setFilter] = useState<"all" | "image" | "video">("all");
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -290,17 +292,23 @@ export default function MemoriesScreen() {
   if (!coupleId) {
     return (
       <View style={styles.center}>
-        <Text style={styles.emptyEmoji}>📸</Text>
         <Text style={styles.emptyTitle}>Воспоминаний пока нет</Text>
         <Text style={styles.emptyText}>Сначала создайте пару или присоединитесь по коду.</Text>
       </View>
     );
   }
 
-  // Группируем по годам, новые сверху
-  const years = Array.from(new Set(memories.map((m) => m.memory_date.slice(0, 4)))).sort(
-    (a, b) => Number(b) - Number(a),
+  const filtered = memories.filter(
+    (memory) => filter === "all" || memory.media_type === filter,
   );
+
+  const [featured, ...others] = filtered;
+
+  const chips: { key: "all" | "image" | "video"; label: string }[] = [
+    { key: "all", label: "Все" },
+    { key: "image", label: "Фото" },
+    { key: "video", label: "Видео" },
+  ];
 
   return (
     <>
@@ -309,31 +317,58 @@ export default function MemoriesScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <PageHeader title="Воспоминания" />
+        <View style={styles.header}>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Воспоминания</Text>
+            <Text style={styles.subtitle}>Моменты, которые вы сохранили</Text>
+          </View>
 
-        {!creating ? (
-          <Pressable style={styles.addButton} onPress={() => setCreating(true)}>
-            <Text style={styles.addButtonText}>+ Добавить воспоминание</Text>
+          <Pressable
+            style={styles.addButton}
+            onPress={() => setCreating((value) => !value)}
+          >
+            <Svg width={22} height={22} viewBox="0 0 24 24">
+              <Path d={creating ? "M6 6l12 12M18 6L6 18" : "M12 5v14M5 12h14"} fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" />
+            </Svg>
           </Pressable>
-        ) : (
+        </View>
+
+        {/* ============ ФИЛЬТРЫ ============ */}
+
+        <View style={styles.chipRow}>
+          {chips.map((chip) => {
+            const active = filter === chip.key;
+
+            return (
+              <Pressable
+                key={chip.key}
+                style={[styles.chip, active && styles.chipActive]}
+                onPress={() => setFilter(chip.key)}
+              >
+                <Text style={[styles.chipText, active && styles.chipTextActive]}>{chip.label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* ============ ФОРМА ДОБАВЛЕНИЯ ============ */}
+
+        {creating && (
           <View style={styles.formCard}>
             <Pressable style={styles.mediaBox} onPress={pickMedia}>
               {picked?.type === "image" ? (
                 <Image source={{ uri: picked.uri }} style={styles.mediaPreview} />
               ) : picked?.type === "video" ? (
-                <View style={styles.videoPicked}>
-                  <Text style={styles.playIcon}>▶</Text>
-                  <Text style={styles.videoPickedText}>Видео выбрано, нажмите, чтобы заменить</Text>
-                </View>
+                <Text style={styles.mediaHint}>Видео выбрано, нажмите, чтобы заменить</Text>
               ) : (
-                <Text style={styles.mediaHint}>📷 Выбрать фото или видео</Text>
+                <Text style={styles.mediaHint}>Выбрать фото или видео</Text>
               )}
             </Pressable>
 
             <TextInput
               style={styles.input}
               placeholder="Подпись"
-              placeholderTextColor="#b9a2aa"
+              placeholderTextColor="#B49BA3"
               value={caption}
               onChangeText={setCaption}
             />
@@ -361,37 +396,62 @@ export default function MemoriesScreen() {
           </View>
         )}
 
-        {memories.length === 0 ? (
+        {filtered.length === 0 ? (
           <Text style={styles.emptyListText}>
             Здесь будут ваши совместные фото и видео. Добавьте первое воспоминание.
           </Text>
         ) : (
-          years.map((year) => (
-            <View key={year}>
-              <Text style={styles.yearLabel}>{year}</Text>
+          <>
+            {/* ============ ГЛАВНОЕ ВОСПОМИНАНИЕ ============ */}
 
-              {memories
-                .filter((m) => m.memory_date.startsWith(year))
-                .map((memory) => (
-                  <Pressable key={memory.id} style={styles.card} onPress={() => openMemory(memory)}>
+            {featured && (
+              <Pressable style={styles.featured} onPress={() => openMemory(featured)}>
+                <View style={styles.featuredMedia}>
+                  {featured.media_type === "video" ? (
+                    <Svg width={44} height={44} viewBox="0 0 24 24">
+                      <Path d="M8 5v14l11-7z" fill="#C23A62" />
+                    </Svg>
+                  ) : (
+                    <SecureImage bucket="memories" path={featured.photo_path} style={styles.featuredImage} />
+                  )}
+                </View>
+
+                <View style={styles.featuredBody}>
+                  <View style={styles.featuredText}>
+                    <Text style={styles.featuredTitle} numberOfLines={1}>
+                      {featured.caption || "Воспоминание"}
+                    </Text>
+                    <Text style={styles.cardDate}>{formatDateRu(featured.memory_date)}</Text>
+                  </View>
+                </View>
+              </Pressable>
+            )}
+
+            {/* ============ СЕТКА ============ */}
+
+            <View style={styles.grid}>
+              {others.map((memory, index) => (
+                <Pressable key={memory.id} style={styles.card} onPress={() => openMemory(memory)}>
+                  <View style={[styles.cardMedia, index % 2 === 0 ? styles.cardMediaSoft : styles.cardMediaPink]}>
                     {memory.media_type === "video" ? (
-                      <View style={styles.videoThumb}>
-                        <Text style={styles.playIcon}>▶</Text>
-                        <Text style={styles.videoThumbText}>Видео</Text>
-                      </View>
+                      <Svg width={34} height={34} viewBox="0 0 24 24">
+                        <Path d="M8 5v14l11-7z" fill="#C23A62" />
+                      </Svg>
                     ) : (
                       <SecureImage bucket="memories" path={memory.photo_path} style={styles.cardImage} />
                     )}
+                  </View>
 
-                    <View style={styles.cardBody}>
-                      <Text style={styles.cardDate}>{formatDateRu(memory.memory_date)}</Text>
-
-                      {memory.caption ? <Text style={styles.cardCaption}>{memory.caption}</Text> : null}
-                    </View>
-                  </Pressable>
-                ))}
+                  <View style={styles.cardBody}>
+                    <Text style={styles.cardTitle} numberOfLines={1}>
+                      {memory.caption || "Воспоминание"}
+                    </Text>
+                    <Text style={styles.cardDate}>{formatDateRu(memory.memory_date)}</Text>
+                  </View>
+                </Pressable>
+              ))}
             </View>
-          ))
+          </>
         )}
       </ScrollView>
 
@@ -431,13 +491,10 @@ export default function MemoriesScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: "#FFF1F0",
-  },
+  screen: { flex: 1, backgroundColor: "#FFF1F0" },
 
   content: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 22,
     paddingTop: 55,
     paddingBottom: 70,
     width: "100%",
@@ -453,16 +510,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
 
-  emptyEmoji: {
-    fontSize: 40,
-    marginBottom: 14,
-  },
-
   emptyTitle: {
     color: "#3B1F2B",
+    fontFamily: "Manrope_700Bold",
     fontSize: 20,
-    fontWeight: "800",
     marginBottom: 8,
+    textAlign: "center",
   },
 
   emptyText: {
@@ -472,87 +525,104 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 18,
+  },
+
+  headerText: { flex: 1, paddingRight: 12 },
+
+  title: {
+    color: "#3B1F2B",
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 36,
+  },
+
+  subtitle: {
+    color: "#7A5A66",
+    fontSize: 15,
+    marginTop: 4,
+  },
+
   addButton: {
-    height: 50,
-    borderRadius: 18,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
   },
 
-  addButtonText: {
-    color: "#ffffff",
+  chipRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 18,
+  },
+
+  chip: {
+    height: 42,
+    paddingHorizontal: 20,
+    borderRadius: 21,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  chipActive: {
+    backgroundColor: "#3B1F2B",
+  },
+
+  chipText: {
+    color: "#3B1F2B",
+    fontFamily: "Manrope_700Bold",
     fontSize: 15,
-    fontWeight: "800",
+  },
+
+  chipTextActive: {
+    color: "#FFFFFF",
   },
 
   formCard: {
-    backgroundColor: "#fff",
-    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
     padding: 16,
     gap: 12,
-    marginBottom: 16,
-    shadowColor: "#9b6676",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
+    marginBottom: 18,
   },
 
   mediaBox: {
-    height: 200,
-    borderRadius: 16,
+    height: 190,
+    borderRadius: 18,
     backgroundColor: "#FFE6DB",
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
 
-  mediaPreview: {
-    width: "100%",
-    height: "100%",
-  },
+  mediaPreview: { width: "100%", height: "100%" },
 
   mediaHint: {
-    color: "#b49ba3",
-    fontSize: 15,
-    fontWeight: "700",
-  },
-
-  videoPicked: {
-    alignItems: "center",
-    gap: 8,
-  },
-
-  videoPickedText: {
-    color: "#8a6b74",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-
-  playIcon: {
-    color: "#C23A62",
-    fontSize: 34,
+    color: "#7A5A66",
+    fontSize: 14,
+    fontFamily: "Manrope_700Bold",
   },
 
   input: {
-    height: 46,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E3B7C2",
-    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#FFF1F0",
+    paddingHorizontal: 18,
     fontSize: 15,
     color: "#3B1F2B",
-    backgroundColor: "#ffffff",
   },
 
   dateField: {
-    height: 46,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: "#E3B7C2",
-    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "#FFF1F0",
+    paddingHorizontal: 18,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -561,13 +631,13 @@ const styles = StyleSheet.create({
   dateFieldText: {
     color: "#3B1F2B",
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: "Manrope_700Bold",
   },
 
   dateFieldIcon: {
-    color: "#c98aa0",
+    color: "#C23A62",
     fontSize: 14,
-    fontWeight: "800",
+    fontFamily: "Manrope_700Bold",
   },
 
   formButtons: {
@@ -577,97 +647,113 @@ const styles = StyleSheet.create({
 
   primaryButton: {
     flex: 1,
-    height: 44,
-    borderRadius: 14,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
   },
 
   primaryButtonText: {
-    color: "#ffffff",
+    color: "#FFFFFF",
     fontSize: 15,
-    fontWeight: "800",
+    fontFamily: "Manrope_700Bold",
   },
 
   secondaryButton: {
     flex: 1,
-    height: 44,
-    borderRadius: 14,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
   },
 
   secondaryButtonText: {
-    color: "#8a6b74",
+    color: "#3B1F2B",
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: "Manrope_700Bold",
   },
 
   emptyListText: {
     color: "#7A5A66",
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 22,
     textAlign: "center",
-    marginTop: 30,
-    lineHeight: 20,
+    marginTop: 40,
   },
 
-  yearLabel: {
-    color: "#7A5A66",
-    fontSize: 14,
-    fontWeight: "800",
-    marginTop: 12,
-    marginBottom: 10,
+  featured: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    overflow: "hidden",
+    marginBottom: 14,
+  },
+
+  featuredMedia: {
+    height: 200,
+    backgroundColor: "#FFE6DB",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  featuredImage: { width: "100%", height: "100%" },
+
+  featuredBody: {
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  featuredText: { flex: 1 },
+
+  featuredTitle: {
+    color: "#3B1F2B",
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 24,
+  },
+
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    rowGap: 12,
   },
 
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 22,
+    width: "48%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
     overflow: "hidden",
-    marginBottom: 14,
-    shadowColor: "#9b6676",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 2,
   },
 
-  cardImage: {
-    width: "100%",
-    aspectRatio: 4 / 3,
-  },
-
-  videoThumb: {
-    width: "100%",
-    aspectRatio: 4 / 3,
-    backgroundColor: "#3B1F2B",
+  cardMedia: {
+    height: 110,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    overflow: "hidden",
   },
 
-  videoThumbText: {
-    color: "#fbe3ec",
-    fontSize: 12,
-    fontWeight: "700",
-  },
+  cardMediaSoft: { backgroundColor: "#FFE6DB" },
+
+  cardMediaPink: { backgroundColor: "#F9D3DC" },
+
+  cardImage: { width: "100%", height: "100%" },
 
   cardBody: {
     padding: 14,
-    gap: 4,
+  },
+
+  cardTitle: {
+    color: "#3B1F2B",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 15,
   },
 
   cardDate: {
     color: "#7A5A66",
     fontSize: 12,
-    fontWeight: "700",
-  },
-
-  cardCaption: {
-    color: "#3B1F2B",
-    fontSize: 15,
-    fontWeight: "700",
+    marginTop: 3,
   },
 
   viewer: {
