@@ -13,7 +13,34 @@ import {
 
 import PageHeader from "@/components/page-header";
 import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
+import { formatDateISO } from "@/components/date-field";
 import { supabase } from "@/lib/supabase";
+
+// Цвет дня недели по настроению
+const MOOD_COLORS: Record<string, string> = {
+  "Супер": "#C23A62",
+  "Хорошо": "#E87A94",
+  "Так себе": "#F4B1C0",
+  "Грустно": "#8E4585",
+  "Злюсь": "#3B1F2B",
+};
+
+// Даты текущей недели (понедельник — воскресенье) в формате ГГГГ-ММ-ДД
+function currentWeekIso(): string[] {
+  const now = new Date();
+
+  const offset = (now.getDay() + 6) % 7;
+
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - offset);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+
+    date.setDate(monday.getDate() + index);
+
+    return formatDateISO(date);
+  });
+}
 
 const MOOD_OPTIONS = [
   { value: "Супер", d: "M7.5 13.5c1 3.5 8 3.5 9 0z" },
@@ -34,6 +61,8 @@ export default function MoodScreen() {
   const [myMood, setMyMood] = useState<string | null>(null);
 
   const [partnerMood, setPartnerMood] = useState<string | null>(null);
+
+  const [weekMoods, setWeekMoods] = useState<Record<string, string>>({});
 
   const [saving, setSaving] = useState(false);
 
@@ -125,6 +154,19 @@ export default function MoodScreen() {
 
         Alert.alert("Ошибка", error.message);
       } else {
+        // Запоминаем настроение за сегодня, чтобы неделя показывала историю
+        const today = formatDateISO(new Date());
+
+        supabase
+          .from("couple_mood_days")
+          .upsert(
+            { couple_id: coupleId, user_id: session.user.id, day: today, mood: emoji },
+            { onConflict: "couple_id,user_id,day" },
+          )
+          .then(() => {});
+
+        setWeekMoods((previous) => ({ ...previous, [today]: emoji }));
+
         // Уведомляем партнёра в Telegram, ошибка уведомления не мешает приложению
         supabase.functions
           .invoke("notify-partner", { body: { kind: "mood", mood: emoji } })
@@ -140,6 +182,28 @@ export default function MoodScreen() {
   // =========================================================
 
   const weekdayIndex = (new Date().getDay() + 6) % 7;
+
+  const weekDates = currentWeekIso();
+
+  useEffect(() => {
+    if (!coupleId || !session?.user?.id) return;
+
+    supabase
+      .from("couple_mood_days")
+      .select("day, mood")
+      .eq("user_id", session.user.id)
+      .gte("day", weekDates[0])
+      .lte("day", weekDates[6])
+      .then(({ data }) => {
+        const map: Record<string, string> = {};
+
+        (data ?? []).forEach((row: { day: string; mood: string }) => {
+          map[row.day] = row.mood;
+        });
+
+        setWeekMoods(map);
+      });
+  }, [coupleId, session?.user?.id]);
 
   if (loading) {
     return (
@@ -245,18 +309,20 @@ export default function MoodScreen() {
 
       <View style={styles.weekRow}>
         {["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((day, index) => {
-          const isToday = index === weekdayIndex;
+          const date = weekDates[index];
 
-          const filled = isToday && myMood !== null;
+          const mood = weekMoods[date];
+
+          const color = mood ? MOOD_COLORS[mood] : undefined;
+
+          const isToday = index === (new Date().getDay() + 6) % 7;
 
           return (
             <View key={day} style={styles.weekItem}>
               <View
                 style={[
                   styles.weekCircle,
-                  filled && styles.weekCircleFilled,
-                  isToday && !filled && styles.weekCircleToday,
-                  !isToday && styles.weekCircleEmpty,
+                  color ? { backgroundColor: color } : isToday ? styles.weekCircleToday : styles.weekCircleEmpty,
                 ]}
               />
 
