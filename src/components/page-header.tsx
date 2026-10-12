@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#fff5f8",
+    borderColor: "#FFF1F0",
     overflow: "hidden",
   },
 
@@ -135,14 +135,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     position: "absolute",
     left: 27,
     top: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#fff5f8",
+    borderColor: "#FFF1F0",
     overflow: "hidden",
   },
 
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   },
 
   missLabel: {
-    color: "#a0838c",
+    color: "#7A5A66",
     fontSize: 10,
     fontWeight: "700",
   },
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
 
   heartText: {
-    color: "#e98ca8",
+    color: "#C23A62",
     fontSize: 20,
   },
 });

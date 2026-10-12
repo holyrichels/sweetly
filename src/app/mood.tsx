@@ -145,7 +145,7 @@ export default function MoodScreen() {
   if (loading) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color="#e98ca8" />
+        <ActivityIndicator size="large" color="#C23A62" />
       </View>
     );
   }
@@ -246,7 +246,7 @@ export default function MoodScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
   },
 
   scrollContent: {
@@ -257,14 +257,14 @@ const styles = StyleSheet.create({
 
   loadingScreen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
   },
 
   messageScreen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   },
 
   messageTitle: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 8,
@@ -284,20 +284,20 @@ const styles = StyleSheet.create({
   },
 
   messageText: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 14,
     textAlign: "center",
     lineHeight: 20,
   },
 
   pageTitle: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 28,
     fontWeight: "800",
   },
 
   pageSubtitle: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 14,
     marginTop: 6,
     marginBottom: 20,
@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
   },
 
   partnerMoodLabel: {
-    color: "#a0838c",
+    color: "#7A5A66",
     fontSize: 12,
     fontWeight: "700",
   },
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   },
 
   sectionLabel: {
-    color: "#624850",
+    color: "#7A5A66",
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 12,
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
   },
 
   moodItemSelected: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
   },
 
   moodEmoji: {

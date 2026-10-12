@@ -383,7 +383,7 @@ export default function RoomScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#e98ca8" />
+        <ActivityIndicator size="large" color="#C23A62" />
       </View>
     );
   }
@@ -509,7 +509,7 @@ export default function RoomScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
   },
 
   content: {
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
 
   center: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
@@ -535,14 +535,14 @@ const styles = StyleSheet.create({
   },
 
   emptyTitle: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 8,
   },
 
   emptyText: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: 24,
     overflow: "hidden",
-    backgroundColor: "#35242a",
+    backgroundColor: "#3B1F2B",
     shadowColor: "#9b6676",
     shadowOpacity: 0.12,
     shadowRadius: 14,
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   },
 
   playerEmptyIcon: {
-    color: "#e98ca8",
+    color: "#C23A62",
     fontSize: 36,
     marginBottom: 10,
   },
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
   },
 
   statusText: {
-    color: "#a0838c",
+    color: "#7A5A66",
     fontSize: 12,
     fontWeight: "700",
   },
@@ -607,10 +607,10 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "#ead5dc",
+    borderColor: "#E3B7C2",
     paddingHorizontal: 14,
     fontSize: 14,
-    color: "#35242a",
+    color: "#3B1F2B",
     backgroundColor: "#ffffff",
   },
 
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     height: 46,
     paddingHorizontal: 18,
     borderRadius: 16,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
   },
 
   chatTitle: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 16,
     fontWeight: "800",
   },
@@ -677,18 +677,18 @@ const styles = StyleSheet.create({
 
   bubbleMine: {
     alignSelf: "flex-end",
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     borderBottomRightRadius: 4,
   },
 
   bubbleOther: {
     alignSelf: "flex-start",
-    backgroundColor: "#fdeef3",
+    backgroundColor: "#FFE6DB",
     borderBottomLeftRadius: 4,
   },
 
   bubbleText: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 14,
   },
 
@@ -708,10 +708,10 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#ead5dc",
+    borderColor: "#E3B7C2",
     paddingHorizontal: 16,
     fontSize: 15,
-    color: "#35242a",
+    color: "#3B1F2B",
     backgroundColor: "#ffffff",
   },
 
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
   },

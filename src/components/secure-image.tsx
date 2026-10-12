@@ -121,6 +121,6 @@ export default function SecureImage({
 
 const styles = StyleSheet.create({
   placeholder: {
-    backgroundColor: "#fdeef3",
+    backgroundColor: "#FFE6DB",
   },
 });

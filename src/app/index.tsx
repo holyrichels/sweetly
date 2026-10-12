@@ -1447,7 +1447,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color="#e98ca8" />
+        <ActivityIndicator size="large" color="#C23A62" />
       </View>
     );
   }
@@ -2114,7 +2114,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   loadingScreen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2125,7 +2125,7 @@ const styles = StyleSheet.create({
 
   authContainer: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
   },
 
   authScroll: {
@@ -2150,7 +2150,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 4,
-    borderColor: "#fff5f8",
+    borderColor: "#FFF1F0",
   },
 
   authAvatarLeft: {
@@ -2163,7 +2163,7 @@ const styles = StyleSheet.create({
   },
 
   authAvatarRight: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     transform: [
       {
         translateX: 23,
@@ -2181,7 +2181,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 34,
     fontWeight: "800",
-    color: "#35242a",
+    color: "#3B1F2B",
   },
 
   authSubtitle: {
@@ -2189,7 +2189,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 30,
     fontSize: 15,
-    color: "#92767f",
+    color: "#7A5A66",
   },
 
   authCard: {
@@ -2212,7 +2212,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 17,
     fontSize: 16,
-    color: "#35242a",
+    color: "#3B1F2B",
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#f4dce3",
@@ -2221,7 +2221,7 @@ const styles = StyleSheet.create({
   primaryButton: {
     height: 56,
     borderRadius: 18,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
     marginTop: 6,
@@ -2255,7 +2255,7 @@ const styles = StyleSheet.create({
 
   menuScreen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     paddingHorizontal: 20,
     paddingTop: 80,
   },
@@ -2272,14 +2272,14 @@ const styles = StyleSheet.create({
   },
 
   menuTitle: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 31,
     fontWeight: "800",
     lineHeight: 37,
   },
 
   menuSubtitle: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 16,
     marginTop: 10,
   },
@@ -2308,7 +2308,7 @@ const styles = StyleSheet.create({
   bigMenuTitle: {
     fontSize: 19,
     fontWeight: "800",
-    color: "#35242a",
+    color: "#3B1F2B",
   },
 
   bigMenuSubtitle: {
@@ -2320,7 +2320,7 @@ const styles = StyleSheet.create({
 
   bigMenuArrow: {
     fontSize: 28,
-    color: "#e98ca8",
+    color: "#C23A62",
   },
 
   formCard: {
@@ -2338,20 +2338,20 @@ const styles = StyleSheet.create({
 
   formTitle: {
     fontSize: 27,
-    color: "#35242a",
+    color: "#3B1F2B",
     fontWeight: "800",
     marginBottom: 20,
   },
 
   formDescription: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
   },
 
   formLabel: {
-    color: "#624850",
+    color: "#7A5A66",
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 10,
@@ -2374,8 +2374,8 @@ const styles = StyleSheet.create({
   },
 
   statusButtonActive: {
-    backgroundColor: "#e98ca8",
-    borderColor: "#e98ca8",
+    backgroundColor: "#C23A62",
+    borderColor: "#C23A62",
   },
 
   statusText: {
@@ -2411,7 +2411,7 @@ const styles = StyleSheet.create({
 
   mainScreen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
   },
 
   mainScroll: {
@@ -2444,21 +2444,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#fff5f8",
+    borderColor: "#FFF1F0",
   },
 
   avatarFront: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     position: "absolute",
     left: 27,
     top: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#fff5f8",
+    borderColor: "#FFF1F0",
   },
 
   avatarText: {
@@ -2513,7 +2513,7 @@ const styles = StyleSheet.create({
   },
 
   missLabel: {
-    color: "#a0838c",
+    color: "#7A5A66",
     fontSize: 10,
     fontWeight: "700",
   },
@@ -2547,7 +2547,7 @@ const styles = StyleSheet.create({
   },
 
   heartText: {
-    color: "#e98ca8",
+    color: "#C23A62",
     fontSize: 20,
   },
 
@@ -2562,7 +2562,7 @@ const styles = StyleSheet.create({
   todayButton: {
     alignSelf: "center",
     marginTop: 8,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     paddingHorizontal: 13,
     paddingVertical: 6,
     borderRadius: 14,
@@ -2599,7 +2599,7 @@ const styles = StyleSheet.create({
   },
 
   dayItemSelected: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
   },
 
   dayWeek: {
@@ -2627,7 +2627,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     position: "absolute",
     bottom: 5,
   },
@@ -2656,7 +2656,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#9b6676",
@@ -2674,7 +2674,7 @@ const styles = StyleSheet.create({
   },
 
   androidDateText: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 16,
   },
 
@@ -2692,7 +2692,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#ead5dc",
+    borderColor: "#E3B7C2",
     backgroundColor: "#ffffff",
     paddingHorizontal: 14,
     flexDirection: "row",
@@ -2701,7 +2701,7 @@ const styles = StyleSheet.create({
   },
 
   dateFieldText: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 16,
     fontWeight: "700",
   },
@@ -2717,7 +2717,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#f2dfe5",
+    borderColor: "#F2D5DD",
     padding: 10,
   },
 
@@ -2731,13 +2731,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
   },
 
   chipActive: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
   },
 
   chipText: {
@@ -2777,12 +2777,12 @@ const styles = StyleSheet.create({
   },
 
   dayCellActive: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     borderRadius: 20,
   },
 
   dayText: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 15,
     fontWeight: "600",
   },
@@ -2800,7 +2800,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2827,7 +2827,7 @@ const styles = StyleSheet.create({
   },
 
   modalTitle: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 19,
     fontWeight: "800",
     marginBottom: 16,
@@ -2835,7 +2835,7 @@ const styles = StyleSheet.create({
 
   modalCancelText: {
     textAlign: "center",
-    color: "#a0838c",
+    color: "#7A5A66",
     fontSize: 14,
     fontWeight: "700",
     marginTop: 14,
@@ -2871,14 +2871,14 @@ const styles = StyleSheet.create({
   },
 
   daysNumber: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 68,
     lineHeight: 74,
     fontWeight: "800",
   },
 
   daysLabel: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 15,
     fontWeight: "600",
     marginBottom: 25,
@@ -2919,7 +2919,7 @@ const styles = StyleSheet.create({
   historyLine: {
     width: "70%",
     height: 1,
-    backgroundColor: "#f2dfe5",
+    backgroundColor: "#F2D5DD",
     marginVertical: 24,
   },
 
@@ -2961,7 +2961,7 @@ const styles = StyleSheet.create({
   },
 
   timeLabel: {
-    color: "#a0838c",
+    color: "#7A5A66",
     fontSize: 10,
     fontWeight: "600",
     marginTop: 2,
@@ -3090,7 +3090,7 @@ const styles = StyleSheet.create({
   },
 
   partnerTitle: {
-    color: "#a0838c",
+    color: "#7A5A66",
     fontSize: 11,
     fontWeight: "600",
   },
@@ -3138,7 +3138,7 @@ const styles = StyleSheet.create({
   },
 
   logoutButtonText: {
-    color: "#a0838c",
+    color: "#7A5A66",
     fontSize: 13,
     fontWeight: "700",
   },

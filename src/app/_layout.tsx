@@ -1,6 +1,9 @@
 import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
+import { useFonts } from 'expo-font';
+import { Manrope_500Medium, Manrope_700Bold } from '@expo-google-fonts/manrope';
+import { PlayfairDisplay_700Bold, PlayfairDisplay_600SemiBold_Italic } from '@expo-google-fonts/playfair-display';
 import { Platform, useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
@@ -68,6 +71,14 @@ async function signInWithTelegramWeb(): Promise<void> {
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
+  // Шрифты макета: Manrope для текста, Playfair Display для заголовков
+  const [fontsLoaded] = useFonts({
+    Manrope_500Medium,
+    Manrope_700Bold,
+    PlayfairDisplay_700Bold,
+    PlayfairDisplay_600SemiBold_Italic,
+  });
+
   const [session, setSession] = useState<any>(null);
   const [checked, setChecked] = useState(false);
 
@@ -123,6 +134,8 @@ export default function TabLayout() {
 
     return startAppRealtime(session.user.id);
   }, [checked, session?.user?.id]);
+
+  if (!fontsLoaded) return null;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

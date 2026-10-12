@@ -1,18 +1,8 @@
 import { useEffect, useState } from "react";
 
-import * as Clipboard from "expo-clipboard";
+import { Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
-import {
-  Alert,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import * as Clipboard from "expo-clipboard";
 
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -43,6 +33,8 @@ function confirmAction(title: string, message: string, onConfirm: () => void) {
 export default function SettingsScreen() {
   const router = useRouter();
 
+
+
   const [passwordOpen, setPasswordOpen] = useState(false);
 
   const [newPassword, setNewPassword] = useState("");
@@ -50,6 +42,7 @@ export default function SettingsScreen() {
   const [repeatPassword, setRepeatPassword] = useState("");
 
   const [savingPassword, setSavingPassword] = useState(false);
+
 
   const [linkingTelegram, setLinkingTelegram] = useState(false);
 
@@ -72,12 +65,9 @@ export default function SettingsScreen() {
     setLinkingTelegram(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "notify-partner",
-        {
-          body: { action: "create_link_code" },
-        },
-      );
+      const { data, error } = await supabase.functions.invoke("notify-partner", {
+        body: { action: "create_link_code" },
+      });
 
       if (error || !data?.code) {
         notify("Ошибка", error?.message ?? "Не удалось создать ссылку");
@@ -115,9 +105,7 @@ export default function SettingsScreen() {
     setSavingPassword(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
 
       if (error) {
         notify("Ошибка", error.message);
@@ -150,11 +138,7 @@ export default function SettingsScreen() {
       "Удалить аккаунт?",
       "Все ваши данные будут удалены без возможности восстановления.",
       () =>
-        confirmAction(
-          "Точно удалить?",
-          "Это действие нельзя отменить.",
-          deleteAccount,
-        ),
+        confirmAction("Точно удалить?", "Это действие нельзя отменить.", deleteAccount),
     );
   }
 
@@ -193,9 +177,7 @@ export default function SettingsScreen() {
             </View>
             <View style={styles.textWrap}>
               <Text style={styles.value}>{email}</Text>
-              <Text style={styles.hint}>
-                Почта аккаунта — нажмите, чтобы скопировать
-              </Text>
+              <Text style={styles.hint}>Почта аккаунта — нажмите, чтобы скопировать</Text>
             </View>
           </Pressable>
         ) : (
@@ -295,9 +277,7 @@ export default function SettingsScreen() {
         </View>
         <View style={styles.textWrap}>
           <Text style={styles.dangerTitle}>Удалить аккаунт</Text>
-          <Text style={styles.hint}>
-            Вместе со всеми записями, без возврата
-          </Text>
+          <Text style={styles.hint}>Вместе со всеми записями, без возврата</Text>
         </View>
       </Pressable>
     </ScrollView>
@@ -307,7 +287,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
   },
 
   content: {
@@ -326,20 +306,20 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: "#e98ca8",
+    color: "#C23A62",
     fontSize: 16,
     fontWeight: "800",
   },
 
   title: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 28,
     fontWeight: "800",
     marginBottom: 8,
   },
 
   sectionLabel: {
-    color: "#624850",
+    color: "#7A5A66",
     fontSize: 14,
     fontWeight: "700",
     marginTop: 22,
@@ -374,14 +354,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#fdeef3",
+    backgroundColor: "#FFE6DB",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
 
   iconAccent: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
   },
 
   iconDanger: {
@@ -390,7 +370,7 @@ const styles = StyleSheet.create({
 
   iconText: {
     fontSize: 16,
-    color: "#35242a",
+    color: "#3B1F2B",
     fontWeight: "800",
   },
 
@@ -399,13 +379,13 @@ const styles = StyleSheet.create({
   },
 
   value: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 15,
     fontWeight: "800",
   },
 
   hint: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 12,
     marginTop: 2,
   },
@@ -430,17 +410,17 @@ const styles = StyleSheet.create({
     height: 46,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#ead5dc",
+    borderColor: "#E3B7C2",
     paddingHorizontal: 14,
     fontSize: 15,
-    color: "#35242a",
+    color: "#3B1F2B",
     backgroundColor: "#ffffff",
   },
 
   primaryButton: {
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
   },

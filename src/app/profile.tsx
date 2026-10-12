@@ -232,7 +232,7 @@ export default function ProfileScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#e98ca8" />
+        <ActivityIndicator size="large" color="#C23A62" />
       </View>
     );
   }
@@ -314,7 +314,7 @@ export default function ProfileScreen() {
               <Text style={styles.name}>{name || "Без имени"}</Text>
               <SymbolView
                 name={{ ios: "pencil", android: "edit", web: "edit" }}
-                tintColor="#e98ca8"
+                tintColor="#C23A62"
                 size={16}
               />
             </Pressable>
@@ -499,7 +499,7 @@ function Row({
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
   },
 
   content: {
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
 
   center: {
     flex: 1,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
@@ -525,21 +525,21 @@ const styles = StyleSheet.create({
   },
 
   emptyTitle: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 20,
     fontWeight: "800",
     marginBottom: 8,
   },
 
   emptyText: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
   },
 
   pageTitle: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 28,
     fontWeight: "800",
     marginBottom: 20,
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: "#fdeef3",
+    backgroundColor: "#FFE6DB",
   },
 
   avatarBadge: {
@@ -616,19 +616,19 @@ const styles = StyleSheet.create({
   },
 
   name: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 20,
     fontWeight: "800",
   },
 
   editIcon: {
-    color: "#e98ca8",
+    color: "#C23A62",
     fontSize: 16,
     fontWeight: "800",
   },
 
   email: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 13,
     marginTop: 4,
   },
@@ -642,10 +642,10 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#ead5dc",
+    borderColor: "#E3B7C2",
     paddingHorizontal: 14,
     fontSize: 16,
-    color: "#35242a",
+    color: "#3B1F2B",
     backgroundColor: "#ffffff",
   },
 
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderRadius: 14,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
   },
 
   sectionLabel: {
-    color: "#624850",
+    color: "#7A5A66",
     fontSize: 14,
     fontWeight: "700",
     marginTop: 24,
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#fdeef3",
+    backgroundColor: "#FFE6DB",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
@@ -735,13 +735,13 @@ const styles = StyleSheet.create({
   },
 
   rowTitle: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 12,
     fontWeight: "600",
   },
 
   rowValue: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 15,
     fontWeight: "800",
     marginTop: 2,
@@ -771,13 +771,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     borderRadius: 14,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
   },
 
   chipActive: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
   },
 
   chipText: {
@@ -794,7 +794,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -806,7 +806,7 @@ const styles = StyleSheet.create({
   },
 
   bigStatCard: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     borderRadius: 24,
     padding: 22,
   },
@@ -845,13 +845,13 @@ const styles = StyleSheet.create({
   },
 
   smallStatNumber: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 24,
     fontWeight: "800",
   },
 
   smallStatLabel: {
-    color: "#92767f",
+    color: "#7A5A66",
     fontSize: 12,
     fontWeight: "600",
     marginTop: 2,
@@ -873,7 +873,7 @@ const styles = StyleSheet.create({
 
   settingsTitle: {
     flex: 1,
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 16,
     fontWeight: "800",
   },

@@ -1,13 +1,6 @@
-import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import {
-    Animated,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-} from "react-native";
+import type { ReactNode } from "react";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 export function formatDateISO(date: Date) {
   const year = date.getFullYear();
@@ -61,18 +54,8 @@ export function FadeIn({ children }: { children: ReactNode }) {
 }
 
 const MONTH_NAMES = [
-  "Янв",
-  "Фев",
-  "Мар",
-  "Апр",
-  "Май",
-  "Июн",
-  "Июл",
-  "Авг",
-  "Сен",
-  "Окт",
-  "Ноя",
-  "Дек",
+  "Янв", "Фев", "Мар", "Апр", "Май", "Июн",
+  "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек",
 ];
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -225,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#f2dfe5",
+    borderColor: "#F2D5DD",
     padding: 10,
   },
 
@@ -239,13 +222,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#fff5f8",
+    backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
   },
 
   chipActive: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
   },
 
   chipText: {
@@ -285,12 +268,12 @@ const styles = StyleSheet.create({
   },
 
   dayCellActive: {
-    backgroundColor: "#e98ca8",
+    backgroundColor: "#C23A62",
     borderRadius: 20,
   },
 
   dayText: {
-    color: "#35242a",
+    color: "#3B1F2B",
     fontSize: 15,
     fontWeight: "600",
   },
