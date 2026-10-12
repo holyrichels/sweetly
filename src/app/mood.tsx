@@ -191,25 +191,25 @@ export default function MoodScreen() {
               onPress={() => selectMood(option.value)}
             >
               <View style={[styles.moodCircle, selected && styles.moodCircleActive]}>
-                <Svg width={30} height={30} viewBox="0 0 24 24">
+                <Svg width={36} height={36} viewBox="0 0 24 24">
                   <Path
                     d="M12 3a9 9 0 100 18 9 9 0 000-18z"
                     fill="none"
                     stroke={selected ? "#FFFFFF" : "#3B1F2B"}
-                    strokeWidth={1.8}
+                    strokeWidth={2.2}
                   />
                   <Path
                     d={option.d}
                     fill="none"
                     stroke={selected ? "#FFFFFF" : "#3B1F2B"}
-                    strokeWidth={1.8}
+                    strokeWidth={2.2}
                     strokeLinecap="round"
                   />
                   <Path
                     d="M9 9.5h.01M15 9.5h.01"
                     fill="none"
                     stroke={selected ? "#FFFFFF" : "#3B1F2B"}
-                    strokeWidth={2.4}
+                    strokeWidth={3}
                     strokeLinecap="round"
                   />
                 </Svg>
@@ -227,7 +227,7 @@ export default function MoodScreen() {
 
       <View style={styles.partnerCard}>
         <View style={styles.partnerCircle}>
-          <Svg width={26} height={26} viewBox="0 0 24 24">
+          <Svg width={32} height={32} viewBox="0 0 24 24">
             <Path d={partnerOption?.d ?? "M8.5 13.5s1.5 2 3.5 2 3.5-2 3.5-2"} fill="none" stroke="#C23A62" strokeWidth={1.8} strokeLinecap="round" />
             <Path d="M12 3a9 9 0 100 18 9 9 0 000-18z" fill="none" stroke="#C23A62" strokeWidth={1.8} />
           </Svg>
@@ -332,9 +332,9 @@ const styles = StyleSheet.create({
   },
 
   moodCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     backgroundColor: "#FFF1F0",
     alignItems: "center",
     justifyContent: "center",
