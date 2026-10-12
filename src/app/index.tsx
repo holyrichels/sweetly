@@ -1682,16 +1682,6 @@ export default function HomeScreen() {
         {/* ================================================= */}
 
         <View style={styles.topBar}>
-          <View style={styles.avatars}>
-            <View style={styles.avatarBack}>
-              <SecureImage bucket="avatars" path={partnerAvatarUrl} style={styles.avatarImage} fallback={<Text style={styles.avatarText}>{getInitials(partnerName)}</Text>} />
-            </View>
-
-            <View style={styles.avatarFront}>
-              <SecureImage bucket="avatars" path={myAvatarUrl} style={styles.avatarImage} fallback={<Text style={styles.avatarText}>{getInitials(myName)}</Text>} />
-            </View>
-          </View>
-
           <Pressable
             style={styles.statusPill}
             onPress={() => setStatusModalVisible(true)}

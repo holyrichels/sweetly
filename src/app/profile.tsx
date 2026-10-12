@@ -85,7 +85,9 @@ export default function ProfileScreen() {
 
   const [timersCount, setTimersCount] = useState(0);
 
-  const [missTotal, setMissTotal] = useState(0);
+  const [missMine, setMissMine] = useState(0);
+
+  const [missPartner, setMissPartner] = useState(0);
 
   const appData = useAppData();
 
@@ -102,7 +104,8 @@ export default function ProfileScreen() {
     setPartnerName(appData.partner ? appData.partner.name || "Партнёр" : null);
     setPartnerBirthday(appData.partner?.birthday ?? null);
     setTimersCount(appData.coupleId ? appData.timersCount : 0);
-    setMissTotal(appData.missMine + appData.missPartner);
+    setMissMine(appData.missMine);
+    setMissPartner(appData.missPartner);
   }, [appData]);
 
   // Сохраняем одно поле профиля. Если политики на UPDATE нет, сообщаем об этом.
@@ -435,15 +438,24 @@ export default function ProfileScreen() {
             <Text style={styles.bigStatNumber}>{togetherDays}</Text>
           </View>
 
-          <View style={styles.smallStatRow}>
-            <View style={styles.smallStatCard}>
-              <Text style={styles.smallStatNumber}>{timersCount}</Text>
-              <Text style={styles.smallStatLabel}>Таймеров</Text>
-            </View>
+          <View style={styles.missCard}>
+            <Text style={styles.missCardTitle}>СКУЧАЮ</Text>
 
-            <View style={styles.smallStatCard}>
-              <Text style={styles.smallStatNumber}>{missTotal}</Text>
-              <Text style={styles.smallStatLabel}>Скучаю</Text>
+            <View style={styles.missRow}>
+              <View style={styles.missItem}>
+                <Text style={styles.missNumber}>{missMine + missPartner}</Text>
+                <Text style={styles.missLabel}>всего</Text>
+              </View>
+
+              <View style={styles.missItem}>
+                <Text style={styles.missNumber}>{missMine}</Text>
+                <Text style={styles.missLabel}>я</Text>
+              </View>
+
+              <View style={styles.missItem}>
+                <Text style={styles.missNumber}>{missPartner}</Text>
+                <Text style={styles.missLabel}>партнёр</Text>
+              </View>
             </View>
           </View>
         </>
@@ -824,6 +836,46 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: "800",
     marginTop: 4,
+  },
+
+  missCard: {
+    backgroundColor: "#C23A62",
+    borderRadius: 24,
+    padding: 22,
+    marginTop: 10,
+  },
+
+  missCardTitle: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    opacity: 0.85,
+  },
+
+  missRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+
+  missItem: {
+    flex: 1,
+    alignItems: "center",
+  },
+
+  missNumber: {
+    color: "#ffffff",
+    fontSize: 30,
+    fontWeight: "800",
+  },
+
+  missLabel: {
+    color: "#ffffff",
+    fontSize: 12,
+    fontWeight: "600",
+    opacity: 0.85,
+    marginTop: 2,
   },
 
   smallStatRow: {
