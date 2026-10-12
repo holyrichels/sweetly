@@ -110,6 +110,9 @@ export default function TabLayout() {
 
   // Общие данные пары грузим сразу после входа, чтобы страницы открывались готовыми
   useEffect(() => {
+    // Ждём, пока проверили вход, иначе экран покажет "нет пары" до загрузки
+    if (!checked) return;
+
     if (!session?.user?.id) {
       clearAppData();
 
@@ -119,7 +122,7 @@ export default function TabLayout() {
     refreshAppData();
 
     return startAppRealtime(session.user.id);
-  }, [session?.user?.id]);
+  }, [checked, session?.user?.id]);
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>

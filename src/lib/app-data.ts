@@ -50,6 +50,10 @@ export type AppData = {
   moods: { user_id: string; mood: string }[];
   room: RoomData;
   timers: { id: string; title: string; start_date: string }[];
+  // Вход через Telegram (почты у такого аккаунта нет)
+  telegramOnly: boolean;
+  // Привязан ли Telegram к аккаунту (для уведомлений в бота)
+  telegramLinked: boolean;
 };
 
 const emptyData: AppData = {
@@ -67,6 +71,8 @@ const emptyData: AppData = {
   moods: [],
   room: null,
   timers: [],
+  telegramOnly: false,
+  telegramLinked: false,
 };
 
 let data: AppData = emptyData;
@@ -116,7 +122,9 @@ async function loadAll() {
 
     const rawEmail = session.user.email ?? null;
 
-    const email = rawEmail && !rawEmail.endsWith("@telegram.user") ? rawEmail : null;
+    const telegramOnly = !!rawEmail && rawEmail.endsWith("@telegram.user");
+
+    const email = rawEmail && !telegramOnly ? rawEmail : null;
 
     const [meRes, memberRes] = await Promise.all([
       supabase
@@ -142,8 +150,9 @@ async function loadAll() {
     const coupleId = memberRes.data?.couple_id ?? null;
 
     if (!coupleId) {
-      data = { ...emptyData, ready: true, userId: uid, email, me };
+      data = { ...emptyData, ready: true, userId: uid, email, telegramOnly, me };
       emit();
+      refreshTelegramLink();
 
       return;
     }
@@ -239,14 +248,35 @@ async function loadAll() {
       memories: (memoriesRes.data as MemoryData[]) ?? [],
       moods: (moodsRes.data as { user_id: string; mood: string }[]) ?? [],
       room: (roomRes.data as RoomData) ?? null,
+      telegramOnly,
+      telegramLinked: data.telegramLinked,
     };
 
     emit();
+    refreshTelegramLink();
   } catch (error) {
     console.log("App data load error:", error);
 
     data = { ...data, ready: true };
     emit();
+  }
+}
+
+// Статус привязки Telegram: проверяем в фоне, экран его не ждёт
+async function refreshTelegramLink() {
+  try {
+    const { data: result } = await supabase.functions.invoke("notify-partner", {
+      body: { action: "link_status" },
+    });
+
+    const linked = result?.linked === true;
+
+    if (linked !== data.telegramLinked) {
+      data = { ...data, telegramLinked: linked };
+      emit();
+    }
+  } catch (error) {
+    console.log("Telegram link status error:", error);
   }
 }
 
