@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 
+import { refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
 // Имя бота без @. Поменяй, если выбрал другой username в BotFather.
@@ -42,10 +43,6 @@ function confirmAction(title: string, message: string, onConfirm: () => void) {
 export default function SettingsScreen() {
   const router = useRouter();
 
-  const [email, setEmail] = useState<string | null>(null);
-
-  const [isTelegramOnly, setIsTelegramOnly] = useState(false);
-
   const [passwordOpen, setPasswordOpen] = useState(false);
 
   const [newPassword, setNewPassword] = useState("");
@@ -54,28 +51,20 @@ export default function SettingsScreen() {
 
   const [savingPassword, setSavingPassword] = useState(false);
 
-  const [telegramLinked, setTelegramLinked] = useState(false);
-
   const [linkingTelegram, setLinkingTelegram] = useState(false);
 
-  useEffect(() => {
-    supabase.functions
-      .invoke("notify-partner", { body: { action: "link_status" } })
-      .then(({ data }) => setTelegramLinked(data?.linked === true))
-      .catch(() => {});
-  }, []);
+  // Почта и статус Telegram берутся из общего хранилища, страница открывается сразу
+  const appData = useAppData();
 
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const raw = data.user?.email ?? null;
+  const email = appData.telegramOnly ? null : appData.email;
 
-      if (raw && raw.endsWith("@telegram.user")) {
-        setIsTelegramOnly(true);
-        setEmail(null);
-      } else {
-        setEmail(raw);
-      }
-    });
+  const isTelegramOnly = appData.telegramOnly;
+
+  const telegramLinked = appData.telegramLinked;
+
+  // Обновляем статус привязки при открытии, например после возврата из бота
+  useEffect(() => {
+    refreshAppData();
   }, []);
 
   // Создаём одноразовый код и открываем бота с ним. Бот связывает Telegram после «Старт».
