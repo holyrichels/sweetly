@@ -4,17 +4,28 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
-  Pressable,
 } from "react-native";
 
 import PageHeader from "@/components/page-header";
 import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { formatDateISO } from "@/components/date-field";
 import { supabase } from "@/lib/supabase";
+
+// На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
+function notify(title: string, message: string) {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+}
 
 // Цвет дня недели по настроению
 const MOOD_COLORS: Record<string, string> = {
@@ -63,6 +74,10 @@ export default function MoodScreen() {
   const [partnerMood, setPartnerMood] = useState<string | null>(null);
 
   const [weekMoods, setWeekMoods] = useState<Record<string, string>>({});
+
+  const [noteDraft, setNoteDraft] = useState("");
+
+  const [sharing, setSharing] = useState(false);
 
   const [saving, setSaving] = useState(false);
 
@@ -190,7 +205,7 @@ export default function MoodScreen() {
 
     supabase
       .from("couple_mood_days")
-      .select("day, mood")
+      .select("day, mood, note")
       .eq("user_id", session.user.id)
       .gte("day", weekDates[0])
       .lte("day", weekDates[6])
@@ -202,6 +217,14 @@ export default function MoodScreen() {
         });
 
         setWeekMoods(map);
+
+        const todayIso = formatDateISO(new Date());
+
+        const todayRow = (data ?? []).find(
+          (row: { day: string; note?: string | null }) => row.day === todayIso,
+        ) as { note?: string | null } | undefined;
+
+        if (todayRow?.note) setNoteDraft(todayRow.note);
       });
   }, [coupleId, session?.user?.id]);
 
@@ -232,6 +255,48 @@ export default function MoodScreen() {
   }
 
   const partnerOption = MOOD_OPTIONS.find((item) => item.value === partnerMood);
+
+  // Отправляем партнёру настроение вместе с заметкой и сохраняем заметку за день
+  async function shareMood() {
+    if (!myMood || !coupleId || !session?.user?.id || sharing) {
+      notify("Сначала выберите настроение", "Нажмите на одно из лиц выше");
+
+      return;
+    }
+
+    setSharing(true);
+
+    try {
+      const note = noteDraft.trim();
+
+      const today = formatDateISO(new Date());
+
+      const { error } = await supabase.from("couple_mood_days").upsert(
+        {
+          couple_id: coupleId,
+          user_id: session.user.id,
+          day: today,
+          mood: myMood,
+          note,
+        },
+        { onConflict: "couple_id,user_id,day" },
+      );
+
+      if (error) {
+        notify("Ошибка", error.message);
+
+        return;
+      }
+
+      await supabase.functions.invoke("notify-partner", {
+        body: { kind: "mood", mood: myMood, note },
+      });
+
+      notify("Готово", "Партнёр получил ваше настроение");
+    } finally {
+      setSharing(false);
+    }
+  }
 
   return (
     <ScrollView
@@ -286,6 +351,25 @@ export default function MoodScreen() {
           );
         })}
       </View>
+
+      {/* ============ ЗАМЕТКА И ОТПРАВКА ============ */}
+
+      <Text style={styles.sectionLabel}>ЗАМЕТКА К НАСТРОЕНИЮ</Text>
+
+      <TextInput
+        style={styles.noteInput}
+        placeholder="Что случилось сегодня?"
+        placeholderTextColor="#B49BA3"
+        value={noteDraft}
+        onChangeText={setNoteDraft}
+        maxLength={140}
+      />
+
+      <Pressable style={styles.shareButton} onPress={shareMood} disabled={sharing}>
+        <Text style={styles.shareText}>
+          {sharing ? "Отправляем..." : `Поделиться с ${partnerName}`}
+        </Text>
+      </Pressable>
 
       {/* ============ НАСТРОЕНИЕ ПАРТНЁРА ============ */}
 
@@ -420,6 +504,31 @@ const styles = StyleSheet.create({
   moodLabelActive: {
     fontFamily: "Manrope_700Bold",
     color: "#C23A62",
+  },
+
+  noteInput: {
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 20,
+    fontSize: 15,
+    color: "#3B1F2B",
+    marginTop: 8,
+  },
+
+  shareButton: {
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#C23A62",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 14,
+  },
+
+  shareText: {
+    color: "#FFFFFF",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 16,
   },
 
   partnerCard: {
