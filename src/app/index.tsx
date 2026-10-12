@@ -292,7 +292,7 @@ function TimerCircleButton({
         name={TIMER_ICONS[icon]}
         size={18}
         weight="semibold"
-        tintColor="#ffffff"
+        tintColor="#3B1F2B"
       />
     </Pressable>
   );
@@ -1682,16 +1682,7 @@ export default function HomeScreen() {
         {/* ================================================= */}
 
         <View style={styles.topBar}>
-          <Pressable
-            style={styles.statusPill}
-            onPress={() => setStatusModalVisible(true)}
-          >
-            <Text style={styles.statusPillText}>
-              {capitalizeFirst(couple.relationship_status || "влюбленные")}
-            </Text>
-
-            <Text style={styles.statusArrow}>⌄</Text>
-          </Pressable>
+          <Text style={styles.brand}>Sweetly</Text>
 
           <View style={styles.missContainer}>
             <View style={styles.missCounter}>
@@ -1808,10 +1799,43 @@ export default function HomeScreen() {
         </View>
 
         {/* ================================================= */}
-        {/* ПЕРЕКЛЮЧАТЕЛЬ ТАЙМЕРОВ */}
+        {/* ================================================= */}
+        {/* ГЛАВНАЯ КАРТОЧКА ТАЙМЕРА */}
         {/* ================================================= */}
 
-        <Text style={styles.timerActiveLabel}>{activeTimer.title}</Text>
+        <View style={styles.bigCard}>
+          <Pressable onPress={() => setStatusModalVisible(true)}>
+            <Text style={styles.bigCardTitle}>{activeTimer.title}</Text>
+          </Pressable>
+
+          <Text style={styles.bigCardNumber}>{getDaysSince(activeTimer.date)}</Text>
+
+          <Text style={styles.bigCardLabel}>
+            {activeTimer.isMain ? "дней вместе" : "дней"}
+          </Text>
+
+          <View style={styles.pillRow}>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>
+                {relationshipTime.years * 12 + relationshipTime.months} мес
+              </Text>
+            </View>
+
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>
+                {Math.floor(relationshipTime.days / 7)} нед
+              </Text>
+            </View>
+
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>{relationshipTime.days % 7} дн</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ================================================= */}
+        {/* ПЕРЕКЛЮЧАТЕЛЬ ТАЙМЕРОВ */}
+        {/* ================================================= */}
 
         <View style={styles.timerSwitcherRow}>
           <AnimatedTimerButton
@@ -1842,104 +1866,33 @@ export default function HomeScreen() {
         </View>
 
         {/* ================================================= */}
-        {/* RELATIONSHIP */}
+        {/* ДРУГИЕ ТАЙМЕРЫ */}
         {/* ================================================= */}
 
-        <View style={styles.relationshipCard}>
-          <Text style={styles.bigHeart}>♥</Text>
+        {timers.length > 1 && (
+          <View style={styles.otherBlock}>
+            <Text style={styles.otherTitle}>ДРУГИЕ ТАЙМЕРЫ</Text>
 
-          <Text style={styles.daysNumber}>
-            {getDaysSince(activeTimer.date)}
-          </Text>
+            {timers
+              .filter((timer) => timer.id !== activeTimer.id)
+              .map((timer) => (
+                <Pressable
+                  key={timer.id}
+                  style={styles.otherCard}
+                  onPress={() =>
+                    setActiveTimerIndex(timers.findIndex((item) => item.id === timer.id))
+                  }
+                >
+                  <Text style={styles.otherName}>{timer.title}</Text>
 
-          <Text style={styles.daysLabel}>
-            {getDaysSince(activeTimer.date) === 1 ? "день" : "дней"}
-            {activeTimer.isMain ? " вместе" : ""}
-          </Text>
-
-          <View style={styles.timeTogether}>
-            <View style={styles.timeMainRow}>
-              <View style={styles.timeUnit}>
-                <Text style={styles.timeNumber}>{relationshipTime.years}</Text>
-
-                <Text style={styles.timeLabel}>
-                  {relationshipTime.years === 1
-                    ? "год"
-                    : relationshipTime.years >= 2 && relationshipTime.years <= 4
-                      ? "года"
-                      : "лет"}
-                </Text>
-              </View>
-
-              <View style={styles.timeUnit}>
-                <Text style={styles.timeNumber}>{relationshipTime.months}</Text>
-
-                <Text style={styles.timeLabel}>
-                  {relationshipTime.months === 1
-                    ? "месяц"
-                    : relationshipTime.months >= 2 &&
-                        relationshipTime.months <= 4
-                      ? "месяца"
-                      : "месяцев"}
-                </Text>
-              </View>
-
-              <View style={styles.timeUnit}>
-                <Text style={styles.timeNumber}>{relationshipTime.days}</Text>
-
-                <Text style={styles.timeLabel}>
-                  {relationshipTime.days === 1
-                    ? "день"
-                    : relationshipTime.days >= 2 && relationshipTime.days <= 4
-                      ? "дня"
-                      : "дней"}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.timeSecondsRow}>
-              <View style={styles.smallTimeUnit}>
-                <Text style={styles.smallTimeNumber}>
-                  {String(relationshipTime.hours).padStart(2, "0")}
-                </Text>
-
-                <Text style={styles.smallTimeLabel}>часов</Text>
-              </View>
-
-              <Text style={styles.timeSeparator}>:</Text>
-
-              <View style={styles.smallTimeUnit}>
-                <Text style={styles.smallTimeNumber}>
-                  {String(relationshipTime.minutes).padStart(2, "0")}
-                </Text>
-
-                <Text style={styles.smallTimeLabel}>минут</Text>
-              </View>
-
-              <Text style={styles.timeSeparator}>:</Text>
-
-              <View style={styles.smallTimeUnit}>
-                <Text style={styles.smallTimeNumber}>
-                  {String(relationshipTime.seconds).padStart(2, "0")}
-                </Text>
-
-                <Text style={styles.smallTimeLabel}>секунд</Text>
-              </View>
-            </View>
+                  <Text style={styles.otherValue}>
+                    {getDaysSince(timer.date)}{" "}
+                    <Text style={styles.otherUnit}>дн</Text>
+                  </Text>
+                </Pressable>
+              ))}
           </View>
-
-          <View style={styles.historyLine} />
-
-          <Text style={styles.historyTitle}>{activeTimer.title}</Text>
-
-          <Text style={styles.historyDate}>
-            {activeTimer.date.toLocaleDateString("ru-RU", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          </Text>
-        </View>
+        )}
 
         {/* ================================================= */}
         {/* INVITE */}
@@ -2410,6 +2363,101 @@ const styles = StyleSheet.create({
     paddingBottom: 70,
   },
 
+  brand: {
+    color: "#C23A62",
+    fontFamily: "PlayfairDisplay_600SemiBold_Italic",
+    fontSize: 30,
+  },
+
+  bigCard: {
+    backgroundColor: "#C23A62",
+    borderRadius: 32,
+    paddingVertical: 26,
+    paddingHorizontal: 24,
+    marginTop: 4,
+  },
+
+  bigCardTitle: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontWeight: "600",
+    opacity: 0.92,
+  },
+
+  bigCardNumber: {
+    color: "#FFFFFF",
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 104,
+    lineHeight: 106,
+    letterSpacing: -2,
+    marginTop: 4,
+  },
+
+  bigCardLabel: {
+    color: "#FFFFFF",
+    fontSize: 17,
+    fontWeight: "600",
+  },
+
+  pillRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 14,
+  },
+
+  pill: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+
+  pillText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  otherBlock: {
+    marginTop: 16,
+    gap: 10,
+  },
+
+  otherTitle: {
+    color: "#7A5A66",
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+  },
+
+  otherCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  otherName: {
+    color: "#3B1F2B",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
+  otherValue: {
+    color: "#C23A62",
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 26,
+  },
+
+  otherUnit: {
+    color: "#7A5A66",
+    fontFamily: "Manrope_700Bold",
+    fontSize: 14,
+  },
+
   topBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -2646,7 +2694,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#C23A62",
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#9b6676",
