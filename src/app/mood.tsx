@@ -16,6 +16,7 @@ import {
 import PageHeader from "@/components/page-header";
 import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { formatDateISO } from "@/components/date-field";
+import SoloScreen from "@/components/solo-screen";
 import { supabase } from "@/lib/supabase";
 
 // На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
@@ -245,14 +246,7 @@ export default function MoodScreen() {
     );
   }
 
-  if (!coupleId) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyTitle}>Пока нет пары</Text>
-        <Text style={styles.emptyText}>Создайте пару или присоединитесь по коду на главной.</Text>
-      </View>
-    );
-  }
+  if (!coupleId) return <SoloScreen kind="mood" />;
 
   const partnerOption = MOOD_OPTIONS.find((item) => item.value === partnerMood);
 

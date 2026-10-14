@@ -90,6 +90,10 @@ export default function LoginScreen() {
         </View>
       </View>
 
+      <Pressable style={styles.forgot} onPress={() => router.push("/reset" as any)}>
+        <Text style={styles.forgotText}>Забыли пароль?</Text>
+      </Pressable>
+
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <PrimaryButton title={loading ? "Входим..." : "Войти"} onPress={submit} disabled={loading} />
@@ -181,6 +185,18 @@ const styles = StyleSheet.create({
     color: SWEETLY.muted,
     fontFamily: FONTS.textBold,
     fontSize: 13,
+  },
+
+  forgot: {
+    alignSelf: "flex-end",
+    paddingVertical: 4,
+    marginTop: -6,
+  },
+
+  forgotText: {
+    color: SWEETLY.accent,
+    fontFamily: FONTS.textBold,
+    fontSize: 14,
   },
 
   error: {

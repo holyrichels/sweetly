@@ -2,14 +2,16 @@ import { DarkTheme, DefaultTheme, Slot, ThemeProvider, usePathname, useRouter } 
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
+import { Platform, useColorScheme } from 'react-native';
 import { Manrope_500Medium, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { PlayfairDisplay_700Bold, PlayfairDisplay_600SemiBold_Italic } from '@expo-google-fonts/playfair-display';
-import { Platform, useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import AppTabs from '@/components/app-tabs';
-import { supabase } from '@/lib/supabase';
+import OfflineScreen from '@/components/offline-screen';
+import SkeletonScreen from '@/components/skeleton-screen';
 import { clearAppData, refreshAppData, startAppRealtime } from '@/lib/app-data';
+import { supabase } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -29,7 +31,6 @@ function loadTelegramScript(): Promise<void> {
 }
 
 // Вход через Telegram работает только для уже привязанного аккаунта.
-// Если привязки нет, ничего не делаем и показываем обычный экран входа.
 async function signInWithTelegramWeb(): Promise<void> {
   if (Platform.OS !== 'web') return;
 
@@ -45,10 +46,7 @@ async function signInWithTelegramWeb(): Promise<void> {
 
   const response = await fetch(`${SUPABASE_URL}/functions/v1/telegram-auth`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      apikey: SUPABASE_KEY,
-    },
+    headers: { 'Content-Type': 'application/json', apikey: SUPABASE_KEY },
     body: JSON.stringify({ initData }),
   });
 
@@ -71,7 +69,7 @@ async function signInWithTelegramWeb(): Promise<void> {
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
-  // Шрифты макета: Manrope для текста, Playfair Display для заголовков
+  // Шрифты макета
   const [fontsLoaded] = useFonts({
     Manrope_500Medium,
     Manrope_700Bold,
@@ -80,8 +78,22 @@ export default function TabLayout() {
   });
 
   const [session, setSession] = useState<any>(null);
+
   const [checked, setChecked] = useState(false);
 
+  // Нет сети: показываем экран «Нет подключения»
+  const [online, setOnline] = useState(true);
+
+  const pathname = usePathname();
+
+  const router = useRouter();
+
+  // Экраны первого запуска показываются без панели вкладок
+  const ONBOARDING = ['/welcome', '/login', '/register', '/start-date', '/connect', '/reset', '/new-password'];
+
+  const onboarding = ONBOARDING.includes(pathname);
+
+  // Вход: проверяем сессию и слушаем изменения
   useEffect(() => {
     let active = true;
 
@@ -109,8 +121,13 @@ export default function TabLayout() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+
+      // Пришли по ссылке из письма о сбросе пароля
+      if (event === 'PASSWORD_RECOVERY') {
+        router.replace('/new-password' as any);
+      }
     });
 
     return () => {
@@ -119,9 +136,32 @@ export default function TabLayout() {
     };
   }, []);
 
-  // Общие данные пары грузим сразу после входа, чтобы страницы открывались готовыми
+  // Состояние сети
   useEffect(() => {
-    // Ждём, пока проверили вход, иначе экран покажет "нет пары" до загрузки
+    if (typeof window === 'undefined') return;
+
+    const update = () => setOnline(window.navigator.onLine);
+
+    update();
+
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+
+    return () => {
+      window.removeEventListener('online', update);
+      window.removeEventListener('offline', update);
+    };
+  }, []);
+
+  // Не вошёл — сразу на приветствие
+  useEffect(() => {
+    if (checked && !session && pathname === '/') {
+      router.replace('/welcome' as any);
+    }
+  }, [checked, session, pathname]);
+
+  // Общие данные пары: грузим после входа, очищаем при выходе
+  useEffect(() => {
     if (!checked) return;
 
     if (!session?.user?.id) {
@@ -135,28 +175,21 @@ export default function TabLayout() {
     return startAppRealtime(session.user.id);
   }, [checked, session?.user?.id]);
 
-  const pathname = usePathname();
-
-  const router = useRouter();
-
-  // Экраны первого запуска показываются без панели вкладок
-  const ONBOARDING = ['/welcome', '/login', '/register', '/start-date', '/connect'];
-
-  const onboarding = ONBOARDING.includes(pathname);
-
-  // Не вошёл — сразу на приветствие
-  useEffect(() => {
-    if (checked && !session && pathname === '/') {
-      router.replace('/welcome' as any);
-    }
-  }, [checked, session, pathname]);
-
   if (!fontsLoaded) return null;
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
-      {session && !onboarding ? <AppTabs /> : checked ? <Slot /> : null}
+
+      {!online ? (
+        <OfflineScreen onRetry={() => setOnline(window.navigator.onLine)} />
+      ) : session && !onboarding ? (
+        <AppTabs />
+      ) : checked ? (
+        <Slot />
+      ) : (
+        <SkeletonScreen />
+      )}
     </ThemeProvider>
   );
 }

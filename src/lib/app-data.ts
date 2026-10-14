@@ -54,6 +54,7 @@ export type AppData = {
   telegramOnly: boolean;
   // Привязан ли Telegram к аккаунту (для уведомлений в бота)
   telegramLinked: boolean;
+  telegramUsername: string | null;
 };
 
 const emptyData: AppData = {
@@ -73,6 +74,7 @@ const emptyData: AppData = {
   timers: [],
   telegramOnly: false,
   telegramLinked: false,
+  telegramUsername: null,
 };
 
 let data: AppData = emptyData;
@@ -250,6 +252,7 @@ async function loadAll() {
       room: (roomRes.data as RoomData) ?? null,
       telegramOnly,
       telegramLinked: data.telegramLinked,
+      telegramUsername: data.telegramUsername,
     };
 
     emit();
@@ -263,7 +266,7 @@ async function loadAll() {
 }
 
 // Статус привязки Telegram: проверяем в фоне, экран его не ждёт
-async function refreshTelegramLink() {
+export async function refreshTelegramLink() {
   try {
     const { data: result } = await supabase.functions.invoke("notify-partner", {
       body: { action: "link_status" },
@@ -271,8 +274,10 @@ async function refreshTelegramLink() {
 
     const linked = result?.linked === true;
 
-    if (linked !== data.telegramLinked) {
-      data = { ...data, telegramLinked: linked };
+    const username: string | null = result?.username ?? null;
+
+    if (linked !== data.telegramLinked || username !== data.telegramUsername) {
+      data = { ...data, telegramLinked: linked, telegramUsername: username };
       emit();
     }
   } catch (error) {

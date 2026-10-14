@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { createClient } from "@supabase/supabase-js";
+import { Platform } from "react-native";
 
 const supabaseUrl = "https://lodzbjnakrweelsotnim.supabase.co";
 
@@ -10,6 +11,7 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    // В браузере читаем ссылку из письма (восстановление пароля), в приложении не нужно
+    detectSessionInUrl: Platform.OS === "web",
   },
 });

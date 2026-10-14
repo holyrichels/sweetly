@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useState } from "react";
+import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 
 import {
@@ -18,6 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useVideoPlayer, VideoView } from "expo-video";
 
 import SecureImage from "@/components/secure-image";
+import SoloScreen from "@/components/solo-screen";
 import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -74,6 +76,7 @@ function VideoPlayerView({ uri }: { uri: string }) {
 }
 
 export default function MemoriesScreen() {
+  const router = useRouter();
   const [loading, setLoading] = useState(!getAppData().ready);
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -289,14 +292,7 @@ export default function MemoriesScreen() {
     );
   }
 
-  if (!coupleId) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.emptyTitle}>Воспоминаний пока нет</Text>
-        <Text style={styles.emptyText}>Сначала создайте пару или присоединитесь по коду.</Text>
-      </View>
-    );
-  }
+  if (!coupleId) return <SoloScreen kind="memories" />;
 
   const filtered = memories.filter(
     (memory) => filter === "all" || memory.media_type === filter,
@@ -325,7 +321,7 @@ export default function MemoriesScreen() {
 
           <Pressable
             style={styles.addButton}
-            onPress={() => setCreating((value) => !value)}
+            onPress={() => router.push("/memory-new" as any)}
           >
             <Svg width={22} height={22} viewBox="0 0 24 24">
               <Path d={creating ? "M6 6l12 12M18 6L6 18" : "M12 5v14M5 12h14"} fill="none" stroke="#FFFFFF" strokeWidth={2} strokeLinecap="round" />

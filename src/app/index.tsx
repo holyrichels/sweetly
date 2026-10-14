@@ -24,6 +24,7 @@ import { SymbolView } from "expo-symbols";
 
 import SecureImage from "@/components/secure-image";
 import { getAppData, refreshAppData, useAppData, type ProfileData } from "@/lib/app-data";
+import SoloScreen from "@/components/solo-screen";
 import { supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "register";
@@ -1539,133 +1540,8 @@ export default function HomeScreen() {
   // =========================================================
 
   if (!couple) {
-    return (
-      <View style={styles.menuScreen}>
-        <View style={styles.menuHeader}>
-          <Text style={styles.menuSmallText}>Добро пожаловать ❤️</Text>
-
-          <Text style={styles.menuTitle}>Создадим ваш общий мир?</Text>
-
-          <Text style={styles.menuSubtitle}>Выберите, как начать</Text>
-        </View>
-
-        {coupleMode === "menu" && (
-          <View style={styles.menuButtons}>
-            <Pressable
-              style={styles.bigMenuButton}
-              onPress={() => setCoupleMode("create")}
-            >
-              <View>
-                <Text style={styles.bigMenuTitle}>Создать пару</Text>
-
-                <Text style={styles.bigMenuSubtitle}>
-                  Создай пространство для вас двоих
-                </Text>
-              </View>
-
-              <Text style={styles.bigMenuArrow}>→</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.bigMenuButton}
-              onPress={() => setCoupleMode("join")}
-            >
-              <View>
-                <Text style={styles.bigMenuTitle}>Ввести код</Text>
-
-                <Text style={styles.bigMenuSubtitle}>
-                  Присоединись к уже созданной паре
-                </Text>
-              </View>
-
-              <Text style={styles.bigMenuArrow}>→</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {coupleMode === "create" && (
-          <View style={styles.formCard}>
-            <Pressable onPress={() => setCoupleMode("menu")}>
-              <Text style={styles.backText}>← Назад</Text>
-            </Pressable>
-
-            <Text style={styles.formTitle}>Создать пару</Text>
-
-            <Text style={styles.formLabel}>Статус отношений</Text>
-
-            <View style={styles.statusRow}>
-              {["влюбленные", "женаты", "друзья"].map((item) => (
-                <Pressable
-                  key={item}
-                  style={[
-                    styles.statusButton,
-                    status === item && styles.statusButtonActive,
-                  ]}
-                  onPress={() => setStatus(item)}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      status === item && styles.statusTextActive,
-                    ]}
-                  >
-                    {item}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-
-            <Text style={styles.formLabel}>Дата начала отношений</Text>
-
-            <DateWheel
-              value={relationshipDate}
-              onChange={setRelationshipDate}
-            />
-
-            <Pressable style={styles.primaryButton} onPress={createCouple}>
-              <Text style={styles.primaryButtonText}>Создать пару ❤️</Text>
-            </Pressable>
-          </View>
-        )}
-
-        {coupleMode === "join" && (
-          <View style={styles.formCard}>
-            <Pressable onPress={() => setCoupleMode("menu")}>
-              <Text style={styles.backText}>← Назад</Text>
-            </Pressable>
-
-            <Text style={styles.formTitle}>Войти в пару</Text>
-
-            <Text style={styles.formDescription}>
-              Введи код, который отправил тебе партнёр.
-            </Text>
-
-            <TextInput
-              style={[styles.input, styles.codeInput]}
-              placeholder="ABC123"
-              placeholderTextColor="#b9a2aa"
-              value={inviteCode}
-              onChangeText={setInviteCode}
-              autoCapitalize="characters"
-              maxLength={6}
-            />
-
-            <Pressable style={styles.primaryButton} onPress={joinCouple}>
-              <Text style={styles.primaryButtonText}>Присоединиться ❤️</Text>
-            </Pressable>
-          </View>
-        )}
-
-        <Pressable style={styles.logoutSmall} onPress={logout}>
-          <Text style={styles.logoutSmallText}>Выйти из аккаунта</Text>
-        </Pressable>
-      </View>
-    );
+    return <SoloScreen kind="home" />;
   }
-
-  // =========================================================
-  // MAIN SCREEN
-  // =========================================================
 
   return (
     <View style={styles.mainScreen}>

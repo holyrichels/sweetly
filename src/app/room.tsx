@@ -3,6 +3,7 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "
 import Svg, { Path } from "react-native-svg";
 
 import SecureImage from "@/components/secure-image";
+import SoloScreen from "@/components/solo-screen";
 import { useAppData } from "@/lib/app-data";
 
 // На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
@@ -27,6 +28,8 @@ export default function RoomScreen() {
   const appData = useAppData();
 
   const partnerName = appData.partner?.name || "партнёром";
+
+  if (!appData.coupleId) return <SoloScreen kind="room" />;
 
   return (
     <ScrollView
