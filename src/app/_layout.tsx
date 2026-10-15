@@ -2,7 +2,7 @@ import { DarkTheme, DefaultTheme, Slot, ThemeProvider, usePathname, useRouter } 
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
 import { useFonts } from 'expo-font';
-import { Platform, useColorScheme } from 'react-native';
+import { Platform, View, useColorScheme } from 'react-native';
 import { Manrope_500Medium, Manrope_700Bold } from '@expo-google-fonts/manrope';
 import { PlayfairDisplay_700Bold, PlayfairDisplay_600SemiBold_Italic } from '@expo-google-fonts/playfair-display';
 
@@ -228,7 +228,10 @@ export default function TabLayout() {
       ) : session && !onboarding ? (
         <AppTabs />
       ) : checked ? (
-        <Slot />
+        // Экраны входа и первого запуска без вкладок: тот же отступ сверху, чтобы не закрывались кнопками Telegram
+        <View style={{ flex: 1, paddingTop: onboarding ? 62 : 0, backgroundColor: '#FFF1F0' }}>
+          <Slot />
+        </View>
       ) : (
         <SkeletonScreen />
       )}

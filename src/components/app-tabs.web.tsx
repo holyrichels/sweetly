@@ -15,8 +15,8 @@ const TABS = [
 ];
 
 // Отступ сверху на вебе: место под кнопки Telegram («Закрыть» и «···»).
-const TOP_OFFSET = 20;
-const MAIN_TOP_OFFSET = 40;
+// Одинаковый для всех страниц, как на главной.
+const TOP_OFFSET = 40;
 
 // Минимальная длина свайпа и скорость анимации
 const SWIPE_DISTANCE = 60;
@@ -27,7 +27,7 @@ export default function AppTabs() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const topOffset = pathname === "/" ? MAIN_TOP_OFFSET : TOP_OFFSET;
+  const topOffset = TOP_OFFSET;
 
   const currentIndex = TABS.findIndex((tab) => tab.route === pathname);
 
