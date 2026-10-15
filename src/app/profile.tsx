@@ -6,7 +6,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import SecureImage from "@/components/secure-image";
-import InviteLinkRow from "@/components/invite-link-row";
 import SkeletonScreen from "@/components/skeleton-screen";
 import { ScreenTitle } from "@/components/sweetly-ui";
 import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
@@ -258,8 +257,6 @@ export default function ProfileScreen() {
               <Text style={styles.soloButtonText}>Пригласить партнёра</Text>
             </Pressable>
           </View>
-
-          <InviteLinkRow code={app.couple?.invite_code} />
 
           <View style={styles.codeRow}>
             <View>

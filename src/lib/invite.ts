@@ -12,9 +12,8 @@ export function inviteLink(code: string) {
 export function shareInvite(code: string | null | undefined) {
   if (!code) return;
 
-  const text = "Присоединяйся ко мне в Sweetly ❤️";
+  // Текст и ссылка в одном сообщении: сначала текст, потом ссылка
+  const message = `Присоединяйся ко мне в Sweetly ❤️\n\n${inviteLink(code)}`;
 
-  Linking.openURL(
-    `https://t.me/share/url?url=${encodeURIComponent(inviteLink(code))}&text=${encodeURIComponent(text)}`,
-  );
+  Linking.openURL(`https://t.me/share/url?text=${encodeURIComponent(message)}`);
 }
