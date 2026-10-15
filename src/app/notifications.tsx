@@ -72,6 +72,21 @@ export default function NotificationsScreen() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  // Отвязка: показываем ошибку, если сервер не выполнил действие
+  async function removeLink() {
+    const { data, error } = await supabase.functions.invoke("notify-partner", {
+      body: { action: "unlink" },
+    });
+
+    if (error || data?.error) {
+      notify("Не получилось отвязать", error?.message ?? data?.error ?? "Попробуйте ещё раз");
+
+      return;
+    }
+
+    await refreshAppData();
+  }
+
   async function sendTest() {
     setTesting(true);
 
@@ -96,11 +111,7 @@ export default function NotificationsScreen() {
     confirmAction(
       "Отвязать Telegram?",
       "Уведомления от партнёра перестанут приходить.",
-      async () => {
-        await supabase.functions.invoke("notify-partner", { body: { action: "unlink" } });
-
-        await refreshAppData();
-      },
+      removeLink,
       "Отвязать",
     );
   }
