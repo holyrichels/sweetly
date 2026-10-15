@@ -26,6 +26,7 @@ import SecureImage from "@/components/secure-image";
 import { getAppData, refreshAppData, useAppData, type ProfileData } from "@/lib/app-data";
 import SoloScreen from "@/components/solo-screen";
 import SkeletonScreen from "@/components/skeleton-screen";
+import InviteLinkRow from "@/components/invite-link-row";
 import DayView from "@/components/day-view";
 import { logMiss } from "@/lib/miss-log";
 import StartDateCard from "@/components/start-date-card";
@@ -1801,6 +1802,8 @@ export default function HomeScreen() {
               </Text>
 
               <Text style={styles.inviteCode}>{couple.invite_code}</Text>
+
+              <InviteLinkRow code={couple.invite_code} />
 
               <Pressable style={styles.shareButton} onPress={shareInviteCode}>
                 <Text style={styles.shareButtonText}>Поделиться кодом</Text>

@@ -5,6 +5,7 @@ import * as Clipboard from "expo-clipboard";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Field, PrimaryButton, ScreenTitle, SecondaryButton } from "@/components/sweetly-ui";
+import InviteLinkRow from "@/components/invite-link-row";
 import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
 import { refreshAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -129,6 +130,8 @@ export default function ConnectScreen() {
           <PrimaryButton title="Поделиться" onPress={shareInvite} style={styles.halfButton} />
         </View>
       </View>
+
+      <InviteLinkRow code={code} />
 
       <View style={styles.divider}>
         <View style={styles.dividerLine} />
