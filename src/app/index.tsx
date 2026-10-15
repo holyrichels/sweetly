@@ -2,35 +2,34 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Svg, { Path } from "react-native-svg";
 
 import {
+  ActivityIndicator,
   Alert,
   Animated,
   Dimensions,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
-  View
+  View,
 } from "react-native";
 
 import { SymbolView } from "expo-symbols";
 
-import DayView from "@/components/day-view";
-import SkeletonScreen from "@/components/skeleton-screen";
+import SecureImage from "@/components/secure-image";
+import { getAppData, refreshAppData, useAppData, type ProfileData } from "@/lib/app-data";
 import SoloScreen from "@/components/solo-screen";
-import StartDateCard from "@/components/start-date-card";
-import {
-  getAppData,
-  refreshAppData,
-  useAppData,
-  type ProfileData,
-} from "@/lib/app-data";
+import SkeletonScreen from "@/components/skeleton-screen";
 import { shareInvite } from "@/lib/invite";
+import DayView from "@/components/day-view";
 import { logMiss } from "@/lib/miss-log";
+import StartDateCard from "@/components/start-date-card";
 import { supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "register";
@@ -94,18 +93,8 @@ function FadeIn({ children }: { children: React.ReactNode }) {
 }
 
 const MONTH_NAMES = [
-  "Янв",
-  "Фев",
-  "Мар",
-  "Апр",
-  "Май",
-  "Июн",
-  "Июл",
-  "Авг",
-  "Сен",
-  "Окт",
-  "Ноя",
-  "Дек",
+  "Янв", "Фев", "Мар", "Апр", "Май", "Июн",
+  "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек",
 ];
 
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
@@ -290,11 +279,7 @@ const TIMER_ICONS: Record<
   React.ComponentProps<typeof SymbolView>["name"]
 > = {
   back: { ios: "chevron.left", android: "chevron_left", web: "chevron_left" },
-  next: {
-    ios: "chevron.right",
-    android: "chevron_right",
-    web: "chevron_right",
-  },
+  next: { ios: "chevron.right", android: "chevron_right", web: "chevron_right" },
   edit: { ios: "pencil", android: "edit", web: "edit" },
   add: { ios: "plus", android: "add", web: "add" },
   delete: { ios: "xmark", android: "close", web: "close" },
@@ -509,9 +494,7 @@ export default function HomeScreen() {
     setLoading(!appData.ready);
 
     setSession(
-      appData.userId
-        ? { user: { id: appData.userId, email: appData.email } }
-        : null,
+      appData.userId ? { user: { id: appData.userId, email: appData.email } } : null,
     );
 
     setCouple(appData.couple);
@@ -521,11 +504,7 @@ export default function HomeScreen() {
     setProfilesList(
       [appData.me, appData.partner]
         .filter((item): item is ProfileData => item !== null)
-        .map((item) => ({
-          id: item.id,
-          name: item.name,
-          avatar_url: item.avatar_url,
-        })),
+        .map((item) => ({ id: item.id, name: item.name, avatar_url: item.avatar_url })),
     );
 
     setCustomTimers(appData.timers);
@@ -666,7 +645,7 @@ export default function HomeScreen() {
   }, [session?.user?.id, couple?.id]);
 
   // =========================================================
-  // =========================================================
+    // =========================================================
   // REALTIME: изменения профилей (аватарки и имена партнёра)
   // =========================================================
 
@@ -694,7 +673,7 @@ export default function HomeScreen() {
   }, [session?.user?.id, couple?.id]);
 
   // =========================================================
-  // =========================================================
+    // =========================================================
   // Привязка Telegram к аккаунту (только когда открыто в боте)
   // =========================================================
 
@@ -859,8 +838,7 @@ export default function HomeScreen() {
         return;
       }
 
-      if (couple?.id && session?.user?.id)
-        await logMiss(couple.id, session.user.id);
+      if (couple?.id && session?.user?.id) await logMiss(couple.id, session.user.id);
 
       // Уведомляем партнёра в Telegram
       supabase.functions
@@ -1152,12 +1130,12 @@ export default function HomeScreen() {
   const myName = session?.user?.user_metadata?.name || name || "Вы";
 
   const myAvatarUrl =
-    profilesList.find((profile) => profile.id === session?.user?.id)
-      ?.avatar_url || null;
+    profilesList.find((profile) => profile.id === session?.user?.id)?.avatar_url ||
+    null;
 
   const partnerAvatarUrl =
-    profilesList.find((profile) => profile.id !== session?.user?.id)
-      ?.avatar_url || null;
+    profilesList.find((profile) => profile.id !== session?.user?.id)?.avatar_url ||
+    null;
 
   const partnerName =
     profilesList.find((profile) => profile.id !== session?.user?.id)?.name ||
@@ -1595,6 +1573,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
+
         {/* ================================================= */}
         {/* ДНИ — ГОРИЗОНТАЛЬНАЯ ЛЕНТА */}
         {/* ================================================= */}
@@ -1689,9 +1668,7 @@ export default function HomeScreen() {
         </View>
 
         {/* ================================================= */}
-        {!isSameDate(selectedDate, new Date()) &&
-        couple?.id &&
-        session?.user?.id ? (
+        {!isSameDate(selectedDate, new Date()) && couple?.id && session?.user?.id ? (
           <DayView
             dateISO={formatDateISO(selectedDate)}
             coupleId={couple.id}
@@ -1703,106 +1680,101 @@ export default function HomeScreen() {
           />
         ) : (
           <>
-            {/* ================================================= */}
-            {/* ГЛАВНАЯ КАРТОЧКА ТАЙМЕРА */}
-            {/* ================================================= */}
+        {/* ================================================= */}
+        {/* ГЛАВНАЯ КАРТОЧКА ТАЙМЕРА */}
+        {/* ================================================= */}
 
-            <View style={styles.bigCard}>
-              <Pressable onPress={() => setStatusModalVisible(true)}>
-                <Text style={styles.bigCardTitle}>{activeTimer.title}</Text>
-              </Pressable>
+        <View style={styles.bigCard}>
+          <Pressable onPress={() => setStatusModalVisible(true)}>
+            <Text style={styles.bigCardTitle}>{activeTimer.title}</Text>
+          </Pressable>
 
-              <Text style={styles.bigCardNumber}>
-                {getDaysSince(activeTimer.date)}
+          <Text style={styles.bigCardNumber}>{getDaysSince(activeTimer.date)}</Text>
+
+          <Text style={styles.bigCardLabel}>
+            {activeTimer.isMain ? "дней вместе" : "дней"}
+          </Text>
+
+          <View style={styles.pillRow}>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>
+                {relationshipTime.years * 12 + relationshipTime.months} мес
               </Text>
-
-              <Text style={styles.bigCardLabel}>
-                {activeTimer.isMain ? "дней вместе" : "дней"}
-              </Text>
-
-              <View style={styles.pillRow}>
-                <View style={styles.pill}>
-                  <Text style={styles.pillText}>
-                    {relationshipTime.years * 12 + relationshipTime.months} мес
-                  </Text>
-                </View>
-
-                <View style={styles.pill}>
-                  <Text style={styles.pillText}>
-                    {Math.floor(relationshipTime.days / 7)} нед
-                  </Text>
-                </View>
-
-                <View style={styles.pill}>
-                  <Text style={styles.pillText}>
-                    {relationshipTime.days % 7} дн
-                  </Text>
-                </View>
-              </View>
             </View>
 
-            {/* ================================================= */}
-            {/* ПЕРЕКЛЮЧАТЕЛЬ ТАЙМЕРОВ */}
-            {/* ================================================= */}
-
-            <View style={styles.timerSwitcherRow}>
-              <AnimatedTimerButton
-                visible={clampedTimerIndex > 0}
-                onPress={() => setActiveTimerIndex((value) => value - 1)}
-                icon="back"
-              />
-
-              <View style={styles.timerFixedSlot}>
-                <TimerCircleButton icon="edit" onPress={openEditTimer} />
-              </View>
-
-              <View style={styles.timerFixedSlot}>
-                <TimerCircleButton icon="add" onPress={openCreateTimer} />
-              </View>
-
-              <AnimatedTimerButton
-                visible={!activeTimer.isMain}
-                onPress={deleteActiveTimer}
-                icon="delete"
-              />
-
-              <AnimatedTimerButton
-                visible={clampedTimerIndex < timers.length - 1}
-                onPress={() => setActiveTimerIndex((value) => value + 1)}
-                icon="next"
-              />
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>
+                {Math.floor(relationshipTime.days / 7)} нед
+              </Text>
             </View>
 
-            {/* ================================================= */}
-            {/* ДРУГИЕ ТАЙМЕРЫ */}
-            {/* ================================================= */}
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>{relationshipTime.days % 7} дн</Text>
+            </View>
+          </View>
+        </View>
 
-            {timers.length > 1 && (
-              <View style={styles.otherBlock}>
-                <Text style={styles.otherTitle}>ДРУГИЕ ТАЙМЕРЫ</Text>
+        {/* ================================================= */}
+        {/* ПЕРЕКЛЮЧАТЕЛЬ ТАЙМЕРОВ */}
+        {/* ================================================= */}
 
-                {timers
-                  .filter((timer) => timer.id !== activeTimer.id)
-                  .map((timer) => (
-                    <Pressable
-                      key={timer.id}
-                      style={styles.otherCard}
-                      onPress={() =>
-                        setActiveTimerIndex(
-                          timers.findIndex((item) => item.id === timer.id),
-                        )
-                      }
-                    >
-                      <Text style={styles.otherName}>{timer.title}</Text>
+        <View style={styles.timerSwitcherRow}>
+          <AnimatedTimerButton
+            visible={clampedTimerIndex > 0}
+            onPress={() => setActiveTimerIndex((value) => value - 1)}
+            icon="back"
+          />
 
-                      <Text style={styles.otherValue}>
-                        {getDaysSince(timer.date)}{" "}
-                        <Text style={styles.otherUnit}>дн</Text>
-                      </Text>
-                    </Pressable>
-                  ))}
-              </View>
-            )}
+          <View style={styles.timerFixedSlot}>
+            <TimerCircleButton icon="edit" onPress={openEditTimer} />
+          </View>
+
+          <View style={styles.timerFixedSlot}>
+            <TimerCircleButton icon="add" onPress={openCreateTimer} />
+          </View>
+
+          <AnimatedTimerButton
+            visible={!activeTimer.isMain}
+            onPress={deleteActiveTimer}
+            icon="delete"
+          />
+
+          <AnimatedTimerButton
+            visible={clampedTimerIndex < timers.length - 1}
+            onPress={() => setActiveTimerIndex((value) => value + 1)}
+            icon="next"
+          />
+        </View>
+
+        {/* ================================================= */}
+        {/* ДРУГИЕ ТАЙМЕРЫ */}
+        {/* ================================================= */}
+
+        {timers.length > 1 && (
+          <View style={styles.otherBlock}>
+            <Text style={styles.otherTitle}>ДРУГИЕ ТАЙМЕРЫ</Text>
+
+            {timers
+              .filter((timer) => timer.id !== activeTimer.id)
+              .map((timer) => (
+                <Pressable
+                  key={timer.id}
+                  style={styles.otherCard}
+                  onPress={() =>
+                    setActiveTimerIndex(timers.findIndex((item) => item.id === timer.id))
+                  }
+                >
+                  <Text style={styles.otherName}>{timer.title}</Text>
+
+                  <Text style={styles.otherValue}>
+                    {getDaysSince(timer.date)}{" "}
+                    <Text style={styles.otherUnit}>дн</Text>
+                  </Text>
+                </Pressable>
+              ))}
+          </View>
+        )}
+
           </>
         )}
 
@@ -1824,9 +1796,7 @@ export default function HomeScreen() {
               <Text style={styles.inviteCode}>{couple.invite_code}</Text>
 
               <Pressable style={styles.shareButton} onPress={shareInviteCode}>
-                <Text style={styles.shareButtonText}>
-                  Поделиться приглашением
-                </Text>
+                <Text style={styles.shareButtonText}>Поделиться приглашением</Text>
               </Pressable>
             </View>
           </View>
@@ -1860,6 +1830,7 @@ export default function HomeScreen() {
 
         <View style={styles.bottomArea}>
           <Text style={styles.bottomText}>Ваш маленький мир ❤️</Text>
+
         </View>
       </ScrollView>
 
