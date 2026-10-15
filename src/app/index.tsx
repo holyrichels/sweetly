@@ -1204,8 +1204,8 @@ export default function HomeScreen() {
 
   // Кнопка "Сегодня" появляется, когда лента прокручена достаточно далеко
   // влево и сегодняшний день (крайний правый элемент) уже не виден
-  const showTodayButton =
-    daysStripWidth > 0 && maxDaysScrollX - daysScrollX > DAY_ITEM_WIDTH;
+  // Кнопка «Сегодня →» появляется, когда выбран не сегодняшний день
+  const showTodayButton = !isSameDate(selectedDate, new Date());
 
   useEffect(() => {
     Animated.timing(todayButtonAnim, {
@@ -1676,7 +1676,6 @@ export default function HomeScreen() {
             partnerName={partnerName}
             myName={myName}
             startDate={couple.relationship_date ?? null}
-            onToday={goToToday}
           />
         ) : (
           <>
