@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Slot, usePathname, useRouter } from "expo-router";
-import { Animated, PanResponder, Pressable, StyleSheet, Text, View } from "react-native";
+import { Animated, PanResponder, Pressable, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { SWEETLY } from "@/constants/sweetly-theme";
@@ -92,6 +92,7 @@ export default function AppTabs() {
             <Pressable
               key={tab.route}
               style={styles.item}
+              accessibilityLabel={tab.label}
               onPress={() => router.navigate(tab.route as any)}
             >
               <Svg width={24} height={24} viewBox="0 0 24 24">
@@ -104,9 +105,6 @@ export default function AppTabs() {
                   strokeLinejoin="round"
                 />
               </Svg>
-              <Text style={[styles.label, { color, fontWeight: active ? "700" : "600" }]}>
-                {tab.label}
-              </Text>
             </Pressable>
           );
         })}
@@ -142,10 +140,5 @@ const styles = StyleSheet.create({
     height: 60,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
-  },
-
-  label: {
-    fontSize: 11,
   },
 });
