@@ -25,6 +25,9 @@ import { SymbolView } from "expo-symbols";
 import SecureImage from "@/components/secure-image";
 import { getAppData, refreshAppData, useAppData, type ProfileData } from "@/lib/app-data";
 import SoloScreen from "@/components/solo-screen";
+import DayView from "@/components/day-view";
+import { logMiss } from "@/lib/miss-log";
+import StartDateCard from "@/components/start-date-card";
 import { supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "register";
@@ -833,6 +836,8 @@ export default function HomeScreen() {
         return;
       }
 
+      if (couple?.id && session?.user?.id) await logMiss(couple.id, session.user.id);
+
       // Уведомляем партнёра в Telegram
       supabase.functions
         .invoke("notify-partner", { body: { kind: "miss" } })
@@ -1540,7 +1545,11 @@ export default function HomeScreen() {
   // =========================================================
 
   if (!couple) {
-    return <SoloScreen kind="home" />;
+    return (
+      <SoloScreen kind="home">
+        <StartDateCard />
+      </SoloScreen>
+    );
   }
 
   return (
@@ -1671,6 +1680,18 @@ export default function HomeScreen() {
         </View>
 
         {/* ================================================= */}
+        {!isSameDate(selectedDate, new Date()) && couple?.id && session?.user?.id ? (
+          <DayView
+            dateISO={formatDateISO(selectedDate)}
+            coupleId={couple.id}
+            userId={session.user.id}
+            partnerName={partnerName}
+            myName={myName}
+            startDate={couple.relationship_date ?? null}
+            onToday={goToToday}
+          />
+        ) : (
+          <>
         {/* ================================================= */}
         {/* ГЛАВНАЯ КАРТОЧКА ТАЙМЕРА */}
         {/* ================================================= */}
@@ -1764,6 +1785,9 @@ export default function HomeScreen() {
                 </Pressable>
               ))}
           </View>
+        )}
+
+          </>
         )}
 
         {/* ================================================= */}

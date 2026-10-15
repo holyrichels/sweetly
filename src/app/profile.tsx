@@ -12,6 +12,7 @@ import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { notify } from "@/lib/dialogs";
 import { shareInvite } from "@/lib/invite";
+import { logMiss } from "@/lib/miss-log";
 import { supabase } from "@/lib/supabase";
 
 function daysSince(value?: string | null) {
@@ -116,6 +117,8 @@ export default function ProfileScreen() {
 
         return;
       }
+
+      await logMiss(app.coupleId, app.userId ?? "");
 
       supabase.functions.invoke("notify-partner", { body: { kind: "miss" } }).catch(() => {});
 

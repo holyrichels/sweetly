@@ -370,8 +370,9 @@ export default function MoodScreen() {
       <View style={styles.partnerCard}>
         <View style={styles.partnerCircle}>
           <Svg width={32} height={32} viewBox="0 0 24 24">
-            <Path d={partnerOption?.d ?? "M8.5 13.5s1.5 2 3.5 2 3.5-2 3.5-2"} fill="none" stroke="#C23A62" strokeWidth={1.8} strokeLinecap="round" />
-            <Path d="M12 3a9 9 0 100 18 9 9 0 000-18z" fill="none" stroke="#C23A62" strokeWidth={1.8} />
+            <Path d="M12 3a9 9 0 100 18 9 9 0 000-18z" fill="none" stroke="#C23A62" strokeWidth={2.2} />
+            <Path d={partnerOption?.d ?? "M8.5 13.5s1.5 2 3.5 2 3.5-2 3.5-2"} fill="none" stroke="#C23A62" strokeWidth={2.2} strokeLinecap="round" />
+            <Path d="M9 9.5h.01M15 9.5h.01" fill="none" stroke="#C23A62" strokeWidth={3} strokeLinecap="round" />
           </Svg>
         </View>
 

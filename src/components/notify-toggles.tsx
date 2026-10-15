@@ -15,12 +15,14 @@ export default function NotifyToggles() {
 
   const [mood, setMood] = useState(true);
 
+  const [dates, setDates] = useState(true);
+
   useEffect(() => {
     if (!app.userId) return;
 
     supabase
       .from("profiles")
-      .select("notify_miss, notify_mood")
+      .select("notify_miss, notify_mood, notify_dates")
       .eq("id", app.userId)
       .maybeSingle()
       .then(({ data }) => {
@@ -28,13 +30,14 @@ export default function NotifyToggles() {
 
         setMiss(data.notify_miss !== false);
         setMood(data.notify_mood !== false);
+        setDates(data.notify_dates !== false);
       });
   }, [app.userId]);
 
-  async function change(field: "notify_miss" | "notify_mood", value: boolean) {
+  async function change(field: "notify_miss" | "notify_mood" | "notify_dates", value: boolean) {
     if (!app.userId) return;
 
-    const setter = field === "notify_miss" ? setMiss : setMood;
+    const setter = field === "notify_miss" ? setMiss : field === "notify_mood" ? setMood : setDates;
 
     setter(value);
 
@@ -47,6 +50,7 @@ export default function NotifyToggles() {
   const rows = [
     { title: "Партнёр скучает", sub: "Когда он нажимает «Скучаю»", value: miss, field: "notify_miss" as const },
     { title: "Настроение партнёра", sub: "Когда он отмечает настроение", value: mood, field: "notify_mood" as const },
+    { title: "Даты и годовщины", sub: "Каждый месяц в день начала отношений", value: dates, field: "notify_dates" as const },
   ];
 
   return (

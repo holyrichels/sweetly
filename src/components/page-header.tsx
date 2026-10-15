@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Alert, Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import SecureImage from "@/components/secure-image";
+import { logMiss } from "@/lib/miss-log";
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
@@ -53,6 +54,8 @@ export default function PageHeader({ title }: { title: string }) {
 
         return;
       }
+
+      if (coupleId && userId) await logMiss(coupleId, userId);
 
       // Уведомляем партнёра в Telegram
       supabase.functions

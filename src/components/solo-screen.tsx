@@ -60,12 +60,14 @@ export default function SoloScreen({ kind, children }: { kind: Kind; children?: 
 
       {children}
 
-      <View style={styles.card}>
-        <Text style={styles.heading}>{content.heading}</Text>
-        <Text style={styles.text}>{content.text}</Text>
+      {!children && (
+        <View style={styles.card}>
+          <Text style={styles.heading}>{content.heading}</Text>
+          <Text style={styles.text}>{content.text}</Text>
 
-        <PrimaryButton title={content.cta} onPress={() => router.push("/start-date" as any)} style={styles.cta} />
-      </View>
+          <PrimaryButton title={content.cta} onPress={() => router.push("/start-date" as any)} style={styles.cta} />
+        </View>
+      )}
 
       {content.list.length > 0 && (
         <View>
