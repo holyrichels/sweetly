@@ -807,12 +807,14 @@ const styles = StyleSheet.create({
   linkRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     marginTop: 22,
+    width: "100%",
   },
 
   linkInput: {
     flex: 1,
+    minWidth: 0,
     height: 52,
     borderRadius: 26,
     backgroundColor: "#FFFFFF",
@@ -823,7 +825,8 @@ const styles = StyleSheet.create({
 
   connectButton: {
     height: 52,
-    paddingHorizontal: 26,
+    paddingHorizontal: 20,
+    flexShrink: 0,
     borderRadius: 26,
     backgroundColor: "#3B1F2B",
     alignItems: "center",
