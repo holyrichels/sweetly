@@ -1,3 +1,4 @@
+import SkeletonScreen from "@/components/skeleton-screen";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
@@ -477,13 +478,7 @@ export default function WatchScreen() {
     return `${minutes}:${seconds}`;
   }
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#C23A62" />
-      </View>
-    );
-  }
+  if (loading) return <SkeletonScreen />;
 
   if (!coupleId) {
     return (

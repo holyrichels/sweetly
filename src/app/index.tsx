@@ -25,6 +25,7 @@ import { SymbolView } from "expo-symbols";
 import SecureImage from "@/components/secure-image";
 import { getAppData, refreshAppData, useAppData, type ProfileData } from "@/lib/app-data";
 import SoloScreen from "@/components/solo-screen";
+import SkeletonScreen from "@/components/skeleton-screen";
 import DayView from "@/components/day-view";
 import { logMiss } from "@/lib/miss-log";
 import StartDateCard from "@/components/start-date-card";
@@ -1451,13 +1452,7 @@ export default function HomeScreen() {
   // LOADING
   // =========================================================
 
-  if (loading) {
-    return (
-      <View style={styles.loadingScreen}>
-        <ActivityIndicator size="large" color="#C23A62" />
-      </View>
-    );
-  }
+  if (loading) return <SkeletonScreen />;
 
   // =========================================================
   // AUTH SCREEN

@@ -19,6 +19,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useVideoPlayer, VideoView } from "expo-video";
 
 import SecureImage from "@/components/secure-image";
+import SkeletonScreen from "@/components/skeleton-screen";
 import SoloScreen from "@/components/solo-screen";
 import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
@@ -284,13 +285,7 @@ export default function MemoriesScreen() {
 
   const [filter, setFilter] = useState<"all" | "image" | "video">("all");
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#C23A62" />
-      </View>
-    );
-  }
+  if (loading) return <SkeletonScreen />;
 
   if (!coupleId) return <SoloScreen kind="memories" />;
 

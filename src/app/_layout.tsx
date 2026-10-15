@@ -11,6 +11,7 @@ import AppTabs from '@/components/app-tabs';
 import OfflineScreen from '@/components/offline-screen';
 import SkeletonScreen from '@/components/skeleton-screen';
 import { clearAppData, refreshAppData, startAppRealtime } from '@/lib/app-data';
+import { readInviteFromTelegram, savePendingInvite, getPendingInvite } from '@/lib/invite-link';
 import { supabase } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
@@ -89,7 +90,7 @@ export default function TabLayout() {
   const router = useRouter();
 
   // Экраны первого запуска показываются без панели вкладок
-  const ONBOARDING = ['/welcome', '/login', '/register', '/start-date', '/connect', '/reset', '/new-password'];
+  const ONBOARDING = ['/welcome', '/login', '/register', '/start-date', '/connect', '/reset', '/new-password', '/invite'];
 
   const onboarding = ONBOARDING.includes(pathname);
 
@@ -152,6 +153,47 @@ export default function TabLayout() {
       window.removeEventListener('offline', update);
     };
   }, []);
+
+  // Открыли по ссылке-приглашению: запоминаем код и показываем приглашение
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    let tries = 0;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    // Telegram загружается не сразу, поэтому проверяем несколько секунд
+    const check = () => {
+      const code = readInviteFromTelegram();
+
+      if (code) {
+        savePendingInvite(code);
+
+        if (pathname !== '/invite') router.replace('/invite' as any);
+
+        return;
+      }
+
+      tries += 1;
+
+      if (tries < 20) timer = setTimeout(check, 150);
+    };
+
+    check();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, []);
+
+  // Есть непринятое приглашение (например, после регистрации): показываем его
+  useEffect(() => {
+    if (!checked) return;
+
+    if (getPendingInvite() && pathname !== '/invite') {
+      router.replace('/invite' as any);
+    }
+  }, [checked, pathname]);
 
   // Не вошёл — сразу на приветствие
   useEffect(() => {

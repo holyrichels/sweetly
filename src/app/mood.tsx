@@ -1,3 +1,4 @@
+import SkeletonScreen from "@/components/skeleton-screen";
 import Svg, { Path } from "react-native-svg";
 import { useEffect, useLayoutEffect, useState } from "react";
 
@@ -229,13 +230,7 @@ export default function MoodScreen() {
       });
   }, [coupleId, session?.user?.id]);
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#C23A62" />
-      </View>
-    );
-  }
+  if (loading) return <SkeletonScreen />;
 
   if (!session) {
     return (
