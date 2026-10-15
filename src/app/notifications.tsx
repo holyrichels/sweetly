@@ -74,12 +74,13 @@ export default function NotificationsScreen() {
 
   // Отвязка: показываем ошибку, если сервер не выполнил действие
   async function removeLink() {
-    const { data, error } = await supabase.functions.invoke("notify-partner", {
-      body: { action: "unlink" },
-    });
+    if (!app.userId) return;
 
-    if (error || data?.error) {
-      notify("Не получилось отвязать", error?.message ?? data?.error ?? "Попробуйте ещё раз");
+    // Удаляем свою связку напрямую: правило доступа разрешает только свою строку
+    const { error } = await supabase.from("telegram_links").delete().eq("user_id", app.userId);
+
+    if (error) {
+      notify("Не получилось отвязать", error.message);
 
       return;
     }
