@@ -7,6 +7,7 @@ import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-na
 import { Field, PrimaryButton, ScreenTitle, SecondaryButton } from "@/components/sweetly-ui";
 import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
 import { refreshAppData } from "@/lib/app-data";
+import { shareInvite } from "@/lib/invite";
 import { supabase } from "@/lib/supabase";
 
 // Имя бота без @. Должно совпадать с настройками.
@@ -63,17 +64,9 @@ export default function ConnectScreen() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // Ссылка-приглашение открывает бота и приложение с кодом
-  function shareInvite() {
-    if (!code) return;
-
-    const link = `https://t.me/${BOT_USERNAME}?startapp=${code}`;
-
-    const text = "Присоединяйся ко мне в Sweetly ❤️";
-
-    Linking.openURL(
-      `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`,
-    );
+  // Тот же текст и ссылка, что на главной: сначала текст, потом ссылка
+  function shareInviteLink() {
+    shareInvite(code);
   }
 
   async function join() {
@@ -126,7 +119,7 @@ export default function ConnectScreen() {
             style={styles.halfButton}
           />
 
-          <PrimaryButton title="Поделиться" onPress={shareInvite} style={styles.halfButton} />
+          <PrimaryButton title="Поделиться" onPress={shareInviteLink} style={styles.halfButton} />
         </View>
       </View>
 
