@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import Svg, { Path } from "react-native-svg";
 
 import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
@@ -76,7 +77,16 @@ export default function SoloScreen({ kind, children }: { kind: Kind; children?: 
           <View style={styles.list}>
             {content.list.map((item, index) => (
               <View key={item} style={[styles.row, index < content.list.length - 1 && styles.border]}>
-                <Text style={styles.rowText}>{item}</Text>
+                <View style={styles.lockCircle}>
+                  <Svg width={18} height={18} viewBox="0 0 24 24">
+                    <Path d="M6 11h12v9H6zM8 11V8a4 4 0 118 0v3" fill="none" stroke={SWEETLY.muted} strokeWidth={1.8} strokeLinejoin="round" />
+                  </Svg>
+                </View>
+
+                <View style={styles.flex}>
+                  <Text style={styles.rowText}>{item}</Text>
+                  <Text style={styles.rowHint}>Откроется вдвоём</Text>
+                </View>
               </View>
             ))}
           </View>
@@ -142,7 +152,10 @@ const styles = StyleSheet.create({
 
   row: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
 
   border: {
@@ -151,10 +164,28 @@ const styles = StyleSheet.create({
   },
 
   rowText: {
-    color: SWEETLY.text,
+    color: SWEETLY.muted,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
+
+  rowHint: {
+    color: SWEETLY.muted,
+    fontFamily: FONTS.text,
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  lockCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: SWEETLY.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  flex: { flex: 1 },
 
   link: {
     alignSelf: "center",

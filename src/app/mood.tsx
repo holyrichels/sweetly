@@ -17,7 +17,7 @@ import {
 import PageHeader from "@/components/page-header";
 import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { formatDateISO } from "@/components/date-field";
-import SoloScreen from "@/components/solo-screen";
+import SoloMood from "@/components/solo-mood";
 import { supabase } from "@/lib/supabase";
 
 // На вебе многокнопочный Alert не показывается, поэтому там используем окна браузера
@@ -241,7 +241,7 @@ export default function MoodScreen() {
     );
   }
 
-  if (!coupleId) return <SoloScreen kind="mood" />;
+  if (!coupleId) return <SoloMood />;
 
   const partnerOption = MOOD_OPTIONS.find((item) => item.value === partnerMood);
 

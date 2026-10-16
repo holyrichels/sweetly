@@ -24,12 +24,11 @@ import { SymbolView } from "expo-symbols";
 
 import SecureImage from "@/components/secure-image";
 import { getAppData, refreshAppData, useAppData, type ProfileData } from "@/lib/app-data";
-import SoloScreen from "@/components/solo-screen";
+import SoloHome from "@/components/solo-home";
 import SkeletonScreen from "@/components/skeleton-screen";
 import { shareInvite } from "@/lib/invite";
 import DayView from "@/components/day-view";
 import { logMiss } from "@/lib/miss-log";
-import StartDateCard from "@/components/start-date-card";
 import { supabase } from "@/lib/supabase";
 
 type AuthMode = "login" | "register";
@@ -1536,9 +1535,7 @@ export default function HomeScreen() {
 
   if (!couple) {
     return (
-      <SoloScreen kind="home">
-        <StartDateCard />
-      </SoloScreen>
+      <SoloHome />
     );
   }
 

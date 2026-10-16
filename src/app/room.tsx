@@ -3,7 +3,7 @@ import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "
 import Svg, { Path } from "react-native-svg";
 
 import SecureImage from "@/components/secure-image";
-import SoloScreen from "@/components/solo-screen";
+import SoloRoom from "@/components/solo-room";
 import SkeletonScreen from "@/components/skeleton-screen";
 import { useAppData } from "@/lib/app-data";
 
@@ -17,10 +17,10 @@ function notify(title: string, message: string) {
 }
 
 const SHARED = [
-  { title: "Планы", desc: "Что хотите сделать вместе", d: "M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zM3 10h18M8 3v4M16 3v4" },
-  { title: "Желания", desc: "Подарки и мечты друг друга", d: "M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7c-3 0-4-4-1.5-4S12 7 12 7zM12 7c3 0 4-4 1.5-4S12 7 12 7z" },
-  { title: "Места", desc: "Куда съездить и где побывать", d: "M12 21s-6-5.5-6-11a6 6 0 0112 0c0 5.5-6 11-6 11zM10 10a2 2 0 104 0 2 2 0 10-4 0" },
-  { title: "Заметки", desc: "Мелочи, которые важно помнить", d: "M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5" },
+  { title: "Планы", route: "/room-plans", desc: "Что хотите сделать вместе", d: "M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zM3 10h18M8 3v4M16 3v4" },
+  { title: "Желания", route: "/room-wishes", desc: "Подарки и мечты друг друга", d: "M4 10h16v10H4zM3 7h18v3H3zM12 7v13M12 7c-3 0-4-4-1.5-4S12 7 12 7zM12 7c3 0 4-4 1.5-4S12 7 12 7z" },
+  { title: "Места", route: "/room-places", desc: "Куда съездить и где побывать", d: "M12 21s-6-5.5-6-11a6 6 0 0112 0c0 5.5-6 11-6 11zM10 10a2 2 0 104 0 2 2 0 10-4 0" },
+  { title: "Заметки", route: "/room-notes", desc: "Мелочи, которые важно помнить", d: "M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5" },
 ];
 
 export default function RoomScreen() {
@@ -32,7 +32,7 @@ export default function RoomScreen() {
 
   if (!appData.ready) return <SkeletonScreen />;
 
-  if (!appData.coupleId) return <SoloScreen kind="room" />;
+  if (!appData.coupleId) return <SoloRoom />;
 
   return (
     <ScrollView
@@ -98,7 +98,7 @@ export default function RoomScreen() {
           <Pressable
             key={item.title}
             style={styles.gridCard}
-            onPress={() => notify("Скоро", `Раздел «${item.title}» появится в следующем обновлении`)}
+            onPress={() => router.push(item.route as any)}
           >
             <View style={styles.gridIcon}>
               <Svg width={22} height={22} viewBox="0 0 24 24">

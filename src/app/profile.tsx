@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import SecureImage from "@/components/secure-image";
+import SoloProfile from "@/components/solo-profile";
 import SkeletonScreen from "@/components/skeleton-screen";
 import { ScreenTitle } from "@/components/sweetly-ui";
 import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
@@ -41,6 +42,8 @@ export default function ProfileScreen() {
   if (!app.ready) return <SkeletonScreen />;
 
   const hasPartner = !!app.partner;
+
+  if (!hasPartner) return <SoloProfile />;
 
   const days = daysSince(app.couple?.relationship_date);
 

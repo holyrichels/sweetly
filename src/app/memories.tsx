@@ -20,7 +20,7 @@ import { useVideoPlayer, VideoView } from "expo-video";
 
 import SecureImage from "@/components/secure-image";
 import SkeletonScreen from "@/components/skeleton-screen";
-import SoloScreen from "@/components/solo-screen";
+import SoloMemories from "@/components/solo-memories";
 import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import { getAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -287,7 +287,7 @@ export default function MemoriesScreen() {
 
   if (loading) return <SkeletonScreen />;
 
-  if (!coupleId) return <SoloScreen kind="memories" />;
+  if (!coupleId) return <SoloMemories />;
 
   const filtered = memories.filter(
     (memory) => filter === "all" || memory.media_type === filter,
