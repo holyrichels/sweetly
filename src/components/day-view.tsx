@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 
 import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
@@ -12,18 +12,14 @@ type MemoryRow = { id: string; caption: string; media_type: string };
 
 type EventKey = "mood" | "miss" | "memory";
 
-const EVENTS: { key: EventKey; label: string }[] = [
-  { key: "mood", label: "Настроение" },
-  { key: "miss", label: "Скучаю" },
-  { key: "memory", label: "Воспоминание" },
-];
-
 function capitalize(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-// Иконка события в круглой кнопке (контурная, 24 px)
-function EventIcon({ kind, color }: { kind: EventKey; color: string }) {
+// Иконка события (контурная, 24 px) в круглом фоне
+function EventIcon({ kind }: { kind: EventKey }) {
+  const color = SWEETLY.accent;
+
   if (kind === "mood") {
     return (
       <Svg width={24} height={24} viewBox="0 0 24 24">
@@ -57,7 +53,38 @@ function EventIcon({ kind, color }: { kind: EventKey; color: string }) {
   );
 }
 
-// Карточка выбранного дня: круглые кнопки событий и подробности
+// Одна строка события: круглая иконка, название и описание
+function EventRow({
+  kind,
+  title,
+  lines,
+  last,
+}: {
+  kind: EventKey;
+  title: string;
+  lines: string[];
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.row, !last && styles.rowBorder]}>
+      <View style={styles.iconCircle}>
+        <EventIcon kind={kind} />
+      </View>
+
+      <View style={styles.rowText}>
+        <Text style={styles.rowTitle}>{title}</Text>
+
+        {lines.map((line, index) => (
+          <Text key={index} style={styles.rowSub}>
+            {line}
+          </Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// Карточка выбранного дня: заголовок с датой и три события списком
 export default function DayView({
   dateISO,
   coupleId,
@@ -80,8 +107,6 @@ export default function DayView({
   const [partnerMisses, setPartnerMisses] = useState(0);
 
   const [memories, setMemories] = useState<MemoryRow[]>([]);
-
-  const [active, setActive] = useState<EventKey>("mood");
 
   useEffect(() => {
     let alive = true;
@@ -129,11 +154,20 @@ export default function DayView({
 
   const moodName = (value: string) => (value === userId ? myName : partnerName);
 
-  const counts: Record<EventKey, number> = {
-    mood: moods.length,
-    miss: myMisses + partnerMisses,
-    memory: memories.length,
-  };
+  const moodLines =
+    moods.length === 0
+      ? ["Никто не отмечал настроение"]
+      : moods.map((row) => `${moodName(row.user_id)} — ${row.mood}${row.note ? ` · «${row.note}»` : ""}`);
+
+  const missLines =
+    myMisses + partnerMisses === 0
+      ? ["В этот день не нажимали"]
+      : [`${myName} — ${myMisses} раз · ${partnerName} — ${partnerMisses} раз`];
+
+  const memoryLines =
+    memories.length === 0
+      ? ["В этот день ничего не добавляли"]
+      : [memories.map((memory) => memory.caption || (memory.media_type === "video" ? "Видео" : "Фото")).join(" · ")];
 
   return (
     <View style={styles.wrap}>
@@ -147,59 +181,12 @@ export default function DayView({
         </Text>
       </View>
 
-      <Text style={styles.title}>{title}</Text>
-
-      <View style={styles.eventsRow}>
-        {EVENTS.map((event) => {
-          const selected = active === event.key;
-
-          return (
-            <Pressable key={event.key} style={styles.eventItem} onPress={() => setActive(event.key)}>
-              <View style={[styles.eventCircle, selected && styles.eventCircleActive]}>
-                <EventIcon kind={event.key} color={selected ? "#FFFFFF" : SWEETLY.accent} />
-              </View>
-
-              <Text style={styles.eventLabel}>
-                {event.label}
-                {counts[event.key] > 0 ? ` · ${counts[event.key]}` : ""}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
       <View style={styles.card}>
-        {active === "mood" &&
-          (moods.length === 0 ? (
-            <Text style={styles.empty}>Никто не отмечал настроение</Text>
-          ) : (
-            moods.map((row) => (
-              <Text key={row.user_id} style={styles.line}>
-                {moodName(row.user_id)} — {row.mood}
-                {row.note ? `\n«${row.note}»` : ""}
-              </Text>
-            ))
-          ))}
+        <Text style={styles.title}>{title}</Text>
 
-        {active === "miss" &&
-          (myMisses + partnerMisses === 0 ? (
-            <Text style={styles.empty}>В этот день не нажимали «Скучаю»</Text>
-          ) : (
-            <Text style={styles.line}>
-              {myName} — {myMisses} раз · {partnerName} — {partnerMisses} раз
-            </Text>
-          ))}
-
-        {active === "memory" &&
-          (memories.length === 0 ? (
-            <Text style={styles.empty}>В этот день ничего не добавляли</Text>
-          ) : (
-            memories.map((memory) => (
-              <Text key={memory.id} style={styles.line}>
-                {memory.caption || (memory.media_type === "video" ? "Видео" : "Фото")}
-              </Text>
-            ))
-          ))}
+        <EventRow kind="mood" title="Настроение" lines={moodLines} />
+        <EventRow kind="miss" title="Скучаю" lines={missLines} />
+        <EventRow kind="memory" title="Воспоминание" lines={memoryLines} last />
       </View>
     </View>
   );
@@ -238,61 +225,57 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
+  card: {
+    backgroundColor: SWEETLY.card,
+    borderRadius: 28,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 8,
+  },
+
   title: {
     color: SWEETLY.text,
     fontFamily: FONTS.display,
-    fontSize: 22,
+    fontSize: 26,
+    marginBottom: 14,
   },
 
-  eventsRow: {
+  row: {
     flexDirection: "row",
-    justifyContent: "space-around",
-  },
-
-  eventItem: {
     alignItems: "center",
-    gap: 6,
-    minWidth: 44,
+    gap: 14,
+    paddingVertical: 14,
   },
 
-  eventCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: SWEETLY.card,
+  rowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: SWEETLY.divider,
+  },
+
+  iconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: SWEETLY.peach,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  eventCircleActive: {
-    backgroundColor: SWEETLY.accent,
+  rowText: {
+    flex: 1,
+    gap: 2,
   },
 
-  eventLabel: {
-    color: SWEETLY.muted,
-    fontFamily: FONTS.text,
-    fontSize: 12,
-    textAlign: "center",
-  },
-
-  card: {
-    backgroundColor: SWEETLY.card,
-    borderRadius: 28,
-    padding: 20,
-    gap: 8,
-    minHeight: 90,
-  },
-
-  line: {
+  rowTitle: {
     color: SWEETLY.text,
-    fontFamily: FONTS.text,
-    fontSize: 15,
-    lineHeight: 21,
+    fontFamily: FONTS.textBold,
+    fontSize: 17,
   },
 
-  empty: {
+  rowSub: {
     color: SWEETLY.muted,
     fontFamily: FONTS.text,
-    fontSize: 14,
+    fontSize: 13,
+    lineHeight: 18,
   },
 });
