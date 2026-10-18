@@ -8,8 +8,8 @@ import Svg, { Path } from "react-native-svg";
 import NotifyToggles from "@/components/notify-toggles";
 import SubHeader from "@/components/sub-header";
 import { Field, PrimaryButton, SecondaryButton, SectionLabel } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
-import { clearAppData, useAppData } from "@/lib/app-data";
+import { ACCENTS, AccentName, FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { clearAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { confirmAction, notify } from "@/lib/dialogs";
 import { supabase } from "@/lib/supabase";
 
@@ -27,6 +27,21 @@ export default function SettingsScreen() {
   const [repeatPassword, setRepeatPassword] = useState("");
 
   const [saving, setSaving] = useState(false);
+
+  // Сохраняем выбор оформления в профиле: тема и акцентный цвет
+  async function saveAppearance(field: "theme" | "accent", value: string) {
+    if (!app.userId) return;
+
+    const { error } = await supabase.from("profiles").update({ [field]: value }).eq("id", app.userId);
+
+    if (error) {
+      notify("Ошибка", error.message);
+
+      return;
+    }
+
+    await refreshAppData();
+  }
 
   async function copyEmail() {
     if (!app.email) return;
@@ -169,6 +184,55 @@ export default function SettingsScreen() {
       </View>
 
       <View>
+        <SectionLabel>ОФОРМЛЕНИЕ</SectionLabel>
+
+        <View style={styles.appearanceCard}>
+          <View style={styles.segment}>
+            {(["light", "dark"] as const).map((value) => {
+              const active = (app.me?.theme ?? "light") === value;
+
+              return (
+                <Pressable
+                  key={value}
+                  style={[styles.segmentItem, active && styles.segmentItemActive]}
+                  onPress={() => saveAppearance("theme", value)}
+                >
+                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                    {value === "light" ? "Светлая" : "Тёмная"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <View style={styles.accentRow}>
+            <Text style={styles.accentLabel}>Акцентный цвет</Text>
+
+            <View style={styles.swatches}>
+              {(Object.keys(ACCENTS) as AccentName[]).map((name) => {
+                const active = (app.me?.accent ?? "rose") === name;
+
+                return (
+                  <Pressable
+                    key={name}
+                    accessibilityLabel={ACCENTS[name].label}
+                    style={[styles.swatch, { backgroundColor: ACCENTS[name].color }]}
+                    onPress={() => saveAppearance("accent", name)}
+                  >
+                    {active && (
+                      <Svg width={18} height={18} viewBox="0 0 24 24">
+                        <Path d="M5 12l5 5 9-10" fill="none" stroke="#FFFFFF" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                      </Svg>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </View>
+
+      <View>
         <SectionLabel>УВЕДОМЛЕНИЯ</SectionLabel>
 
         <NotifyToggles />
@@ -188,6 +252,71 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  appearanceCard: {
+    backgroundColor: SWEETLY.card,
+    borderRadius: 24,
+    paddingTop: 14,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 12,
+  },
+
+  segment: {
+    flexDirection: "row",
+    backgroundColor: SWEETLY.background,
+    borderRadius: 24,
+    padding: 4,
+    gap: 4,
+  },
+
+  segmentItem: {
+    flex: 1,
+    minWidth: 0,
+    height: 44,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  segmentItemActive: {
+    backgroundColor: SWEETLY.accent,
+  },
+
+  segmentText: {
+    color: SWEETLY.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 14,
+  },
+
+  segmentTextActive: {
+    color: "#FFFFFF",
+  },
+
+  accentRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  accentLabel: {
+    color: SWEETLY.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 15,
+  },
+
+  swatches: {
+    flexDirection: "row",
+    gap: 8,
+  },
+
+  swatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   screen: { flex: 1, backgroundColor: SWEETLY.background },
 
   content: {

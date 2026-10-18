@@ -8,6 +8,8 @@ export type ProfileData = {
   gender: string | null;
   birthday: string | null;
   avatar_url: string | null;
+  theme?: string | null;
+  accent?: string | null;
 };
 
 export type CoupleData = {
@@ -131,7 +133,7 @@ async function loadAll() {
     const [meRes, memberRes] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, name, gender, birthday, avatar_url")
+        .select("id, name, gender, birthday, avatar_url, theme, accent")
         .eq("id", uid)
         .maybeSingle(),
       supabase.from("couple_members").select("couple_id").eq("user_id", uid).maybeSingle(),
