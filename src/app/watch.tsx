@@ -1,3 +1,4 @@
+import { C, liveStyles } from "@/constants/sweetly-theme";
 import SkeletonScreen from "@/components/skeleton-screen";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
@@ -516,7 +517,7 @@ export default function WatchScreen() {
       <View style={styles.topRow}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Svg width={22} height={22} viewBox="0 0 24 24">
-            <Path d="M15 6l-6 6 6 6" fill="none" stroke="#3B1F2B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <Path d="M15 6l-6 6 6 6" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </Pressable>
 
@@ -539,7 +540,7 @@ export default function WatchScreen() {
           <View style={styles.playerEmpty}>
             <View style={styles.playCircle}>
               <Svg width={26} height={26} viewBox="0 0 24 24">
-                <Path d="M8 5v14l11-7z" fill="#FFFFFF" />
+                <Path d="M8 5v14l11-7z" fill={C.accentOn} />
               </Svg>
             </View>
           </View>
@@ -564,25 +565,25 @@ export default function WatchScreen() {
       <View style={styles.controlsRow}>
         <Pressable style={styles.seekButton} onPress={() => seekBy(-12)} disabled={!hasVideo}>
           <Svg width={26} height={26} viewBox="0 0 24 24">
-            <Path d="M4 12a8 8 0 102.3-5.7M4 4v4h4" fill="none" stroke="#3B1F2B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <Path d="M4 12a8 8 0 102.3-5.7M4 4v4h4" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </Pressable>
 
         <Pressable style={styles.mainButton} onPress={togglePlay} disabled={!hasVideo}>
           {isPlaying ? (
             <Svg width={30} height={30} viewBox="0 0 24 24">
-              <Path d="M7 5h3v14H7zM14 5h3v14h-3z" fill="#FFFFFF" />
+              <Path d="M7 5h3v14H7zM14 5h3v14h-3z" fill={C.accentOn} />
             </Svg>
           ) : (
             <Svg width={30} height={30} viewBox="0 0 24 24">
-              <Path d="M8 5v14l11-7z" fill="#FFFFFF" />
+              <Path d="M8 5v14l11-7z" fill={C.accentOn} />
             </Svg>
           )}
         </Pressable>
 
         <Pressable style={styles.seekButton} onPress={() => seekBy(12)} disabled={!hasVideo}>
           <Svg width={26} height={26} viewBox="0 0 24 24">
-            <Path d="M20 12a8 8 0 11-2.3-5.7M20 4v4h-4" fill="none" stroke="#3B1F2B" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <Path d="M20 12a8 8 0 11-2.3-5.7M20 4v4h-4" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </Pressable>
       </View>
@@ -593,7 +594,7 @@ export default function WatchScreen() {
         <TextInput
           style={styles.linkInput}
           placeholder="Вставьте ссылку на видео"
-          placeholderTextColor="#B49BA3"
+          placeholderTextColor={C.muted}
           value={linkDraft}
           onChangeText={setLinkDraft}
           autoCapitalize="none"
@@ -619,7 +620,7 @@ export default function WatchScreen() {
             onPress={() => notify("Скоро", "Реакции появятся в следующем обновлении")}
           >
             <Svg width={24} height={24} viewBox="0 0 24 24">
-              <Path d={d} fill="none" stroke="#C23A62" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+              <Path d={d} fill="none" stroke={C.accentText} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </Pressable>
         ))}
@@ -628,8 +629,8 @@ export default function WatchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FFF1F0" },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -642,14 +643,14 @@ const styles = StyleSheet.create({
 
   center: {
     flex: 1,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
   },
 
   emptyTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 20,
     marginBottom: 8,
@@ -657,7 +658,7 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
@@ -674,14 +675,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
 
   title: {
     flex: 1,
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 32,
   },
@@ -690,7 +691,7 @@ const styles = StyleSheet.create({
     width: "100%",
     aspectRatio: 16 / 9,
     borderRadius: 28,
-    backgroundColor: "#3B1F2B",
+    backgroundColor: C.videoBg,
     overflow: "hidden",
   },
 
@@ -709,7 +710,7 @@ const styles = StyleSheet.create({
     width: 74,
     height: 74,
     borderRadius: 37,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
     paddingLeft: 4,
@@ -733,21 +734,21 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#F4B1C0",
+    backgroundColor: C.accentPale,
   },
 
   syncDotOnline: {
-    backgroundColor: "#F4B1C0",
+    backgroundColor: C.accentPale,
   },
 
   syncText: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontSize: 13,
     fontFamily: "Manrope_700Bold",
   },
 
   videoTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 20,
     marginTop: 18,
@@ -756,7 +757,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#F2D5DD",
+    backgroundColor: C.divider,
     marginTop: 12,
     overflow: "hidden",
   },
@@ -764,7 +765,7 @@ const styles = StyleSheet.create({
   progressFill: {
     height: 5,
     borderRadius: 3,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
   },
 
   timeRow: {
@@ -774,7 +775,7 @@ const styles = StyleSheet.create({
   },
 
   timeText: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
   },
 
@@ -790,7 +791,7 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -799,7 +800,7 @@ const styles = StyleSheet.create({
     width: 86,
     height: 86,
     borderRadius: 43,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -817,10 +818,10 @@ const styles = StyleSheet.create({
     minWidth: 0,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     paddingHorizontal: 22,
     fontSize: 15,
-    color: "#3B1F2B",
+    color: C.text,
   },
 
   connectButton: {
@@ -828,13 +829,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     flexShrink: 0,
     borderRadius: 26,
-    backgroundColor: "#3B1F2B",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
   },
 
   connectText: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontSize: 16,
     fontFamily: "Manrope_700Bold",
   },
@@ -850,8 +851,8 @@ const styles = StyleSheet.create({
     height: 56,
     marginHorizontal: 4,
     borderRadius: 28,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
-});
+}));

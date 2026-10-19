@@ -12,6 +12,8 @@ import OfflineScreen from '@/components/offline-screen';
 import SkeletonScreen from '@/components/skeleton-screen';
 import { clearAppData, refreshAppData, startAppRealtime } from '@/lib/app-data';
 import { readInviteFromTelegram, savePendingInvite, getPendingInvite } from '@/lib/invite-link';
+import { C } from '@/constants/sweetly-theme';
+import { AppThemeProvider } from '@/lib/theme';
 import { supabase } from '@/lib/supabase';
 
 SplashScreen.preventAutoHideAsync();
@@ -221,6 +223,7 @@ export default function TabLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <AppThemeProvider>
       <AnimatedSplashOverlay />
 
       {!online ? (
@@ -229,12 +232,13 @@ export default function TabLayout() {
         <AppTabs />
       ) : checked ? (
         // Экраны входа и первого запуска без вкладок: тот же отступ сверху, чтобы не закрывались кнопками Telegram
-        <View style={{ flex: 1, paddingTop: onboarding ? 62 : 0, backgroundColor: '#FFF1F0' }}>
+        <View style={{ flex: 1, paddingTop: onboarding ? 62 : 0, backgroundColor: C.background }}>
           <Slot />
         </View>
       ) : (
         <SkeletonScreen />
       )}
+      </AppThemeProvider>
     </ThemeProvider>
   );
 }

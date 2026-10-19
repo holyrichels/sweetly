@@ -1,20 +1,23 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import SecureImage from "@/components/secure-image";
-import SoloProfile from "@/components/solo-profile";
 import SkeletonScreen from "@/components/skeleton-screen";
-import { ScreenTitle } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import SoloProfile from "@/components/solo-profile";
+import { C, FONTS, liveStyles } from "@/constants/sweetly-theme";
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { notify } from "@/lib/dialogs";
-import { shareInvite } from "@/lib/invite";
 import { logMiss } from "@/lib/miss-log";
 import { supabase } from "@/lib/supabase";
+
+const HEART = "M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z";
+const CALENDAR = "M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zM3 10h18M8 3v4M16 3v4";
+const SLIDERS = "M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6";
+const CHEVRON = "M9 6l6 6-6 6";
 
 function daysSince(value?: string | null) {
   if (!value) return 0;
@@ -28,7 +31,13 @@ function initialOf(name?: string | null) {
   return (name || "?").trim().charAt(0).toUpperCase();
 }
 
-const CHEVRON = "M9 6l6 6-6 6";
+function Icon({ d, color, size = 22 }: { d: string; color: string; size?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d={d} fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -38,6 +47,28 @@ export default function ProfileScreen() {
   const [uploading, setUploading] = useState(false);
 
   const [busy, setBusy] = useState(false);
+
+  // Анимация «Скучаю»: кнопка сжимается и возвращается, над ней поднимается сердечко
+  const missScale = useRef(new Animated.Value(1)).current;
+
+  const missFloat = useRef(new Animated.Value(0)).current;
+
+  function playMissAnimation() {
+    missScale.setValue(1);
+
+    Animated.sequence([
+      Animated.timing(missScale, { toValue: 0.88, duration: 90, useNativeDriver: true }),
+      Animated.spring(missScale, { toValue: 1, friction: 3, tension: 180, useNativeDriver: true }),
+    ]).start();
+
+    missFloat.setValue(0);
+
+    Animated.timing(missFloat, { toValue: 1, duration: 900, useNativeDriver: true }).start();
+  }
+
+  const burstOpacity = missFloat.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 1, 0] });
+
+  const burstY = missFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -70] });
 
   if (!app.ready) return <SkeletonScreen />;
 
@@ -105,8 +136,11 @@ export default function ProfileScreen() {
     }
   }
 
+  // Нажатие «Скучаю»: считаем, пишем в журнал и отправляем уведомление партнёру
   async function pressMiss() {
     if (!app.coupleId || busy) return;
+
+    playMissAnimation();
 
     setBusy(true);
 
@@ -131,144 +165,102 @@ export default function ProfileScreen() {
     }
   }
 
-  const rows = hasPartner
-    ? [
-        { title: "Данные пары", sub: "Статус, имена, даты", path: "/profile-pair" },
-        { title: "Даты и таймеры", sub: "Годовщины и важные дни", path: "/profile-dates" },
-        { title: "Настройки", sub: "Аккаунт и уведомления", path: "/settings" },
-      ]
-    : [
-        { title: "Ввести код партнёра", sub: "Если партнёр уже прислал код", path: "/connect" },
-        { title: "Настройки", sub: "Аккаунт и уведомления", path: "/settings" },
-      ];
+  const rows = [
+    { title: "Данные пары", icon: HEART, path: "/profile-pair" },
+    { title: "Даты и таймеры", icon: CALENDAR, path: "/profile-dates" },
+    { title: "Настройки", icon: SLIDERS, path: "/settings" },
+  ];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <ScreenTitle>Профиль</ScreenTitle>
+      <Text style={styles.title}>Профиль</Text>
 
-      {/* ============ ВЫ ============ */}
-
-      <View style={styles.meRow}>
-        <Pressable style={styles.avatarWrap} onPress={pickAvatar}>
+      <Pressable style={styles.me} onPress={pickAvatar}>
+        <View style={styles.avatar}>
           <SecureImage
             bucket="avatars"
             path={app.me?.avatar_url}
             style={styles.avatarImage}
-            fallback={
-              <View style={styles.avatarFallback}>
-                <Text style={styles.avatarLetter}>{initialOf(app.me?.name)}</Text>
-              </View>
-            }
+            fallback={<Text style={styles.avatarLetter}>{initialOf(app.me?.name)}</Text>}
           />
+        </View>
 
-          <View style={styles.camera}>
-            <Svg width={14} height={14} viewBox="0 0 24 24">
-              <Path
-                d="M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 100-7 3.5 3.5 0 000 7z"
-                fill="none"
-                stroke={SWEETLY.accent}
-                strokeWidth={1.8}
-                strokeLinejoin="round"
+        <Text style={styles.name}>{uploading ? "Загружаем..." : app.me?.name || "Без имени"}</Text>
+        <Text style={styles.nick}>{app.telegramUsername ? `@${app.telegramUsername}` : "Аккаунт Sweetly"}</Text>
+      </Pressable>
+
+      {/* ============ ВЫ ВМЕСТЕ ============ */}
+
+      <View style={styles.card}>
+        <View style={styles.pairLeft}>
+          <View style={styles.pairAvatars}>
+            <View style={[styles.miniAvatar, styles.miniBack]}>
+              <Text style={styles.miniLetter}>{initialOf(app.me?.name)}</Text>
+            </View>
+
+            <View style={[styles.miniAvatar, styles.miniFront]}>
+              <SecureImage
+                bucket="avatars"
+                path={app.partner?.avatar_url}
+                style={styles.avatarImage}
+                fallback={<Icon d={HEART} color={C.accent} size={16} />}
               />
-            </Svg>
+            </View>
           </View>
-        </Pressable>
 
-        <View style={styles.meText}>
-          <Text style={styles.name}>{uploading ? "Загружаем..." : app.me?.name || "Без имени"}</Text>
-          <Text style={styles.account}>Аккаунт Sweetly</Text>
+          <View style={styles.flex}>
+            <Text style={styles.pairSmall}>Вы вместе с</Text>
+            <Text style={styles.pairName} numberOfLines={1}>
+              {app.partner?.name}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.daysBox}>
+          <Text style={styles.daysNumber}>{days}</Text>
+          <Text style={styles.daysUnit}>дн</Text>
         </View>
       </View>
 
-      {hasPartner ? (
-        <>
-          {/* ============ ПАРА ============ */}
+      {/* ============ СКУЧАЮ ============ */}
 
-          <View style={styles.pairCard}>
-            <View style={styles.avatars}>
-              <View style={[styles.smallAvatar, { left: 0 }]}>
-                <SecureImage
-                  bucket="avatars"
-                  path={app.me?.avatar_url}
-                  style={styles.avatarImage}
-                  fallback={<Text style={styles.smallLetter}>{initialOf(app.me?.name)}</Text>}
-                />
-              </View>
-
-              <View style={[styles.smallAvatar, { left: 26 }]}>
-                <SecureImage
-                  bucket="avatars"
-                  path={app.partner?.avatar_url}
-                  style={styles.avatarImage}
-                  fallback={<Text style={styles.smallLetter}>{initialOf(app.partner?.name)}</Text>}
-                />
-              </View>
-            </View>
-
-            <Text style={styles.pairText} numberOfLines={2}>
-              Вы вместе с {app.partner?.name}
+      <View style={styles.card}>
+        <View style={styles.missTop}>
+          <View style={styles.flex}>
+            <Text style={styles.missLabel}>Скучаю</Text>
+            <Text style={styles.missTotal}>
+              {total} <Text style={styles.missUnit}>раз</Text>
             </Text>
-
-            <View style={styles.pairDays}>
-              <Text style={styles.pairNumber}>{days}</Text>
-              <Text style={styles.pairUnit}>дн</Text>
-            </View>
           </View>
 
-          {/* ============ СКУЧАЮ ============ */}
-
-          <View style={styles.missCard}>
-            <View style={styles.missTop}>
-              <View>
-                <Text style={styles.missLabel}>СКУЧАЮ</Text>
-                <Text style={styles.missTotal}>{total} раз</Text>
-              </View>
-
-              <Pressable style={styles.heart} onPress={pressMiss} disabled={busy}>
-                <Svg width={24} height={24} viewBox="0 0 24 24">
-                  <Path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" fill="#FFFFFF" />
-                </Svg>
-              </Pressable>
-            </View>
-
-            <View style={styles.statsRow}>
-              {[
-                { n: total, label: "общее" },
-                { n: app.missMine, label: "моё" },
-                { n: app.missPartner, label: "партнёра" },
-              ].map((item) => (
-                <View key={item.label} style={styles.stat}>
-                  <Text style={styles.statNumber}>{item.n}</Text>
-                  <Text style={styles.statLabel}>{item.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        </>
-      ) : (
-        <>
-          {/* ============ ПАРТНЁР НЕ ПОДКЛЮЧЁН ============ */}
-
-          <View style={styles.soloCard}>
-            <Text style={styles.soloTitle}>Партнёр не подключён</Text>
-
-            <Text style={styles.soloText}>
-              Пригласите его, чтобы видеть общие дни, настроение и воспоминания.
-            </Text>
-
-            <Pressable style={styles.soloButton} onPress={() => shareInvite(app.couple?.invite_code)}>
-              <Text style={styles.soloButtonText}>Пригласить партнёра</Text>
+          <Animated.View style={{ transform: [{ scale: missScale }] }}>
+            <Pressable style={styles.missButton} onPress={pressMiss} disabled={busy}>
+              <Icon d={HEART} color={C.accentOn} size={18} />
+              <Text style={styles.missButtonText}>Скучаю</Text>
             </Pressable>
-          </View>
+          </Animated.View>
 
-          <View style={styles.codeRow}>
-            <View>
-              <Text style={styles.codeLabel}>МОЙ КОД ПРИГЛАШЕНИЯ</Text>
-              <Text style={styles.code}>{app.couple?.invite_code ?? "—"}</Text>
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.burst, { opacity: burstOpacity, transform: [{ translateY: burstY }] }]}
+          >
+            <Icon d={HEART} color={C.accent} size={26} />
+          </Animated.View>
+        </View>
+
+        <View style={styles.statsRow}>
+          {[
+            { n: total, label: "общее" },
+            { n: app.missMine, label: "моё" },
+            { n: app.missPartner, label: "партнёра" },
+          ].map((item) => (
+            <View key={item.label} style={styles.stat}>
+              <Text style={styles.statNumber}>{item.n}</Text>
+              <Text style={styles.statLabel}>{item.label}</Text>
             </View>
-          </View>
-        </>
-      )}
+          ))}
+        </View>
+      </View>
 
       {/* ============ РАЗДЕЛЫ ============ */}
 
@@ -276,17 +268,12 @@ export default function ProfileScreen() {
         {rows.map((row, index) => (
           <Pressable
             key={row.title}
-            style={[styles.row, index < rows.length - 1 && styles.rowBorder]}
+            style={[styles.row, index < rows.length - 1 && styles.border]}
             onPress={() => router.push(row.path as any)}
           >
-            <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>{row.title}</Text>
-              <Text style={styles.rowSub}>{row.sub}</Text>
-            </View>
-
-            <Svg width={20} height={20} viewBox="0 0 24 24">
-              <Path d={CHEVRON} fill="none" stroke={SWEETLY.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
+            <Icon d={row.icon} color={C.dashed} size={22} />
+            <Text style={styles.rowTitle}>{row.title}</Text>
+            <Icon d={CHEVRON} color={C.muted} size={20} />
           </Pressable>
         ))}
       </View>
@@ -294,279 +281,243 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: C.background },
 
-  content: {
-    paddingHorizontal: 22,
-    paddingTop: 55,
-    paddingBottom: 70,
-    width: "100%",
-    maxWidth: 520,
-    alignSelf: "center",
-    gap: 14,
-  },
+    content: {
+      paddingHorizontal: 22,
+      paddingTop: 55,
+      paddingBottom: 70,
+      width: "100%",
+      maxWidth: 520,
+      alignSelf: "center",
+      gap: 14,
+    },
 
-  meRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-    marginTop: 4,
-  },
+    flex: { flex: 1 },
 
-  avatarWrap: { width: 76, height: 76 },
+    title: {
+      color: C.text,
+      fontFamily: FONTS.display,
+      fontSize: 36,
+    },
 
-  avatarImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 38,
-  },
+    me: {
+      alignItems: "center",
+      gap: 6,
+      marginTop: 4,
+    },
 
-  avatarFallback: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: SWEETLY.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    avatar: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
 
-  avatarLetter: {
-    color: "#FFFFFF",
-    fontFamily: FONTS.display,
-    fontSize: 32,
-  },
+    avatarImage: {
+      width: "100%",
+      height: "100%",
+    },
 
-  camera: {
-    position: "absolute",
-    right: -2,
-    bottom: -2,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: SWEETLY.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    avatarLetter: {
+      color: C.accentOn,
+      fontFamily: FONTS.display,
+      fontSize: 40,
+    },
 
-  meText: { flex: 1 },
+    name: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 22,
+      marginTop: 6,
+    },
 
-  name: {
-    color: SWEETLY.text,
-    fontFamily: FONTS.display,
-    fontSize: 28,
-  },
+    nick: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 14,
+    },
 
-  account: {
-    color: SWEETLY.muted,
-    fontFamily: FONTS.text,
-    fontSize: 14,
-    marginTop: 2,
-  },
+    card: {
+      backgroundColor: C.card,
+      borderRadius: 24,
+      padding: 18,
+      gap: 14,
+    },
 
-  pairCard: {
-    backgroundColor: SWEETLY.accent,
-    borderRadius: 28,
-    padding: 18,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+    pairLeft: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
 
-  avatars: { width: 80, height: 52 },
+    pairAvatars: {
+      width: 64,
+      height: 40,
+    },
 
-  smallAvatar: {
-    position: "absolute",
-    top: 0,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: SWEETLY.peach,
-    borderWidth: 3,
-    borderColor: SWEETLY.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
+    miniAvatar: {
+      position: "absolute",
+      top: 0,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      overflow: "hidden",
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: C.card,
+    },
 
-  smallLetter: {
-    color: SWEETLY.accent,
-    fontFamily: FONTS.display,
-    fontSize: 20,
-  },
+    miniBack: {
+      left: 0,
+      backgroundColor: C.peach,
+    },
 
-  pairText: {
-    flex: 1,
-    color: "#FFFFFF",
-    fontFamily: FONTS.textBold,
-    fontSize: 17,
-  },
+    miniFront: {
+      left: 22,
+      backgroundColor: C.peachLight,
+    },
 
-  pairDays: { alignItems: "center" },
+    miniLetter: {
+      color: C.text,
+      fontFamily: FONTS.display,
+      fontSize: 16,
+    },
 
-  pairNumber: {
-    color: "#FFFFFF",
-    fontFamily: FONTS.display,
-    fontSize: 34,
-    lineHeight: 36,
-  },
+    pairSmall: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 12,
+    },
 
-  pairUnit: {
-    color: "#FFFFFF",
-    fontFamily: FONTS.text,
-    fontSize: 13,
-    opacity: 0.85,
-  },
+    pairName: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 16,
+      marginTop: 2,
+    },
 
-  missCard: {
-    backgroundColor: SWEETLY.card,
-    borderRadius: 28,
-    padding: 18,
-    gap: 16,
-  },
+    daysBox: {
+      flexDirection: "row",
+      alignItems: "baseline",
+      gap: 4,
+    },
 
-  missTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+    daysNumber: {
+      color: C.text,
+      fontFamily: FONTS.display,
+      fontSize: 32,
+    },
 
-  missLabel: {
-    color: SWEETLY.muted,
-    fontFamily: FONTS.textBold,
-    fontSize: 13,
-    letterSpacing: 0.4,
-  },
+    daysUnit: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 14,
+    },
 
-  missTotal: {
-    color: SWEETLY.text,
-    fontFamily: FONTS.display,
-    fontSize: 30,
-    marginTop: 2,
-  },
+    missTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
 
-  heart: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: SWEETLY.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    missLabel: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 13,
+    },
 
-  statsRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
+    missTotal: {
+      color: C.text,
+      fontFamily: FONTS.display,
+      fontSize: 30,
+      marginTop: 2,
+    },
 
-  stat: {
-    flex: 1,
-    backgroundColor: SWEETLY.background,
-    borderRadius: 18,
-    paddingVertical: 12,
-    alignItems: "center",
-  },
+    missUnit: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 14,
+    },
 
-  statNumber: {
-    color: SWEETLY.text,
-    fontFamily: FONTS.display,
-    fontSize: 24,
-  },
+    missButton: {
+      height: 44,
+      paddingHorizontal: 18,
+      borderRadius: 22,
+      backgroundColor: C.accent,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
 
-  statLabel: {
-    color: SWEETLY.muted,
-    fontFamily: FONTS.text,
-    fontSize: 12,
-    marginTop: 2,
-  },
+    burst: {
+      position: "absolute",
+      right: 40,
+      top: 18,
+    },
 
-  soloCard: {
-    backgroundColor: SWEETLY.peach,
-    borderRadius: 28,
-    padding: 20,
-    gap: 8,
-  },
+    missButtonText: {
+      color: C.accentOn,
+      fontFamily: FONTS.textBold,
+      fontSize: 15,
+    },
 
-  soloTitle: {
-    color: SWEETLY.text,
-    fontFamily: FONTS.display,
-    fontSize: 24,
-  },
+    statsRow: {
+      flexDirection: "row",
+      borderTopWidth: 1,
+      borderTopColor: C.divider,
+      paddingTop: 14,
+    },
 
-  soloText: {
-    color: SWEETLY.muted,
-    fontFamily: FONTS.text,
-    fontSize: 14,
-    lineHeight: 20,
-  },
+    stat: {
+      flex: 1,
+      alignItems: "center",
+      gap: 2,
+    },
 
-  soloButton: {
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: SWEETLY.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-  },
+    statNumber: {
+      color: C.text,
+      fontFamily: FONTS.display,
+      fontSize: 24,
+    },
 
-  soloButtonText: {
-    color: "#FFFFFF",
-    fontFamily: FONTS.textBold,
-    fontSize: 16,
-  },
+    statLabel: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 12,
+    },
 
-  codeRow: {
-    backgroundColor: SWEETLY.card,
-    borderRadius: 22,
-    padding: 18,
-  },
+    list: {
+      backgroundColor: C.card,
+      borderRadius: 24,
+      overflow: "hidden",
+    },
 
-  codeLabel: {
-    color: SWEETLY.muted,
-    fontFamily: FONTS.textBold,
-    fontSize: 12,
-    letterSpacing: 0.4,
-  },
+    row: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      paddingHorizontal: 20,
+      paddingVertical: 18,
+    },
 
-  code: {
-    color: SWEETLY.text,
-    fontFamily: FONTS.display,
-    fontSize: 28,
-    letterSpacing: 3,
-    marginTop: 4,
-  },
+    border: {
+      borderBottomWidth: 1,
+      borderBottomColor: C.divider,
+    },
 
-  list: {
-    backgroundColor: SWEETLY.card,
-    borderRadius: 28,
-    overflow: "hidden",
-  },
-
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    minHeight: 64,
-  },
-
-  rowBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: SWEETLY.divider,
-  },
-
-  rowText: { flex: 1 },
-
-  rowTitle: {
-    color: SWEETLY.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 17,
-  },
-
-  rowSub: {
-    color: SWEETLY.muted,
-    fontFamily: FONTS.text,
-    fontSize: 13,
-    marginTop: 2,
-  },
-});
+    rowTitle: {
+      flex: 1,
+      color: C.text,
+      fontFamily: FONTS.text,
+      fontSize: 16,
+    },
+  })
+);

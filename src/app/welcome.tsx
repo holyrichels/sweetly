@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
 import { PrimaryButton, SecondaryButton } from "@/components/sweetly-ui";
-import { SWEETLY, FONTS } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -16,7 +16,7 @@ export default function WelcomeScreen() {
             <Svg width={68} height={68} viewBox="0 0 24 24">
               <Path
                 d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"
-                fill="#FFFFFF"
+                fill={C.card}
                 stroke="#FFFFFF"
                 strokeWidth={1.6}
                 strokeLinejoin="round"
@@ -37,10 +37,10 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: SWEETLY.background,
+    backgroundColor: C.background,
     paddingHorizontal: 22,
     paddingTop: 40,
     paddingBottom: 40,
@@ -67,20 +67,20 @@ const styles = StyleSheet.create({
     width: 144,
     height: 144,
     borderRadius: 72,
-    backgroundColor: SWEETLY.accent,
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
   },
 
   brand: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.displayItalic,
     fontSize: 52,
     marginTop: 8,
   },
 
   tagline: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 17,
     textAlign: "center",
@@ -91,4 +91,4 @@ const styles = StyleSheet.create({
   actions: {
     gap: 12,
   },
-});
+}));

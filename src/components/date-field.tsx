@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { C, liveStyles } from "@/constants/sweetly-theme";
 
 export function formatDateISO(date: Date) {
   const year = date.getFullYear();
@@ -202,13 +203,13 @@ export function CalendarGrid({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   calendar: {
     marginTop: 10,
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#F2D5DD",
+    borderColor: C.divider,
     padding: 10,
   },
 
@@ -222,13 +223,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
 
   chipActive: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
   },
 
   chipText: {
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
   },
 
   chipTextActive: {
-    color: "#ffffff",
+    color: C.accentOn,
   },
 
   weekRow: {
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     fontFamily: "Manrope_700Bold",
     flex: 1,
     textAlign: "center",
-    color: "#b49ba3",
+    color: C.muted,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -270,23 +271,23 @@ const styles = StyleSheet.create({
   },
 
   dayCellActive: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     borderRadius: 20,
   },
 
   dayText: {
     fontFamily: "PlayfairDisplay_700Bold",
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 15,
     fontWeight: "600",
   },
 
   dayTextActive: {
-    color: "#ffffff",
+    color: C.accentOn,
     fontWeight: "800",
   },
 
   dayTextDisabled: {
     color: "#d9c7cd",
   },
-});
+}));

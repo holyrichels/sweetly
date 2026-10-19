@@ -5,7 +5,7 @@ import * as Clipboard from "expo-clipboard";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Field, PrimaryButton, ScreenTitle, SecondaryButton } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { refreshAppData } from "@/lib/app-data";
 import { shareInvite } from "@/lib/invite";
 import { supabase } from "@/lib/supabase";
@@ -145,8 +145,8 @@ export default function ConnectScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -158,28 +158,28 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 6 },
 
   subtitle: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 15,
     lineHeight: 22,
   },
 
   codeCard: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 20,
     gap: 12,
   },
 
   label: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.textBold,
     fontSize: 13,
     letterSpacing: 0.3,
   },
 
   code: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.display,
     fontSize: 36,
     letterSpacing: 4,
@@ -205,11 +205,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: SWEETLY.divider,
+    backgroundColor: C.divider,
   },
 
   dividerText: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 14,
   },
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
   field: { gap: 6 },
 
   error: {
-    color: SWEETLY.error,
+    color: C.error,
     fontFamily: FONTS.textBold,
     fontSize: 14,
   },
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
   },
 
   skipText: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.textBold,
     fontSize: 15,
   },
-});
+}));

@@ -6,7 +6,7 @@ import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/
 import SkeletonScreen from "@/components/skeleton-screen";
 import SubHeader from "@/components/sub-header";
 import { Field, PrimaryButton, SectionLabel } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { notify } from "@/lib/dialogs";
 import { supabase } from "@/lib/supabase";
@@ -254,8 +254,8 @@ export default function PairDataScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -281,23 +281,23 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 18,
     borderRadius: 22,
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  chipActive: { backgroundColor: SWEETLY.accent },
+  chipActive: { backgroundColor: C.accent },
 
   chipText: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 15,
   },
 
-  chipTextActive: { color: "#FFFFFF" },
+  chipTextActive: { color: C.accentOn },
 
   partnerField: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 26,
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -305,20 +305,20 @@ const styles = StyleSheet.create({
   },
 
   partnerValue: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
 
   partnerHint: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 12,
     marginTop: 2,
   },
 
   card: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     overflow: "hidden",
   },
@@ -332,27 +332,27 @@ const styles = StyleSheet.create({
   },
 
   dateLabel: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
   },
 
   dateValue: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 17,
     marginTop: 2,
   },
 
   edit: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.textBold,
     fontSize: 14,
   },
 
   divider: {
     height: 1,
-    backgroundColor: SWEETLY.divider,
+    backgroundColor: C.divider,
     marginHorizontal: 20,
   },
 
@@ -363,4 +363,4 @@ const styles = StyleSheet.create({
   },
 
   saveButton: { height: 48 },
-});
+}));

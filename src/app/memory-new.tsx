@@ -7,7 +7,7 @@ import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/date-field";
 import SubHeader from "@/components/sub-header";
 import { PrimaryButton, SecondaryButton, SectionLabel } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { notify } from "@/lib/dialogs";
 import { supabase } from "@/lib/supabase";
@@ -129,7 +129,7 @@ export default function MemoryNewScreen() {
         <TextInput
           style={styles.input}
           placeholder="Например, «Первое свидание»"
-          placeholderTextColor={SWEETLY.muted}
+          placeholderTextColor={C.muted}
           value={title}
           onChangeText={setTitle}
         />
@@ -159,8 +159,8 @@ export default function MemoryNewScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
   photo: {
     height: 240,
     borderRadius: 28,
-    backgroundColor: SWEETLY.peach,
+    backgroundColor: C.peach,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
   photoImage: { width: "100%", height: "100%" },
 
   photoHint: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
@@ -194,23 +194,23 @@ const styles = StyleSheet.create({
   input: {
     height: 52,
     borderRadius: 26,
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     paddingHorizontal: 20,
     justifyContent: "center",
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.text,
     fontSize: 15,
   },
 
   inputText: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 15,
   },
 
   calendar: {
     marginTop: 10,
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 24,
     padding: 10,
   },
@@ -220,4 +220,4 @@ const styles = StyleSheet.create({
     gap: 10,
     marginTop: 6,
   },
-});
+}));

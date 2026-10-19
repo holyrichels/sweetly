@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { Field, PrimaryButton } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { routeAfterAuth } from "@/lib/onboarding";
 import { supabase } from "@/lib/supabase";
 
@@ -119,7 +119,7 @@ export default function RegisterScreen() {
           <TextInput
             style={styles.passwordInput}
             placeholder="Придумайте пароль"
-            placeholderTextColor={SWEETLY.muted}
+            placeholderTextColor={C.muted}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -153,8 +153,8 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background, paddingHorizontal: 22, paddingTop: 40 },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background, paddingHorizontal: 22, paddingTop: 40 },
 
   content: {
     paddingHorizontal: 22,
@@ -167,13 +167,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
 
   backText: {
-    color: SWEETLY.text,
+    color: C.text,
     fontSize: 26,
     marginTop: -4,
   },
@@ -181,13 +181,13 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 6 },
 
   title: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.display,
     fontSize: 32,
   },
 
   subtitle: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 15,
     lineHeight: 22,
@@ -196,14 +196,14 @@ const styles = StyleSheet.create({
   field: { gap: 6 },
 
   label: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.textBold,
     fontSize: 13,
     letterSpacing: 0.3,
   },
 
   hint: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 12,
     paddingLeft: 6,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   passwordWrap: {
     height: 54,
     borderRadius: 27,
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     flexDirection: "row",
     alignItems: "center",
     paddingLeft: 22,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 54,
     fontSize: 16,
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.text,
   },
 
@@ -234,13 +234,13 @@ const styles = StyleSheet.create({
   },
 
   showText: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.textBold,
     fontSize: 13,
   },
 
   error: {
-    color: SWEETLY.error,
+    color: C.error,
     fontFamily: FONTS.textBold,
     fontSize: 14,
   },
@@ -254,16 +254,16 @@ const styles = StyleSheet.create({
   },
 
   footerText: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.textBold,
     fontSize: 15,
   },
 
   footerLink: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.textBold,
     fontSize: 15,
     paddingHorizontal: 8,
     paddingVertical: 10,
   },
-});
+}));

@@ -4,10 +4,10 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import Svg, { Circle, Path } from "react-native-svg";
 
 import { PrimaryButton, SectionLabel } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { notify } from "@/lib/dialogs";
 
-import { SoloTitle } from "./solo-shell";
+import { ICON, SoloTitle } from "./solo-shell";
 
 const MOODS = [
   { value: "Супер", d: "M7.5 13.5c1 3.5 8 3.5 9 0z" },
@@ -43,9 +43,9 @@ export default function SoloMood() {
             <Pressable key={item.value} style={styles.moodItem} onPress={() => setMood(item.value)}>
               <View style={[styles.moodCircle, selected && styles.moodCircleOn]}>
                 <Svg width={34} height={34} viewBox="0 0 24 24">
-                  <Circle cx={12} cy={12} r={9} fill="none" stroke={selected ? "#FFFFFF" : SWEETLY.text} strokeWidth={2} />
-                  <Path d={item.d} fill="none" stroke={selected ? "#FFFFFF" : SWEETLY.text} strokeWidth={2} strokeLinecap="round" />
-                  <Path d="M9 9.5h.01M15 9.5h.01" fill="none" stroke={selected ? "#FFFFFF" : SWEETLY.text} strokeWidth={3} strokeLinecap="round" />
+                  <Circle cx={12} cy={12} r={9} fill="none" stroke={selected ? "#FFFFFF" : C.text} strokeWidth={2} />
+                  <Path d={item.d} fill="none" stroke={selected ? "#FFFFFF" : C.text} strokeWidth={2} strokeLinecap="round" />
+                  <Path d="M9 9.5h.01M15 9.5h.01" fill="none" stroke={selected ? "#FFFFFF" : C.text} strokeWidth={3} strokeLinecap="round" />
                 </Svg>
               </View>
 
@@ -60,7 +60,7 @@ export default function SoloMood() {
       <TextInput
         style={styles.input}
         placeholder="Что случилось сегодня?"
-        placeholderTextColor={SWEETLY.muted}
+        placeholderTextColor={C.muted}
         value={note}
         onChangeText={setNote}
         maxLength={140}
@@ -68,7 +68,15 @@ export default function SoloMood() {
 
       <PrimaryButton title="Сохранить" onPress={save} />
 
-      <Text style={styles.hint}>Партнёр увидит твоё настроение, когда подключится</Text>
+      <View style={styles.hintCard}>
+        <View style={styles.hintIcon}>
+          <Svg width={20} height={20} viewBox="0 0 24 24">
+            <Path d={ICON.lock} fill="none" stroke={C.error} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          </Svg>
+        </View>
+
+        <Text style={styles.hintText}>Партнёр увидит твоё настроение, когда подключится</Text>
+      </View>
 
       <SectionLabel>ЭТА НЕДЕЛЯ</SectionLabel>
 
@@ -93,8 +101,8 @@ export default function SoloMood() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -107,7 +115,7 @@ const styles = StyleSheet.create({
   },
 
   moodCard: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     paddingVertical: 16,
     paddingHorizontal: 8,
@@ -121,36 +129,62 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: SWEETLY.background,
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  moodCircleOn: { backgroundColor: SWEETLY.accent },
+  moodCircleOn: { backgroundColor: C.accent },
 
   moodLabel: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.text,
     fontSize: 12,
     marginTop: 6,
   },
 
   moodLabelOn: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.textBold,
   },
 
   input: {
     height: 52,
     borderRadius: 26,
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     paddingHorizontal: 20,
     fontSize: 15,
-    color: SWEETLY.text,
+    color: C.text,
+  },
+
+  hintCard: {
+    backgroundColor: C.peachLight,
+    borderRadius: 24,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+
+  hintIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: C.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  hintText: {
+    flex: 1,
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 14,
+    lineHeight: 19,
   },
 
   hint: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
     textAlign: "center",
@@ -167,24 +201,24 @@ const styles = StyleSheet.create({
 
   dotToday: {
     borderWidth: 2,
-    borderColor: SWEETLY.accent,
-    backgroundColor: SWEETLY.card,
+    borderColor: C.accent,
+    backgroundColor: C.card,
   },
 
   dotEmpty: {
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: SWEETLY.dashed,
+    borderColor: C.dashed,
   },
 
   dayLabel: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 12,
   },
 
   dayLabelToday: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.textBold,
   },
-});
+}));

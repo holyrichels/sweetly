@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { Toggle } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
@@ -69,9 +69,9 @@ export default function NotifyToggles() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   card: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     overflow: "hidden",
   },
@@ -87,21 +87,21 @@ const styles = StyleSheet.create({
 
   border: {
     borderBottomWidth: 1,
-    borderBottomColor: SWEETLY.divider,
+    borderBottomColor: C.divider,
   },
 
   text: { flex: 1 },
 
   title: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
 
   sub: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
     marginTop: 2,
   },
-});
+}));

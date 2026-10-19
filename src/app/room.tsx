@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
+import { C, liveStyles } from "@/constants/sweetly-theme";
 import SecureImage from "@/components/secure-image";
 import SoloRoom from "@/components/solo-room";
 import SkeletonScreen from "@/components/skeleton-screen";
@@ -75,7 +76,7 @@ export default function RoomScreen() {
       <Pressable style={styles.watchCard} onPress={() => router.push("/watch" as any)}>
         <View style={styles.playCircle}>
           <Svg width={24} height={24} viewBox="0 0 24 24">
-            <Path d="M8 5v14l11-7z" fill="#FFFFFF" />
+            <Path d="M8 5v14l11-7z" fill={C.card} />
           </Svg>
         </View>
 
@@ -116,16 +117,17 @@ export default function RoomScreen() {
         style={styles.addButton}
         onPress={() => notify("Скоро", "Добавление появится в следующем обновлении")}
       >
-        <Text style={styles.addText}>+  Добавить в комнату</Text>
+        <Text style={styles.addPlus}>+</Text>
+        <Text style={styles.addText}>Добавить в комнату</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
   },
 
   content: {
@@ -138,20 +140,20 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 40,
   },
 
   subtitle: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 16,
     marginTop: 4,
     marginBottom: 22,
   },
 
   pairCard: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     borderRadius: 28,
     padding: 18,
     flexDirection: "row",
@@ -167,26 +169,26 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     position: "absolute",
     left: 0,
     top: 1,
     overflow: "hidden",
     borderWidth: 3,
-    borderColor: "#C23A62",
+    borderColor: C.accent,
   },
 
   avatarFront: {
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FFE6DB",
+    backgroundColor: C.peachLight,
     position: "absolute",
     left: 28,
     top: 1,
     overflow: "hidden",
     borderWidth: 3,
-    borderColor: "#C23A62",
+    borderColor: C.accent,
   },
 
   avatarImage: {
@@ -200,13 +202,13 @@ const styles = StyleSheet.create({
   },
 
   pairTitle: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontFamily: "Manrope_700Bold",
     fontSize: 20,
   },
 
   pairSub: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontSize: 14,
     opacity: 0.85,
     marginTop: 4,
@@ -214,7 +216,7 @@ const styles = StyleSheet.create({
 
   watchCard: {
     marginTop: 14,
-    backgroundColor: "#3B1F2B",
+    backgroundColor: C.plumCard,
     borderRadius: 28,
     padding: 18,
     flexDirection: "row",
@@ -226,7 +228,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
     paddingLeft: 3,
@@ -237,20 +239,20 @@ const styles = StyleSheet.create({
   },
 
   watchTitle: {
-    color: "#FFFFFF",
+    color: C.onPlumCard,
     fontFamily: "Manrope_700Bold",
     fontSize: 20,
   },
 
   watchSub: {
-    color: "#FFFFFF",
+    color: C.onPlumCard,
     fontSize: 14,
     opacity: 0.7,
     marginTop: 2,
   },
 
   sectionLabel: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     fontFamily: "Manrope_700Bold",
     letterSpacing: 0.4,
@@ -267,7 +269,7 @@ const styles = StyleSheet.create({
 
   gridCard: {
     width: "48%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     borderRadius: 24,
     padding: 18,
     minHeight: 170,
@@ -277,20 +279,20 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#FFE6DB",
+    backgroundColor: C.peachLight,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
   },
 
   gridTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 18,
   },
 
   gridDesc: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     marginTop: 4,
     lineHeight: 19,
@@ -302,14 +304,22 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: "#E3B7C2",
+    borderColor: C.muted,
+    flexDirection: "row",
+    gap: 8,
     alignItems: "center",
     justifyContent: "center",
   },
 
   addText: {
-    color: "#C23A62",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 16,
   },
-});
+
+  addPlus: {
+    color: C.dashed,
+    fontFamily: "Manrope_700Bold",
+    fontSize: 20,
+  },
+}));

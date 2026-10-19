@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -8,7 +8,8 @@ import Svg, { Path } from "react-native-svg";
 import NotifyToggles from "@/components/notify-toggles";
 import SubHeader from "@/components/sub-header";
 import { Field, PrimaryButton, SecondaryButton, SectionLabel } from "@/components/sweetly-ui";
-import { ACCENTS, AccentName, FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { ACCENTS, AccentName, FONTS } from "@/constants/sweetly-theme";
+import { useColors } from "@/lib/theme";
 import { clearAppData, refreshAppData, useAppData } from "@/lib/app-data";
 import { confirmAction, notify } from "@/lib/dialogs";
 import { supabase } from "@/lib/supabase";
@@ -16,6 +17,10 @@ import { supabase } from "@/lib/supabase";
 const CHEVRON = "M9 6l6 6-6 6";
 
 export default function SettingsScreen() {
+  const c = useColors();
+
+  const styles = useMemo(() => makeStyles(c), [c]);
+
   const router = useRouter();
 
   const app = useAppData();
@@ -145,7 +150,7 @@ export default function SettingsScreen() {
             </View>
 
             <Svg width={20} height={20} viewBox="0 0 24 24">
-              <Path d={CHEVRON} fill="none" stroke={SWEETLY.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              <Path d={CHEVRON} fill="none" stroke={c.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </Pressable>
 
@@ -155,7 +160,7 @@ export default function SettingsScreen() {
             </View>
 
             <Svg width={20} height={20} viewBox="0 0 24 24">
-              <Path d={CHEVRON} fill="none" stroke={SWEETLY.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+              <Path d={CHEVRON} fill="none" stroke={c.muted} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </Pressable>
 
@@ -188,7 +193,7 @@ export default function SettingsScreen() {
 
         <View style={styles.appearanceCard}>
           <View style={styles.segment}>
-            {(["light", "dark"] as const).map((value) => {
+            {(["light", "dark", "auto"] as const).map((value) => {
               const active = (app.me?.theme ?? "light") === value;
 
               return (
@@ -198,7 +203,7 @@ export default function SettingsScreen() {
                   onPress={() => saveAppearance("theme", value)}
                 >
                   <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                    {value === "light" ? "Светлая" : "Тёмная"}
+                    {value === "light" ? "Светлая" : value === "dark" ? "Тёмная" : "Авто"}
                   </Text>
                 </Pressable>
               );
@@ -213,18 +218,25 @@ export default function SettingsScreen() {
                 const active = (app.me?.accent ?? "rose") === name;
 
                 return (
-                  <Pressable
-                    key={name}
-                    accessibilityLabel={ACCENTS[name].label}
-                    style={[styles.swatch, { backgroundColor: ACCENTS[name].color }]}
-                    onPress={() => saveAppearance("accent", name)}
-                  >
-                    {active && (
-                      <Svg width={18} height={18} viewBox="0 0 24 24">
-                        <Path d="M5 12l5 5 9-10" fill="none" stroke="#FFFFFF" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
-                      </Svg>
-                    )}
-                  </Pressable>
+                  <View key={name} style={styles.swatchItem}>
+                    <Pressable
+                      accessibilityLabel={ACCENTS[name].label}
+                      style={[
+                        styles.swatch,
+                        { backgroundColor: ACCENTS[name].color },
+                        active && styles.swatchActive,
+                      ]}
+                      onPress={() => saveAppearance("accent", name)}
+                    >
+                      {active && (
+                        <Svg width={18} height={18} viewBox="0 0 24 24">
+                          <Path d="M5 12l5 5 9-10" fill="none" stroke="#FFFFFF" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+                        </Svg>
+                      )}
+                    </Pressable>
+
+                    <Text style={styles.swatchLabel}>{ACCENTS[name].label}</Text>
+                  </View>
                 );
               })}
             </View>
@@ -242,18 +254,21 @@ export default function SettingsScreen() {
         )}
       </View>
 
-      <SecondaryButton title="Выйти из аккаунта" onPress={logout} />
+      <Pressable style={styles.outlineButton} onPress={logout}>
+        <Text style={styles.outlineText}>Выйти из аккаунта</Text>
+      </Pressable>
 
-      <Pressable style={styles.danger} onPress={deleteAccount}>
+      <Pressable style={styles.dangerButton} onPress={deleteAccount}>
         <Text style={styles.dangerText}>Удалить аккаунт</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(c: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
   appearanceCard: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: c.card,
     borderRadius: 24,
     paddingTop: 14,
     paddingHorizontal: 16,
@@ -263,7 +278,7 @@ const styles = StyleSheet.create({
 
   segment: {
     flexDirection: "row",
-    backgroundColor: SWEETLY.background,
+    backgroundColor: c.background,
     borderRadius: 24,
     padding: 4,
     gap: 4,
@@ -279,11 +294,11 @@ const styles = StyleSheet.create({
   },
 
   segmentItemActive: {
-    backgroundColor: SWEETLY.accent,
+    backgroundColor: c.accent,
   },
 
   segmentText: {
-    color: SWEETLY.text,
+    color: c.text,
     fontFamily: FONTS.textBold,
     fontSize: 14,
   },
@@ -299,7 +314,7 @@ const styles = StyleSheet.create({
   },
 
   accentLabel: {
-    color: SWEETLY.text,
+    color: c.text,
     fontFamily: FONTS.textBold,
     fontSize: 15,
   },
@@ -317,7 +332,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+  screen: { flex: 1, backgroundColor: c.background },
 
   content: {
     paddingHorizontal: 22,
@@ -332,7 +347,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
 
   card: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: c.card,
     borderRadius: 28,
     overflow: "hidden",
   },
@@ -347,17 +362,17 @@ const styles = StyleSheet.create({
 
   border: {
     borderBottomWidth: 1,
-    borderBottomColor: SWEETLY.divider,
+    borderBottomColor: c.divider,
   },
 
   rowLabel: {
-    color: SWEETLY.muted,
+    color: c.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
   },
 
   rowValue: {
-    color: SWEETLY.text,
+    color: c.text,
     fontFamily: FONTS.textBold,
     fontSize: 17,
     marginTop: 2,
@@ -367,25 +382,61 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
     borderTopWidth: 1,
-    borderTopColor: SWEETLY.divider,
+    borderTopColor: c.divider,
   },
 
   hint: {
-    color: SWEETLY.muted,
+    color: c.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
     marginTop: 8,
     paddingHorizontal: 6,
   },
 
-  danger: {
-    alignSelf: "center",
-    paddingVertical: 12,
+  swatchItem: {
+    alignItems: "center",
+    gap: 4,
+  },
+
+  swatchActive: {
+    borderWidth: 3,
+    borderColor: c.text,
+  },
+
+  swatchLabel: {
+    color: c.muted,
+    fontFamily: FONTS.text,
+    fontSize: 12,
+  },
+
+  outlineButton: {
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: c.text,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  outlineText: {
+    color: c.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 16,
+  },
+
+  dangerButton: {
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: c.error,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   dangerText: {
-    color: SWEETLY.error,
+    color: c.error,
     fontFamily: FONTS.textBold,
-    fontSize: 15,
+    fontSize: 16,
   },
 });
+}

@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { CalendarGrid, formatDateISO, formatDateRu } from "@/components/date-field";
 import { PrimaryButton, ScreenTitle } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { refreshAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
 
@@ -101,8 +101,8 @@ export default function StartDateScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -114,29 +114,29 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 6 },
 
   subtitle: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 15,
     lineHeight: 22,
   },
 
   card: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 12,
   },
 
   selected: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 16,
     textAlign: "center",
   },
 
   error: {
-    color: SWEETLY.error,
+    color: C.error,
     fontFamily: FONTS.textBold,
     fontSize: 14,
     textAlign: "center",
   },
-});
+}));

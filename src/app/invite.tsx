@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 
 import { PrimaryButton, SecondaryButton } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { getAppData, refreshAppData } from "@/lib/app-data";
 import { clearPendingInvite, getPendingInvite } from "@/lib/invite-link";
 import { supabase } from "@/lib/supabase";
@@ -99,7 +99,7 @@ export default function InviteScreen() {
   if (step === "loading" || step === "busy") {
     return (
       <View style={styles.screen}>
-        <ActivityIndicator size="large" color={SWEETLY.accent} />
+        <ActivityIndicator size="large" color={C.accent} />
       </View>
     );
   }
@@ -149,10 +149,10 @@ export default function InviteScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: SWEETLY.background,
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 30,
@@ -163,26 +163,26 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-    backgroundColor: SWEETLY.accent,
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 8,
   },
 
   heartText: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontSize: 40,
   },
 
   title: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.display,
     fontSize: 28,
     textAlign: "center",
   },
 
   text: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 15,
     lineHeight: 22,
@@ -191,9 +191,9 @@ const styles = StyleSheet.create({
   },
 
   error: {
-    color: SWEETLY.error,
+    color: C.error,
     fontFamily: FONTS.textBold,
     fontSize: 14,
     textAlign: "center",
   },
-});
+}));

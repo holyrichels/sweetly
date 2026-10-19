@@ -1,3 +1,4 @@
+import { C, liveStyles } from "@/constants/sweetly-theme";
 import SkeletonScreen from "@/components/skeleton-screen";
 import Svg, { Path } from "react-native-svg";
 import { useEffect, useLayoutEffect, useState } from "react";
@@ -313,20 +314,20 @@ export default function MoodScreen() {
                   <Path
                     d="M12 3a9 9 0 100 18 9 9 0 000-18z"
                     fill="none"
-                    stroke={selected ? "#FFFFFF" : "#3B1F2B"}
+                    stroke={selected ? C.accentOn : C.text}
                     strokeWidth={2.2}
                   />
                   <Path
                     d={option.d}
                     fill="none"
-                    stroke={selected ? "#FFFFFF" : "#3B1F2B"}
+                    stroke={selected ? C.accentOn : C.text}
                     strokeWidth={2.2}
                     strokeLinecap="round"
                   />
                   <Path
                     d="M9 9.5h.01M15 9.5h.01"
                     fill="none"
-                    stroke={selected ? "#FFFFFF" : "#3B1F2B"}
+                    stroke={selected ? C.accentOn : C.text}
                     strokeWidth={3}
                     strokeLinecap="round"
                   />
@@ -348,7 +349,7 @@ export default function MoodScreen() {
       <TextInput
         style={styles.noteInput}
         placeholder="Что случилось сегодня?"
-        placeholderTextColor="#B49BA3"
+        placeholderTextColor={C.muted}
         value={noteDraft}
         onChangeText={setNoteDraft}
         maxLength={140}
@@ -409,8 +410,8 @@ export default function MoodScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FFF1F0" },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -423,14 +424,14 @@ const styles = StyleSheet.create({
 
   center: {
     flex: 1,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
   },
 
   emptyTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 20,
     marginBottom: 8,
@@ -438,27 +439,27 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
   },
 
   title: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 40,
   },
 
   subtitle: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 16,
     marginTop: 4,
     marginBottom: 22,
   },
 
   moodCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     borderRadius: 28,
     paddingVertical: 16,
     paddingHorizontal: 8,
@@ -475,55 +476,55 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
 
   moodCircleActive: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
   },
 
   moodLabel: {
-    color: "#3B1F2B",
-    fontSize: 12,
+    color: C.text,
+    fontSize: 13,
     marginTop: 6,
-    fontFamily: "Manrope_500Medium",
+    fontFamily: "Manrope_700Bold",
   },
 
   moodLabelActive: {
     fontFamily: "Manrope_700Bold",
-    color: "#C23A62",
+    color: C.accent,
   },
 
   noteInput: {
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     paddingHorizontal: 20,
     fontSize: 15,
-    color: "#3B1F2B",
+    color: C.text,
     marginTop: 8,
   },
 
   shareButton: {
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 14,
   },
 
   shareText: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontFamily: "Manrope_700Bold",
     fontSize: 16,
   },
 
   partnerCard: {
     marginTop: 18,
-    backgroundColor: "#FFE6DB",
+    backgroundColor: C.peachLight,
     borderRadius: 28,
     padding: 16,
     flexDirection: "row",
@@ -535,7 +536,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -545,19 +546,19 @@ const styles = StyleSheet.create({
   },
 
   partnerName: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 13,
   },
 
   partnerMood: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 20,
     marginTop: 2,
   },
 
   sectionLabel: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     fontFamily: "Manrope_700Bold",
     letterSpacing: 0.4,
@@ -582,29 +583,29 @@ const styles = StyleSheet.create({
   },
 
   weekCircleFilled: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
   },
 
   weekCircleToday: {
     borderWidth: 2,
-    borderColor: "#C23A62",
-    backgroundColor: "#FFFFFF",
+    borderColor: C.accent,
+    backgroundColor: C.card,
   },
 
   weekCircleEmpty: {
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: "#E3B7C2",
+    borderColor: C.dashed,
   },
 
   weekLabel: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 13,
     marginTop: 6,
   },
 
   weekLabelToday: {
-    color: "#C23A62",
+    color: C.accent,
     fontFamily: "Manrope_700Bold",
   },
-});
+}));

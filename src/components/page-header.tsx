@@ -6,6 +6,7 @@ import SecureImage from "@/components/secure-image";
 import { logMiss } from "@/lib/miss-log";
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
+import { C, liveStyles } from "@/constants/sweetly-theme";
 
 type ProfileItem = { id: string; name: string; avatar_url?: string | null };
 
@@ -104,7 +105,7 @@ export default function PageHeader({ title }: { title: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#FFF1F0",
+    borderColor: C.background,
     overflow: "hidden",
   },
 
@@ -138,14 +139,14 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     position: "absolute",
     left: 27,
     top: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#FFF1F0",
+    borderColor: C.background,
     overflow: "hidden",
   },
 
@@ -155,7 +156,7 @@ const styles = StyleSheet.create({
   },
 
   avatarText: {
-    color: "#fff",
+    color: C.accentOn,
     fontSize: 15,
     fontWeight: "800",
   },
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
   },
 
   titlePill: {
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 9,
@@ -184,7 +185,7 @@ const styles = StyleSheet.create({
   },
 
   titleText: {
-    color: "#704e59",
+    color: C.text,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
   },
 
   missLabel: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 10,
     fontWeight: "700",
   },
@@ -216,7 +217,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#9b6676",
@@ -227,7 +228,7 @@ const styles = StyleSheet.create({
   },
 
   heartText: {
-    color: "#C23A62",
+    color: C.accent,
     fontSize: 20,
   },
-});
+}));

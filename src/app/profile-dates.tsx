@@ -6,7 +6,7 @@ import { CalendarGrid, FadeIn, formatDateISO, formatDateRu } from "@/components/
 import SkeletonScreen from "@/components/skeleton-screen";
 import SubHeader from "@/components/sub-header";
 import { Field, PrimaryButton, SecondaryButton } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { confirmAction, notify } from "@/lib/dialogs";
 import { supabase } from "@/lib/supabase";
@@ -191,8 +191,8 @@ export default function DatesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   list: { gap: 10 },
 
   card: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -219,29 +219,29 @@ const styles = StyleSheet.create({
     borderColor: "transparent",
   },
 
-  cardActive: { borderColor: SWEETLY.accent },
+  cardActive: { borderColor: C.accent },
 
   cardTitle: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 17,
   },
 
   cardDate: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
     marginTop: 2,
   },
 
   cardNumber: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.display,
     fontSize: 28,
   },
 
   cardUnit: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 14,
   },
@@ -256,27 +256,27 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: SWEETLY.dashed,
+    borderColor: C.dashed,
     alignItems: "center",
     justifyContent: "center",
   },
 
   addText: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
 
   form: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 16,
     gap: 12,
   },
 
   formTitle: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.display,
     fontSize: 22,
   },
-});
+}));

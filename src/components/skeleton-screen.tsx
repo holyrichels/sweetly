@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { Animated, StyleSheet, View } from "react-native";
 
-import { SWEETLY } from "@/constants/sweetly-theme";
+import { C, liveStyles } from "@/constants/sweetly-theme";
 
 // Заготовка экрана на время загрузки: пульсирующие блоки вместо спиннера
 export default function SkeletonScreen() {
@@ -40,10 +40,10 @@ export default function SkeletonScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: SWEETLY.background,
+    backgroundColor: C.background,
     paddingHorizontal: 22,
     paddingTop: 55,
     gap: 14,
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
     width: 150,
     height: 36,
     borderRadius: 18,
-    backgroundColor: SWEETLY.divider,
+    backgroundColor: C.divider,
   },
 
   weekRow: {
@@ -65,18 +65,18 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 64,
     borderRadius: 18,
-    backgroundColor: SWEETLY.divider,
+    backgroundColor: C.divider,
   },
 
   bigCard: {
     height: 210,
     borderRadius: 32,
-    backgroundColor: SWEETLY.divider,
+    backgroundColor: C.divider,
   },
 
   card: {
     height: 64,
     borderRadius: 22,
-    backgroundColor: SWEETLY.divider,
+    backgroundColor: C.divider,
   },
-});
+}));

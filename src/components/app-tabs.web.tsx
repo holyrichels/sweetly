@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Slot, usePathname, useRouter } from "expo-router";
 import { Animated, PanResponder, Pressable, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import { SWEETLY } from "@/constants/sweetly-theme";
+import { useColors } from "@/lib/theme";
 
 // Иконки из макета (линейные, 24x24)
 const TABS = [
@@ -24,6 +24,9 @@ const SLIDE_DISTANCE = 28;
 const ANIMATION_MS = 240;
 
 export default function AppTabs() {
+  const c = useColors();
+  const styles = useMemo(() => makeStyles(c), [c]);
+
   const pathname = usePathname();
   const router = useRouter();
 
@@ -86,7 +89,7 @@ export default function AppTabs() {
       <View style={styles.bar}>
         {TABS.map((tab) => {
           const active = pathname === tab.route;
-          const color = active ? SWEETLY.accent : SWEETLY.muted;
+          const color = active ? c.accent : c.muted;
 
           return (
             <Pressable
@@ -113,10 +116,11 @@ export default function AppTabs() {
   );
 }
 
-const styles = StyleSheet.create({
+function makeStyles(c: ReturnType<typeof useColors>) {
+  return StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: SWEETLY.background,
+    backgroundColor: c.background,
   },
 
   content: {
@@ -128,7 +132,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
-    backgroundColor: SWEETLY.card,
+    backgroundColor: c.bottomBar,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     paddingHorizontal: 8,
@@ -142,3 +146,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 });
+}

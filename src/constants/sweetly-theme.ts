@@ -43,55 +43,78 @@ export const SIZE = {
   minTouch: 44,
 };
 
-// ---------- Светлая и тёмная тема, акцентные цвета ----------
+// ---------- Темы и акценты ----------
 
-export type ThemeName = 'light' | 'dark';
+export type ThemeName = 'light' | 'dark' | 'auto';
+
+export type ResolvedTheme = 'light' | 'dark';
 
 export type AccentName = 'rose' | 'berry' | 'coral' | 'plum';
 
-// Акцентные цвета: выбирает пользователь, применяются ко всей палитре темы
-export const ACCENTS: Record<AccentName, { label: string; color: string; light: string }> = {
-  rose: { label: 'Роза', color: '#C23A62', light: '#E87A94' },
-  berry: { label: 'Ягода', color: '#B5304F', light: '#D9667F' },
-  coral: { label: 'Коралл', color: '#E0654A', light: '#F09A86' },
-  plum: { label: 'Слива', color: '#8E4585', light: '#B57AAE' },
+export const ACCENTS: Record<AccentName, { label: string; color: string }> = {
+  rose: { label: 'Роза', color: '#C23A62' },
+  berry: { label: 'Ягода', color: '#B5304F' },
+  coral: { label: 'Коралл', color: '#E0654A' },
+  plum: { label: 'Слива', color: '#8E4585' },
 };
 
-type Palette = {
+// Осветляет цвет к белому на заданную долю: для текста и иконок акцента в тёмной теме
+export function lighten(hex: string, amount: number): string {
+  const value = hex.replace('#', '');
+
+  const channels = [0, 2, 4].map((index) => parseInt(value.substring(index, index + 2), 16));
+
+  const mixed = channels.map((channel) => Math.round(channel + (255 - channel) * amount));
+
+  return '#' + mixed.map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+export type Palette = {
   background: string;
   card: string;
   peach: string;
+  peachLight: string;
   divider: string;
   text: string;
   muted: string;
   accent: string;
-  accentLight: string;
-  accentPale: string;
+  accentText: string;
+  accentOn: string;
   dashed: string;
   error: string;
   toggleOff: string;
-  plum: string;
+  bottomBar: string;
+  videoBg: string;
+  plumCard: string;
+  onPlumCard: string;
 };
 
-// Палитра для выбранной темы и акцента
-export function getPalette(theme: ThemeName, accent: AccentName): Palette {
-  const picked = ACCENTS[accent];
+// Палитра для темы и акцента. Coral: текст на заливке тёмный.
+export function getPalette(theme: ResolvedTheme, accent: AccentName): Palette {
+  const color = ACCENTS[accent].color;
+
+  // Текст на акцентной заливке белый для всех акцентов, как в макете
+  const onAccent = '#FFFFFF';
 
   if (theme === 'dark') {
     return {
       background: '#1E1218',
       card: '#2E1E26',
       peach: '#4A2C36',
+      peachLight: '#3A2430',
       divider: '#3E2A33',
       text: '#FBE9EF',
       muted: '#B89AA6',
-      accent: picked.color,
-      accentLight: picked.light,
-      accentPale: '#5A3442',
+      accent: color,
+      accentText: lighten(color, 0.4),
+      accentOn: onAccent,
       dashed: '#7A5A66',
       error: '#FF8FA3',
       toggleOff: '#5A4550',
-      plum: '#FBE9EF',
+      bottomBar: '#2E1E26',
+      videoBg: '#120A0E',
+      plumCard: '#4A2C36',
+      onPlumCard: '#FBE9EF',
     };
   }
 
@@ -99,15 +122,50 @@ export function getPalette(theme: ThemeName, accent: AccentName): Palette {
     background: '#FFF1F0',
     card: '#FFFFFF',
     peach: '#FFD9C9',
+    peachLight: '#FFE6DB',
     divider: '#F3DCDD',
     text: '#3B1F2B',
     muted: '#7A5A66',
-    accent: picked.color,
-    accentLight: picked.light,
-    accentPale: '#F4B1C0',
+    accent: color,
+    accentText: color,
+    accentOn: onAccent,
     dashed: '#D98BA0',
     error: '#B5304F',
     toggleOff: '#D9C3CA',
-    plum: '#3B1F2B',
+    bottomBar: '#FFFFFF',
+    videoBg: '#3B1F2B',
+    plumCard: '#3B1F2B',
+    onPlumCard: '#FFFFFF',
   };
+}
+
+// ---------- Живая палитра: текущая тема доступна везде, включая вспомогательные компоненты ----------
+
+// Текущая палитра. Обновляется провайдером темы при смене темы или акцента.
+export const C: Palette = { ...getPalette('light', 'rose') };
+
+let paletteVersion = 0;
+
+export function setLive(next: Palette) {
+  const changed = (Object.keys(next) as (keyof Palette)[]).some((key) => C[key] !== next[key]);
+
+  if (changed) {
+    Object.assign(C, next);
+    paletteVersion += 1;
+  }
+}
+
+// Стили, которые пересчитываются при смене темы. Используются как обычный объект styles.
+export function liveStyles<T extends object>(factory: (palette: Palette) => T): T {
+  let cache: { version: number; value: T } | null = null;
+
+  return new Proxy({} as T, {
+    get(_target, key) {
+      if (!cache || cache.version !== paletteVersion) {
+        cache = { version: paletteVersion, value: factory(C) };
+      }
+
+      return (cache.value as any)[key];
+    },
+  });
 }

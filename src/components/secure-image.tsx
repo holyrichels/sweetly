@@ -3,6 +3,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Image, ImageStyle, StyleProp, View, StyleSheet } from "react-native";
 
 import { supabase } from "@/lib/supabase";
+import { C, liveStyles } from "@/constants/sweetly-theme";
 
 // Кэш временных ссылок: одна и та же картинка не запрашивается заново на каждой странице
 const urlCache = new Map<string, { url: string; expires: number }>();
@@ -119,8 +120,8 @@ export default function SecureImage({
   return <Image source={{ uri }} style={style} />;
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   placeholder: {
-    backgroundColor: "#FFE6DB",
+    backgroundColor: C.peachLight,
   },
-});
+}));

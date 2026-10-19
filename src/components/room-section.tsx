@@ -5,7 +5,7 @@ import Svg, { Path } from "react-native-svg";
 
 import SubHeader from "@/components/sub-header";
 import { PrimaryButton } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { useAppData } from "@/lib/app-data";
 import { notify } from "@/lib/dialogs";
 import { supabase } from "@/lib/supabase";
@@ -155,7 +155,7 @@ export default function RoomSection({ config }: { config: SectionConfig }) {
           <TextInput
             style={styles.input}
             placeholder={config.placeholder}
-            placeholderTextColor={SWEETLY.muted}
+            placeholderTextColor={C.muted}
             value={title}
             onChangeText={setTitle}
           />
@@ -164,7 +164,7 @@ export default function RoomSection({ config }: { config: SectionConfig }) {
             <TextInput
               style={styles.input}
               placeholder={config.extraLabel}
-              placeholderTextColor={SWEETLY.muted}
+              placeholderTextColor={C.muted}
               value={extra}
               onChangeText={setExtra}
             />
@@ -219,8 +219,8 @@ export default function RoomSection({ config }: { config: SectionConfig }) {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -239,19 +239,19 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     borderWidth: 1.5,
     borderStyle: "dashed",
-    borderColor: SWEETLY.dashed,
+    borderColor: C.dashed,
     alignItems: "center",
     justifyContent: "center",
   },
 
   addText: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
 
   form: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 16,
     gap: 10,
@@ -260,14 +260,14 @@ const styles = StyleSheet.create({
   input: {
     height: 48,
     borderRadius: 24,
-    backgroundColor: SWEETLY.background,
+    backgroundColor: C.background,
     paddingHorizontal: 18,
     fontSize: 15,
-    color: SWEETLY.text,
+    color: C.text,
   },
 
   empty: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 15,
     textAlign: "center",
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   list: { gap: 10 },
 
   card: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 24,
     paddingHorizontal: 18,
     paddingVertical: 16,
@@ -287,7 +287,7 @@ const styles = StyleSheet.create({
   },
 
   cardPinned: {
-    backgroundColor: SWEETLY.peach,
+    backgroundColor: C.peach,
   },
 
   check: {
@@ -295,36 +295,36 @@ const styles = StyleSheet.create({
     height: 26,
     borderRadius: 13,
     borderWidth: 2,
-    borderColor: SWEETLY.accent,
+    borderColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
   },
 
   checkOn: {
-    backgroundColor: SWEETLY.accent,
+    backgroundColor: C.accent,
   },
 
   cardTitle: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
 
   cardDone: {
     textDecorationLine: "line-through",
-    color: SWEETLY.muted,
+    color: C.muted,
   },
 
   cardSub: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
     marginTop: 2,
   },
 
   remove: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontSize: 22,
     paddingHorizontal: 4,
   },
-});
+}));

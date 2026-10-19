@@ -18,6 +18,7 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { useVideoPlayer, VideoView } from "expo-video";
 
+import { C, liveStyles } from "@/constants/sweetly-theme";
 import SecureImage from "@/components/secure-image";
 import SkeletonScreen from "@/components/skeleton-screen";
 import SoloMemories from "@/components/solo-memories";
@@ -359,7 +360,7 @@ export default function MemoriesScreen() {
             <TextInput
               style={styles.input}
               placeholder="Подпись"
-              placeholderTextColor="#B49BA3"
+              placeholderTextColor={C.muted}
               value={caption}
               onChangeText={setCaption}
             />
@@ -400,7 +401,7 @@ export default function MemoriesScreen() {
                 <View style={styles.featuredMedia}>
                   {featured.media_type === "video" ? (
                     <Svg width={44} height={44} viewBox="0 0 24 24">
-                      <Path d="M8 5v14l11-7z" fill="#C23A62" />
+                      <Path d="M8 5v14l11-7z" fill={C.accent} />
                     </Svg>
                   ) : (
                     <SecureImage bucket="memories" path={featured.photo_path} style={styles.featuredImage} />
@@ -426,7 +427,7 @@ export default function MemoriesScreen() {
                   <View style={[styles.cardMedia, index % 2 === 0 ? styles.cardMediaSoft : styles.cardMediaPink]}>
                     {memory.media_type === "video" ? (
                       <Svg width={34} height={34} viewBox="0 0 24 24">
-                        <Path d="M8 5v14l11-7z" fill="#C23A62" />
+                        <Path d="M8 5v14l11-7z" fill={C.accent} />
                       </Svg>
                     ) : (
                       <SecureImage bucket="memories" path={memory.photo_path} style={styles.cardImage} />
@@ -481,8 +482,8 @@ export default function MemoriesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#FFF1F0" },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -495,14 +496,14 @@ const styles = StyleSheet.create({
 
   center: {
     flex: 1,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 40,
   },
 
   emptyTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 20,
     marginBottom: 8,
@@ -510,7 +511,7 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     lineHeight: 20,
     textAlign: "center",
@@ -520,19 +521,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 18,
+    marginBottom: 26,
   },
 
   headerText: { flex: 1, paddingRight: 12 },
 
   title: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 36,
   },
 
   subtitle: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 15,
     marginTop: 4,
   },
@@ -541,7 +542,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -549,34 +550,34 @@ const styles = StyleSheet.create({
   chipRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 18,
+    marginBottom: 22,
   },
 
   chip: {
-    height: 42,
+    height: 56,
     paddingHorizontal: 20,
     borderRadius: 21,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
 
   chipActive: {
-    backgroundColor: "#3B1F2B",
+    backgroundColor: C.accent,
   },
 
   chipText: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 15,
   },
 
   chipTextActive: {
-    color: "#FFFFFF",
+    color: C.accentOn,
   },
 
   formCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     borderRadius: 24,
     padding: 16,
     gap: 12,
@@ -586,7 +587,7 @@ const styles = StyleSheet.create({
   mediaBox: {
     height: 190,
     borderRadius: 18,
-    backgroundColor: "#FFE6DB",
+    backgroundColor: C.peachLight,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -595,7 +596,7 @@ const styles = StyleSheet.create({
   mediaPreview: { width: "100%", height: "100%" },
 
   mediaHint: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     fontFamily: "Manrope_700Bold",
   },
@@ -603,16 +604,16 @@ const styles = StyleSheet.create({
   input: {
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     paddingHorizontal: 18,
     fontSize: 15,
-    color: "#3B1F2B",
+    color: C.text,
   },
 
   dateField: {
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     paddingHorizontal: 18,
     flexDirection: "row",
     alignItems: "center",
@@ -620,13 +621,13 @@ const styles = StyleSheet.create({
   },
 
   dateFieldText: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 15,
     fontFamily: "Manrope_700Bold",
   },
 
   dateFieldIcon: {
-    color: "#C23A62",
+    color: C.accent,
     fontSize: 14,
     fontFamily: "Manrope_700Bold",
   },
@@ -640,13 +641,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
   },
 
   primaryButtonText: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontSize: 15,
     fontFamily: "Manrope_700Bold",
   },
@@ -655,19 +656,19 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
 
   secondaryButtonText: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 15,
     fontFamily: "Manrope_700Bold",
   },
 
   emptyListText: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 15,
     lineHeight: 22,
     textAlign: "center",
@@ -675,7 +676,7 @@ const styles = StyleSheet.create({
   },
 
   featured: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     borderRadius: 28,
     overflow: "hidden",
     marginBottom: 14,
@@ -683,7 +684,7 @@ const styles = StyleSheet.create({
 
   featuredMedia: {
     height: 200,
-    backgroundColor: "#FFE6DB",
+    backgroundColor: C.peachLight,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -699,7 +700,7 @@ const styles = StyleSheet.create({
   featuredText: { flex: 1 },
 
   featuredTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 24,
   },
@@ -713,7 +714,7 @@ const styles = StyleSheet.create({
 
   card: {
     width: "48%",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     borderRadius: 24,
     overflow: "hidden",
   },
@@ -725,9 +726,9 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
 
-  cardMediaSoft: { backgroundColor: "#FFE6DB" },
+  cardMediaSoft: { backgroundColor: C.peachLight },
 
-  cardMediaPink: { backgroundColor: "#F9D3DC" },
+  cardMediaPink: { backgroundColor: C.peachLight },
 
   cardImage: { width: "100%", height: "100%" },
 
@@ -736,13 +737,13 @@ const styles = StyleSheet.create({
   },
 
   cardTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 15,
   },
 
   cardDate: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 12,
     marginTop: 3,
   },
@@ -773,7 +774,7 @@ const styles = StyleSheet.create({
   },
 
   viewerButtonText: {
-    color: "#ffffff",
+    color: C.accentOn,
     fontSize: 18,
     fontWeight: "800",
   },
@@ -788,9 +789,9 @@ const styles = StyleSheet.create({
     bottom: 120,
     left: 20,
     right: 20,
-    color: "#ffffff",
+    color: C.accentOn,
     fontSize: 15,
     fontWeight: "700",
     textAlign: "center",
   },
-});
+}));

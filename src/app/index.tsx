@@ -25,6 +25,7 @@ import { SymbolView } from "expo-symbols";
 import SecureImage from "@/components/secure-image";
 import { getAppData, refreshAppData, useAppData, type ProfileData } from "@/lib/app-data";
 import SoloHome from "@/components/solo-home";
+import { C, liveStyles } from "@/constants/sweetly-theme";
 import SkeletonScreen from "@/components/skeleton-screen";
 import { shareInvite } from "@/lib/invite";
 import DayView from "@/components/day-view";
@@ -298,7 +299,7 @@ function TimerCircleButton({
         name={TIMER_ICONS[icon]}
         size={18}
         weight="semibold"
-        tintColor="#3B1F2B"
+        tintColor={C.text}
       />
     </Pressable>
   );
@@ -816,6 +817,8 @@ export default function HomeScreen() {
       return;
     }
 
+    playMissAnimation();
+
     setMissLoading(true);
 
     // Сразу показываем изменение на экране
@@ -1155,6 +1158,62 @@ export default function HomeScreen() {
   const [daysScrollX, setDaysScrollX] = useState(0);
   const [daysStripWidth, setDaysStripWidth] = useState(0);
 
+  // Анимация «Скучаю»: кнопка сжимается и возвращается, над ней поднимается сердечко
+  const missScale = useRef(new Animated.Value(1)).current;
+
+  const missFloat = useRef(new Animated.Value(0)).current;
+
+  function playMissAnimation() {
+    missScale.setValue(1);
+
+    Animated.sequence([
+      Animated.timing(missScale, { toValue: 0.88, duration: 90, useNativeDriver: true }),
+      Animated.spring(missScale, { toValue: 1, friction: 3, tension: 180, useNativeDriver: true }),
+    ]).start();
+
+    missFloat.setValue(0);
+
+    Animated.timing(missFloat, { toValue: 1, duration: 900, useNativeDriver: true }).start();
+  }
+
+  const burstOpacity = missFloat.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 1, 0] });
+
+  const burstY = missFloat.interpolate({ inputRange: [0, 1], outputRange: [0, -60] });
+
+  // Дни, где есть события (настроение, «Скучаю», воспоминания): на них ставим точку
+  const [eventDays, setEventDays] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const coupleIdValue = couple?.id;
+
+    if (!coupleIdValue) return;
+
+    const from = formatDateISO(new Date(Date.now() - 1095 * 86400000));
+
+    const to = formatDateISO(new Date(Date.now() + 86400000));
+
+    Promise.all([
+      supabase.from("couple_mood_days").select("day").eq("couple_id", coupleIdValue).gte("day", from).lte("day", to),
+      supabase.from("couple_miss_log").select("day").eq("couple_id", coupleIdValue).gte("day", from).lte("day", to),
+      supabase
+        .from("couple_memories")
+        .select("memory_date")
+        .eq("couple_id", coupleIdValue)
+        .gte("memory_date", from)
+        .lte("memory_date", to),
+    ]).then(([moods, misses, memories]) => {
+      const set = new Set<string>();
+
+      (moods.data ?? []).forEach((row: any) => set.add(row.day));
+
+      (misses.data ?? []).forEach((row: any) => set.add(row.day));
+
+      (memories.data ?? []).forEach((row: any) => set.add(row.memory_date));
+
+      setEventDays(set);
+    });
+  }, [couple?.id]);
+
   const dates = useMemo(() => {
     const result = [];
 
@@ -1230,7 +1289,7 @@ export default function HomeScreen() {
   const timers: TimerItem[] = [
     {
       id: "main",
-      title: `Влюблённые с ${partnerName}`,
+      title: `Влюблённые с ${partnerName === "Партнёр" ? "партнёром" : partnerName}`,
       date: getRelationshipDate(),
       isMain: true,
     },
@@ -1481,7 +1540,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Ваше имя"
-                placeholderTextColor="#b9a2aa"
+                placeholderTextColor={C.muted}
                 value={name}
                 onChangeText={setName}
               />
@@ -1490,7 +1549,7 @@ export default function HomeScreen() {
             <TextInput
               style={styles.input}
               placeholder="Email"
-              placeholderTextColor="#b9a2aa"
+              placeholderTextColor={C.muted}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -1500,7 +1559,7 @@ export default function HomeScreen() {
             <TextInput
               style={styles.input}
               placeholder="Пароль"
-              placeholderTextColor="#b9a2aa"
+              placeholderTextColor={C.muted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry
@@ -1557,19 +1616,35 @@ export default function HomeScreen() {
         <View style={styles.topBar}>
           <Text style={styles.brand}>Sweetly</Text>
 
-          <Pressable
-            style={[styles.missPill, missLoading && styles.missPillDisabled]}
-            onPress={pressMiss}
-          >
-            <Svg width={20} height={20} viewBox="0 0 24 24">
-              <Path
-                d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"
-                fill="#C23A62"
-              />
-            </Svg>
+          <View style={styles.missWrap}>
+            <Animated.View style={{ transform: [{ scale: missScale }] }}>
+              <Pressable
+                style={[styles.missPill, missLoading && styles.missPillDisabled]}
+                onPress={pressMiss}
+              >
+                <Svg width={20} height={20} viewBox="0 0 24 24">
+                  <Path
+                    d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"
+                    fill={C.accent}
+                  />
+                </Svg>
 
-            <Text style={styles.missPillText}>Скучаю</Text>
-          </Pressable>
+                <Text style={styles.missPillText}>Скучаю</Text>
+              </Pressable>
+            </Animated.View>
+
+            <Animated.View
+              pointerEvents="none"
+              style={[styles.missBurst, { opacity: burstOpacity, transform: [{ translateY: burstY }] }]}
+            >
+              <Svg width={22} height={22} viewBox="0 0 24 24">
+                <Path
+                  d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z"
+                  fill={C.accent}
+                />
+              </Svg>
+            </Animated.View>
+          </View>
         </View>
 
 
@@ -1633,7 +1708,9 @@ export default function HomeScreen() {
                     {date.getDate()}
                   </Text>
 
-                  {today && <View style={styles.todayDot} />}
+                  {(today || eventDays.has(formatDateISO(date))) && (
+                    <View style={[styles.todayDot, selected && styles.todayDotSelected]} />
+                  )}
                 </Pressable>
               );
             }}
@@ -1904,7 +1981,7 @@ export default function HomeScreen() {
               <TextInput
                 style={styles.input}
                 placeholder="Название (например, Переезд)"
-                placeholderTextColor="#b9a2aa"
+                placeholderTextColor={C.muted}
                 value={timerFormTitle}
                 onChangeText={setTimerFormTitle}
               />
@@ -1936,10 +2013,10 @@ export default function HomeScreen() {
 // STYLES
 // =========================================================
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   loadingScreen: {
     flex: 1,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1950,7 +2027,7 @@ const styles = StyleSheet.create({
 
   authContainer: {
     flex: 1,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
   },
 
   authScroll: {
@@ -1975,7 +2052,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 4,
-    borderColor: "#FFF1F0",
+    borderColor: C.background,
   },
 
   authAvatarLeft: {
@@ -1988,7 +2065,7 @@ const styles = StyleSheet.create({
   },
 
   authAvatarRight: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     transform: [
       {
         translateX: 23,
@@ -1997,7 +2074,7 @@ const styles = StyleSheet.create({
   },
 
   authAvatarText: {
-    color: "#fff",
+    color: C.accentOn,
     fontSize: 22,
     fontWeight: "800",
   },
@@ -2006,7 +2083,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 34,
     fontWeight: "800",
-    color: "#3B1F2B",
+    color: C.text,
   },
 
   authSubtitle: {
@@ -2014,11 +2091,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 30,
     fontSize: 15,
-    color: "#7A5A66",
+    color: C.muted,
   },
 
   authCard: {
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 20,
     shadowColor: "#9b6676",
@@ -2037,16 +2114,16 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 17,
     fontSize: 16,
-    color: "#3B1F2B",
+    color: C.text,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#f4dce3",
+    borderColor: C.divider,
   },
 
   primaryButton: {
     height: 56,
     borderRadius: 18,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 6,
@@ -2061,7 +2138,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButtonText: {
-    color: "#fff",
+    color: C.accentOn,
     fontSize: 16,
     fontWeight: "800",
   },
@@ -2080,7 +2157,7 @@ const styles = StyleSheet.create({
 
   menuScreen: {
     flex: 1,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     paddingHorizontal: 20,
     paddingTop: 80,
   },
@@ -2097,14 +2174,14 @@ const styles = StyleSheet.create({
   },
 
   menuTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 31,
     fontWeight: "800",
     lineHeight: 37,
   },
 
   menuSubtitle: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 16,
     marginTop: 10,
   },
@@ -2114,7 +2191,7 @@ const styles = StyleSheet.create({
   },
 
   bigMenuButton: {
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 24,
     padding: 22,
     flexDirection: "row",
@@ -2133,7 +2210,7 @@ const styles = StyleSheet.create({
   bigMenuTitle: {
     fontSize: 19,
     fontWeight: "800",
-    color: "#3B1F2B",
+    color: C.text,
   },
 
   bigMenuSubtitle: {
@@ -2145,11 +2222,11 @@ const styles = StyleSheet.create({
 
   bigMenuArrow: {
     fontSize: 28,
-    color: "#C23A62",
+    color: C.accent,
   },
 
   formCard: {
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 22,
   },
@@ -2163,20 +2240,20 @@ const styles = StyleSheet.create({
 
   formTitle: {
     fontSize: 27,
-    color: "#3B1F2B",
+    color: C.text,
     fontWeight: "800",
     marginBottom: 20,
   },
 
   formDescription: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: 20,
   },
 
   formLabel: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     fontWeight: "700",
     marginBottom: 10,
@@ -2195,12 +2272,12 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#f4dce3",
+    borderColor: C.divider,
   },
 
   statusButtonActive: {
-    backgroundColor: "#C23A62",
-    borderColor: "#C23A62",
+    backgroundColor: C.accent,
+    borderColor: C.accent,
   },
 
   statusText: {
@@ -2210,7 +2287,7 @@ const styles = StyleSheet.create({
   },
 
   statusTextActive: {
-    color: "#fff",
+    color: C.accentOn,
   },
 
   codeInput: {
@@ -2236,7 +2313,7 @@ const styles = StyleSheet.create({
 
   mainScreen: {
     flex: 1,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
   },
 
   mainScroll: {
@@ -2246,13 +2323,13 @@ const styles = StyleSheet.create({
   },
 
   brand: {
-    color: "#C23A62",
+    color: C.accent,
     fontFamily: "PlayfairDisplay_600SemiBold_Italic",
     fontSize: 30,
   },
 
   bigCard: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     borderRadius: 32,
     paddingVertical: 26,
     paddingHorizontal: 24,
@@ -2260,14 +2337,14 @@ const styles = StyleSheet.create({
   },
 
   bigCardTitle: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontSize: 15,
     fontWeight: "600",
     opacity: 0.92,
   },
 
   bigCardNumber: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 104,
     lineHeight: 106,
@@ -2276,7 +2353,7 @@ const styles = StyleSheet.create({
   },
 
   bigCardLabel: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontSize: 17,
     fontWeight: "600",
   },
@@ -2295,7 +2372,7 @@ const styles = StyleSheet.create({
   },
 
   pillText: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontSize: 14,
     fontWeight: "700",
   },
@@ -2306,14 +2383,14 @@ const styles = StyleSheet.create({
   },
 
   otherTitle: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     fontWeight: "700",
     letterSpacing: 0.4,
   },
 
   otherCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     borderRadius: 22,
     paddingHorizontal: 18,
     paddingVertical: 14,
@@ -2323,19 +2400,19 @@ const styles = StyleSheet.create({
   },
 
   otherName: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 16,
     fontWeight: "700",
   },
 
   otherValue: {
-    color: "#C23A62",
+    color: C.accent,
     fontFamily: "PlayfairDisplay_700Bold",
     fontSize: 26,
   },
 
   otherUnit: {
-    color: "#7A5A66",
+    color: C.muted,
     fontFamily: "Manrope_700Bold",
     fontSize: 14,
   },
@@ -2343,7 +2420,7 @@ const styles = StyleSheet.create({
   missPill: {
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     paddingLeft: 14,
     paddingRight: 18,
     flexDirection: "row",
@@ -2357,9 +2434,19 @@ const styles = StyleSheet.create({
   },
 
   missPillText: {
-    color: "#3B1F2B",
+    color: C.text,
     fontFamily: "Manrope_700Bold",
     fontSize: 15,
+  },
+
+  missWrap: {
+    position: "relative",
+  },
+
+  missBurst: {
+    position: "absolute",
+    right: 14,
+    top: 0,
   },
 
   missPillDisabled: {
@@ -2390,25 +2477,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#FFF1F0",
+    borderColor: C.background,
   },
 
   avatarFront: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     position: "absolute",
     left: 27,
     top: 10,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "#FFF1F0",
+    borderColor: C.background,
   },
 
   avatarText: {
-    color: "#fff",
+    color: C.accentOn,
     fontSize: 15,
     fontWeight: "800",
   },
@@ -2420,7 +2507,7 @@ const styles = StyleSheet.create({
   },
 
   statusPill: {
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 9,
@@ -2438,7 +2525,7 @@ const styles = StyleSheet.create({
   },
 
   statusPillText: {
-    color: "#704e59",
+    color: C.text,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -2459,7 +2546,7 @@ const styles = StyleSheet.create({
   },
 
   missLabel: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 10,
     fontWeight: "700",
   },
@@ -2475,7 +2562,7 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#9b6676",
@@ -2493,7 +2580,7 @@ const styles = StyleSheet.create({
   },
 
   heartText: {
-    color: "#C23A62",
+    color: C.accent,
     fontSize: 20,
   },
 
@@ -2508,7 +2595,7 @@ const styles = StyleSheet.create({
   todayButton: {
     alignSelf: "center",
     marginTop: 8,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     paddingHorizontal: 13,
     paddingVertical: 6,
     borderRadius: 14,
@@ -2524,7 +2611,7 @@ const styles = StyleSheet.create({
 
   todayButtonText: {
     fontFamily: "Manrope_700Bold",
-    color: "#fff",
+    color: C.accentOn,
     fontSize: 11,
     fontWeight: "800",
   },
@@ -2540,13 +2627,13 @@ const styles = StyleSheet.create({
     width: 52,
     height: 67,
     borderRadius: 18,
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
 
   dayItemSelected: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
   },
 
   dayWeek: {
@@ -2563,20 +2650,24 @@ const styles = StyleSheet.create({
 
   dayNumber: {
     fontFamily: "PlayfairDisplay_700Bold",
-    color: "#49333b",
+    color: C.text,
     fontSize: 20,
     fontWeight: "800",
   },
 
   dayNumberSelected: {
-    color: "#fff",
+    color: C.accentOn,
+  },
+
+  todayDotSelected: {
+    backgroundColor: C.accentOn,
   },
 
   todayDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     position: "absolute",
     bottom: 5,
   },
@@ -2606,7 +2697,7 @@ const styles = StyleSheet.create({
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#9b6676",
@@ -2624,7 +2715,7 @@ const styles = StyleSheet.create({
   },
 
   androidDateText: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 16,
   },
 
@@ -2642,8 +2733,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#E3B7C2",
-    backgroundColor: "#ffffff",
+    borderColor: C.dashed,
+    backgroundColor: C.card,
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -2651,7 +2742,7 @@ const styles = StyleSheet.create({
   },
 
   dateFieldText: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 16,
     fontWeight: "700",
   },
@@ -2664,10 +2755,10 @@ const styles = StyleSheet.create({
 
   calendar: {
     marginTop: 10,
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: "#F2D5DD",
+    borderColor: C.divider,
     padding: 10,
   },
 
@@ -2681,13 +2772,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#FFF1F0",
+    backgroundColor: C.background,
     alignItems: "center",
     justifyContent: "center",
   },
 
   chipActive: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
   },
 
   chipText: {
@@ -2697,7 +2788,7 @@ const styles = StyleSheet.create({
   },
 
   chipTextActive: {
-    color: "#ffffff",
+    color: C.accentOn,
   },
 
   weekRow: {
@@ -2708,7 +2799,7 @@ const styles = StyleSheet.create({
   weekText: {
     flex: 1,
     textAlign: "center",
-    color: "#b49ba3",
+    color: C.muted,
     fontSize: 12,
     fontWeight: "700",
   },
@@ -2727,18 +2818,18 @@ const styles = StyleSheet.create({
   },
 
   dayCellActive: {
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     borderRadius: 20,
   },
 
   dayText: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 15,
     fontWeight: "600",
   },
 
   dayTextActive: {
-    color: "#ffffff",
+    color: C.accentOn,
     fontWeight: "800",
   },
 
@@ -2750,13 +2841,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     height: 42,
     borderRadius: 14,
-    backgroundColor: "#C23A62",
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
   },
 
   calendarDoneText: {
-    color: "#ffffff",
+    color: C.accentOn,
     fontSize: 15,
     fontWeight: "800",
   },
@@ -2771,13 +2862,13 @@ const styles = StyleSheet.create({
 
   modalCard: {
     width: "100%",
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 26,
     padding: 22,
   },
 
   modalTitle: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 19,
     fontWeight: "800",
     marginBottom: 16,
@@ -2785,7 +2876,7 @@ const styles = StyleSheet.create({
 
   modalCancelText: {
     textAlign: "center",
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 14,
     fontWeight: "700",
     marginTop: 14,
@@ -2796,7 +2887,7 @@ const styles = StyleSheet.create({
   // =======================================================
 
   relationshipCard: {
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 32,
     alignItems: "center",
     width: "100%",
@@ -2821,14 +2912,14 @@ const styles = StyleSheet.create({
   },
 
   daysNumber: {
-    color: "#3B1F2B",
+    color: C.text,
     fontSize: 68,
     lineHeight: 74,
     fontWeight: "800",
   },
 
   daysLabel: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 15,
     fontWeight: "600",
     marginBottom: 25,
@@ -2852,7 +2943,7 @@ const styles = StyleSheet.create({
   },
 
   timerLabel: {
-    color: "#b49ba3",
+    color: C.muted,
     fontSize: 8,
     fontWeight: "700",
     marginTop: 2,
@@ -2869,7 +2960,7 @@ const styles = StyleSheet.create({
   historyLine: {
     width: "70%",
     height: 1,
-    backgroundColor: "#F2D5DD",
+    backgroundColor: C.divider,
     marginVertical: 24,
   },
 
@@ -2905,13 +2996,13 @@ const styles = StyleSheet.create({
   },
 
   timeNumber: {
-    color: "#49333b",
+    color: C.text,
     fontSize: 24,
     fontWeight: "800",
   },
 
   timeLabel: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 10,
     fontWeight: "600",
     marginTop: 2,
@@ -2936,7 +3027,7 @@ const styles = StyleSheet.create({
   },
 
   smallTimeLabel: {
-    color: "#b49ba3",
+    color: C.muted,
     fontSize: 9,
     marginTop: 2,
   },
@@ -2955,7 +3046,7 @@ const styles = StyleSheet.create({
 
   inviteCard: {
     marginTop: 15,
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 25,
     padding: 20,
     flexDirection: "row",
@@ -2971,20 +3062,20 @@ const styles = StyleSheet.create({
   },
 
   inviteTitle: {
-    color: "#49333b",
+    color: C.text,
     fontSize: 17,
     fontWeight: "800",
   },
 
   inviteDescription: {
-    color: "#9b7d87",
+    color: C.muted,
     fontSize: 12,
     lineHeight: 17,
     marginTop: 5,
   },
 
   inviteCode: {
-    color: "#e27f9d",
+    color: C.text,
     fontSize: 24,
     fontWeight: "900",
     letterSpacing: 4,
@@ -2993,7 +3084,7 @@ const styles = StyleSheet.create({
 
   shareButton: {
     alignSelf: "flex-start",
-    backgroundColor: "#fff0f4",
+    backgroundColor: C.accent,
     borderRadius: 13,
     paddingHorizontal: 14,
     paddingVertical: 9,
@@ -3001,7 +3092,7 @@ const styles = StyleSheet.create({
   },
 
   shareButtonText: {
-    color: "#d66f90",
+    color: C.accentOn,
     fontSize: 12,
     fontWeight: "800",
   },
@@ -3012,7 +3103,7 @@ const styles = StyleSheet.create({
 
   partnerCard: {
     marginTop: 15,
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderRadius: 24,
     padding: 16,
     flexDirection: "row",
@@ -3029,7 +3120,7 @@ const styles = StyleSheet.create({
   },
 
   partnerAvatarText: {
-    color: "#fff",
+    color: C.accentOn,
     fontSize: 15,
     fontWeight: "800",
   },
@@ -3040,13 +3131,13 @@ const styles = StyleSheet.create({
   },
 
   partnerTitle: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 11,
     fontWeight: "600",
   },
 
   partnerName: {
-    color: "#49333b",
+    color: C.text,
     fontSize: 17,
     fontWeight: "800",
     marginTop: 2,
@@ -3082,14 +3173,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 13,
     borderRadius: 16,
-    backgroundColor: "#fff",
+    backgroundColor: C.card,
     borderWidth: 1,
-    borderColor: "#f1dce3",
+    borderColor: C.divider,
   },
 
   logoutButtonText: {
-    color: "#7A5A66",
+    color: C.muted,
     fontSize: 13,
     fontWeight: "700",
   },
-});
+}));

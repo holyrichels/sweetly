@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Svg, { Circle, Path, Rect } from "react-native-svg";
 
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { supabase } from "@/lib/supabase";
 
 type MoodRow = { user_id: string; mood: string; note: string | null };
@@ -18,7 +18,7 @@ function capitalize(text: string) {
 
 // Иконка события (контурная, 24 px) в круглом фоне
 function EventIcon({ kind }: { kind: EventKey }) {
-  const color = SWEETLY.accent;
+  const color = C.accent;
 
   if (kind === "mood") {
     return (
@@ -173,7 +173,7 @@ export default function DayView({
     <View style={styles.wrap}>
       <View style={styles.summary}>
         <Text style={styles.summaryText} numberOfLines={1}>
-          Влюблённые с {partnerName}
+          Влюблённые с {partnerName === "Партнёр" ? "партнёром" : partnerName}
         </Text>
 
         <Text style={styles.summaryDays}>
@@ -192,11 +192,11 @@ export default function DayView({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   wrap: { gap: 14 },
 
   summary: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 16,
@@ -207,26 +207,26 @@ const styles = StyleSheet.create({
 
   summaryText: {
     flex: 1,
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 16,
     marginRight: 10,
   },
 
   summaryDays: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.display,
     fontSize: 24,
   },
 
   summaryUnit: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 14,
   },
 
   card: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     paddingHorizontal: 20,
     paddingTop: 20,
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.display,
     fontSize: 26,
     marginBottom: 14,
@@ -249,14 +249,14 @@ const styles = StyleSheet.create({
 
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: SWEETLY.divider,
+    borderBottomColor: C.divider,
   },
 
   iconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: SWEETLY.peach,
+    backgroundColor: C.peach,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -267,15 +267,15 @@ const styles = StyleSheet.create({
   },
 
   rowTitle: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 17,
   },
 
   rowSub: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
     lineHeight: 18,
   },
-});
+}));

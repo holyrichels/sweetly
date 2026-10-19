@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { CalendarGrid, formatDateISO, formatDateRu } from "@/components/date-field";
 import { PrimaryButton, SectionLabel } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { createCoupleWithDate } from "@/lib/couple";
 
 // Выбор даты начала и создание пары прямо на главной, если пары ещё нет
@@ -44,26 +44,26 @@ export default function StartDateCard() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   wrap: { gap: 10 },
 
   card: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 12,
   },
 
   selected: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 16,
     textAlign: "center",
   },
 
   error: {
-    color: SWEETLY.error,
+    color: C.error,
     fontFamily: FONTS.textBold,
     fontSize: 14,
     textAlign: "center",
   },
-});
+}));

@@ -8,7 +8,7 @@ import Svg, { Path } from "react-native-svg";
 import NotifyToggles from "@/components/notify-toggles";
 import SubHeader from "@/components/sub-header";
 import { PrimaryButton, SecondaryButton } from "@/components/sweetly-ui";
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 import { refreshAppData, useAppData } from "@/lib/app-data";
 import { BOT_USERNAME } from "@/lib/invite";
 import { confirmAction, notify } from "@/lib/dialogs";
@@ -128,7 +128,7 @@ export default function NotificationsScreen() {
           <View style={styles.statusCard}>
             <View style={styles.statusIcon}>
               <Svg width={24} height={24} viewBox="0 0 24 24">
-                <Path d={BELL} fill="none" stroke={SWEETLY.accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d={BELL} fill="none" stroke={C.accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
               </Svg>
             </View>
 
@@ -156,7 +156,7 @@ export default function NotificationsScreen() {
           <View style={styles.statusCard}>
             <View style={styles.statusIcon}>
               <Svg width={24} height={24} viewBox="0 0 24 24">
-                <Path d={BELL} fill="none" stroke={SWEETLY.accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                <Path d={BELL} fill="none" stroke={C.accent} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
               </Svg>
             </View>
 
@@ -205,8 +205,8 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SWEETLY.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
   content: {
     paddingHorizontal: 22,
@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
 
   statusCard: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 18,
     flexDirection: "row",
@@ -233,26 +233,26 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: SWEETLY.peach,
+    backgroundColor: C.peach,
     alignItems: "center",
     justifyContent: "center",
   },
 
   statusTitle: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 17,
   },
 
   statusSub: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 13,
     marginTop: 2,
   },
 
   sectionLabel: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.textBold,
     fontSize: 13,
     letterSpacing: 0.4,
@@ -260,7 +260,7 @@ const styles = StyleSheet.create({
   },
 
   steps: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 18,
     gap: 14,
@@ -276,33 +276,33 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: SWEETLY.accent,
+    backgroundColor: C.accent,
     alignItems: "center",
     justifyContent: "center",
   },
 
   stepNumberText: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontFamily: FONTS.textBold,
     fontSize: 14,
   },
 
   stepText: {
     flex: 1,
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.text,
     fontSize: 15,
   },
 
   codeCard: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 18,
     gap: 12,
   },
 
   code: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.display,
     fontSize: 24,
     letterSpacing: 2,
@@ -320,11 +320,11 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: SWEETLY.accent,
+    backgroundColor: C.accent,
   },
 
   waitingText: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 14,
   },
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   },
 
   unlinkText: {
-    color: SWEETLY.error,
+    color: C.error,
     fontFamily: FONTS.textBold,
     fontSize: 15,
   },
@@ -346,8 +346,8 @@ const styles = StyleSheet.create({
   },
 
   backText: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.textBold,
     fontSize: 14,
   },
-});
+}));

@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 
 // Иконки строк (контурные, 24 px)
 export const ICON = {
@@ -27,7 +27,7 @@ export function SoloBrandHeader() {
 
       <View style={styles.missPill}>
         <Svg width={20} height={20} viewBox="0 0 24 24">
-          <Path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" fill={SWEETLY.accent} />
+          <Path d="M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" fill={C.accent} />
         </Svg>
         <Text style={styles.missText}>Скучаю</Text>
       </View>
@@ -100,7 +100,7 @@ export function WhiteButton({ title, onPress }: { title: string; onPress: () => 
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   flex: { flex: 1 },
 
   brandRow: {
@@ -110,7 +110,7 @@ const styles = StyleSheet.create({
   },
 
   brand: {
-    color: SWEETLY.accent,
+    color: C.accent,
     fontFamily: FONTS.displayItalic,
     fontSize: 30,
   },
@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     paddingLeft: 14,
     paddingRight: 18,
     borderRadius: 22,
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
 
   missText: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 15,
   },
@@ -136,19 +136,19 @@ const styles = StyleSheet.create({
   titleBlock: { gap: 6 },
 
   title: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.display,
     fontSize: 34,
   },
 
   subtitle: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 15,
   },
 
   accent: {
-    backgroundColor: SWEETLY.accent,
+    backgroundColor: C.accent,
     borderRadius: 32,
     padding: 24,
     gap: 10,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
 
   accentTitle: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontFamily: FONTS.display,
     fontSize: 30,
     lineHeight: 34,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
 
   accentText: {
-    color: "#FFFFFF",
+    color: C.accentOn,
     fontFamily: FONTS.text,
     fontSize: 15,
     lineHeight: 21,
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
   },
 
   row: {
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     borderRadius: 22,
     paddingVertical: 10,
     paddingLeft: 12,
@@ -194,19 +194,19 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: SWEETLY.peach,
+    backgroundColor: C.peach,
     alignItems: "center",
     justifyContent: "center",
   },
 
   rowTitle: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
 
   rowHint: {
-    color: SWEETLY.muted,
+    color: C.muted,
     fontFamily: FONTS.text,
     fontSize: 12,
     marginTop: 2,
@@ -215,15 +215,15 @@ const styles = StyleSheet.create({
   whiteButton: {
     height: 56,
     borderRadius: 28,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 6,
   },
 
   whiteText: {
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.textBold,
     fontSize: 16,
   },
-});
+}));

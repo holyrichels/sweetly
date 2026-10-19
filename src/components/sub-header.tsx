@@ -4,7 +4,7 @@ import { useRouter } from "expo-router";
 import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 
-import { FONTS, SWEETLY } from "@/constants/sweetly-theme";
+import { FONTS, C, liveStyles } from "@/constants/sweetly-theme";
 
 // Шапка подэкрана. Внутри Telegram работает его нативная кнопка «назад»,
 // в обычном браузере показываем свою круглую кнопку.
@@ -56,7 +56,7 @@ export default function SubHeader({ title }: { title: string }) {
       {!inTelegram && (
         <Pressable style={styles.back} onPress={() => router.back()}>
           <Svg width={22} height={22} viewBox="0 0 24 24">
-            <Path d="M15 6l-6 6 6 6" fill="none" stroke={SWEETLY.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <Path d="M15 6l-6 6 6 6" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </Pressable>
       )}
@@ -66,7 +66,7 @@ export default function SubHeader({ title }: { title: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = liveStyles(() => StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -78,15 +78,15 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: SWEETLY.card,
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
   },
 
   title: {
     flex: 1,
-    color: SWEETLY.text,
+    color: C.text,
     fontFamily: FONTS.display,
     fontSize: 30,
   },
-});
+}));
