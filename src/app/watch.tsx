@@ -1,20 +1,10 @@
+import { C, liveStyles, FONTS } from "@/constants/sweetly-theme";
 import SkeletonScreen from "@/components/skeleton-screen";
-import { C, FONTS, liveStyles } from "@/constants/sweetly-theme";
-import { useRouter } from "expo-router";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 
-import {
-  Alert,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View
-} from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Linking } from "react-native";
 
 import { getAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -36,13 +26,26 @@ type Message = {
 
 // Достаём ID видео из обычной ссылки, короткой youtu.be и ссылки shorts
 function extractYoutubeId(input: string): string | null {
-  const match = input.match(
-    /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/,
-  );
+  const match = input.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
   return match ? match[1] : null;
 }
 
 // Загружаем API плеера YouTube один раз
+// На Android проверка «не бот» от YouTube появляется во встроенном плеере,
+// поэтому там не встраиваем плеер, а даём кнопку «Открыть в YouTube»
+const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+
+// Открываем видео во внешнем браузере: Telegram openLink выводит ссылку из своего окна
+function openYoutube(url: string) {
+  const tg = (globalThis as any).Telegram?.WebApp;
+
+  if (tg?.openLink) {
+    tg.openLink(url);
+  } else {
+    Linking.openURL(url);
+  }
+}
+
 let youtubeApiPromise: Promise<void> | null = null;
 
 function loadYoutubeApi(): Promise<void> {
@@ -195,31 +198,19 @@ export default function WatchScreen() {
       .channel(`room-${coupleId}`, { config: { presence: { key: userId } } })
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "room_state",
-          filter: `couple_id=eq.${coupleId}`,
-        },
+        { event: "*", schema: "public", table: "room_state", filter: `couple_id=eq.${coupleId}` },
         (payload: any) => {
           if (payload.new) setRoom(payload.new as RoomState);
         },
       )
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "room_messages",
-          filter: `couple_id=eq.${coupleId}`,
-        },
+        { event: "INSERT", schema: "public", table: "room_messages", filter: `couple_id=eq.${coupleId}` },
         (payload: any) => {
           const message = payload.new as Message;
 
           setMessages((previous) =>
-            previous.some((item) => item.id === message.id)
-              ? previous
-              : [...previous, message],
+            previous.some((item) => item.id === message.id) ? previous : [...previous, message],
           );
         },
       )
@@ -249,12 +240,9 @@ export default function WatchScreen() {
 
     // Своё изменение плеер уже показывает, если видео то же самое.
     // Новое видео загружаем всегда, иначе оно появится только со второго раза.
-    if (
-      room.updated_by &&
-      room.updated_by === userIdRef.current &&
-      loadedVideoRef.current === room.video_id
-    )
-      return;
+    if (room.updated_by && room.updated_by === userIdRef.current && loadedVideoRef.current === room.video_id) return;
+
+    if (blockEmbed) return;
 
     let cancelled = false;
 
@@ -264,10 +252,7 @@ export default function WatchScreen() {
       if (cancelled) return;
 
       // Сколько прошло с последнего изменения, чтобы догнать время
-      const elapsed = Math.max(
-        0,
-        (Date.now() - new Date(room.updated_at).getTime()) / 1000,
-      );
+      const elapsed = Math.max(0, (Date.now() - new Date(room.updated_at).getTime()) / 1000);
       const targetPosition = room.is_playing
         ? room.position_seconds + elapsed
         : room.position_seconds;
@@ -423,6 +408,18 @@ export default function WatchScreen() {
   // Код ошибки плеера: показываем кнопку «Открыть в YouTube», а не переходим сами
   const [embedError, setEmbedError] = useState<number | null>(null);
 
+  // Проверка «не бот» от YouTube появляется только на Android внутри Telegram
+  const [blockEmbed] = useState(() => isAndroid && !!(globalThis as any).Telegram?.WebApp?.initData);
+
+  // Android внутри Telegram: сразу открываем «Смотрим вместе» на сайте в браузере
+  useEffect(() => {
+    if (!blockEmbed) return;
+
+    const tg = (globalThis as any).Telegram?.WebApp;
+
+    tg?.openLink?.(`${window.location.origin}/watch`);
+  }, [blockEmbed]);
+
   useEffect(() => {
     setEmbedError(null);
   }, [room?.video_id]);
@@ -516,9 +513,7 @@ export default function WatchScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>Сначала создайте пару</Text>
-        <Text style={styles.emptyText}>
-          Совместный просмотр доступен, когда вы в паре.
-        </Text>
+        <Text style={styles.emptyText}>Совместный просмотр доступен, когда вы в паре.</Text>
       </View>
     );
   }
@@ -528,8 +523,7 @@ export default function WatchScreen() {
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>Совместный просмотр</Text>
         <Text style={styles.emptyText}>
-          Пока открывается в браузере или в Telegram. В приложении на iPhone
-          добавим позже.
+          Пока открывается в браузере или в Telegram. В приложении на iPhone добавим позже.
         </Text>
       </View>
     );
@@ -539,10 +533,7 @@ export default function WatchScreen() {
 
   const hasVideo = !!room?.video_id;
 
-  const ratio =
-    progress.duration > 0
-      ? Math.min(1, progress.current / progress.duration)
-      : 0;
+  const ratio = progress.duration > 0 ? Math.min(1, progress.current / progress.duration) : 0;
 
   return (
     <ScrollView
@@ -554,14 +545,7 @@ export default function WatchScreen() {
       <View style={styles.topRow}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Svg width={22} height={22} viewBox="0 0 24 24">
-            <Path
-              d="M15 6l-6 6 6 6"
-              fill="none"
-              stroke={C.text}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <Path d="M15 6l-6 6 6 6" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </Pressable>
 
@@ -572,15 +556,13 @@ export default function WatchScreen() {
 
       <View style={styles.playerCard}>
         <View style={styles.syncPill}>
-          <View
-            style={[styles.syncDot, partnerOnline && styles.syncDotOnline]}
-          />
+          <View style={[styles.syncDot, partnerOnline && styles.syncDotOnline]} />
           <Text style={styles.syncText}>
             {partnerOnline ? "Синхронно с партнёром" : "Вы один"}
           </Text>
         </View>
 
-        {hasVideo ? (
+        {hasVideo && !blockEmbed ? (
           <View nativeID="room-player" style={styles.player} />
         ) : (
           <View style={styles.playerEmpty}>
@@ -593,12 +575,10 @@ export default function WatchScreen() {
         )}
       </View>
 
-      {embedError !== null && room?.video_id ? (
+      {(embedError !== null || blockEmbed) && room?.video_id ? (
         <Pressable
           style={styles.openButton}
-          onPress={() =>
-            Linking.openURL(`https://www.youtube.com/watch?v=${room.video_id}`)
-          }
+          onPress={() => openYoutube(`https://www.youtube.com/watch?v=${room.video_id}`)}
         >
           <Text style={styles.openButtonText}>Открыть в YouTube</Text>
         </Pressable>
@@ -620,28 +600,13 @@ export default function WatchScreen() {
       {/* ============ УПРАВЛЕНИЕ ============ */}
 
       <View style={styles.controlsRow}>
-        <Pressable
-          style={styles.seekButton}
-          onPress={() => seekBy(-12)}
-          disabled={!hasVideo}
-        >
+        <Pressable style={styles.seekButton} onPress={() => seekBy(-12)} disabled={!hasVideo}>
           <Svg width={26} height={26} viewBox="0 0 24 24">
-            <Path
-              d="M4 12a8 8 0 102.3-5.7M4 4v4h4"
-              fill="none"
-              stroke={C.text}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <Path d="M4 12a8 8 0 102.3-5.7M4 4v4h4" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </Pressable>
 
-        <Pressable
-          style={styles.mainButton}
-          onPress={togglePlay}
-          disabled={!hasVideo}
-        >
+        <Pressable style={styles.mainButton} onPress={togglePlay} disabled={!hasVideo}>
           {isPlaying ? (
             <Svg width={30} height={30} viewBox="0 0 24 24">
               <Path d="M7 5h3v14H7zM14 5h3v14h-3z" fill={C.accentOn} />
@@ -653,20 +618,9 @@ export default function WatchScreen() {
           )}
         </Pressable>
 
-        <Pressable
-          style={styles.seekButton}
-          onPress={() => seekBy(12)}
-          disabled={!hasVideo}
-        >
+        <Pressable style={styles.seekButton} onPress={() => seekBy(12)} disabled={!hasVideo}>
           <Svg width={26} height={26} viewBox="0 0 24 24">
-            <Path
-              d="M20 12a8 8 0 11-2.3-5.7M20 4v4h-4"
-              fill="none"
-              stroke={C.text}
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            <Path d="M20 12a8 8 0 11-2.3-5.7M20 4v4h-4" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
           </Svg>
         </Pressable>
       </View>
@@ -700,19 +654,10 @@ export default function WatchScreen() {
           <Pressable
             key={index}
             style={styles.reactionPill}
-            onPress={() =>
-              notify("Скоро", "Реакции появятся в следующем обновлении")
-            }
+            onPress={() => notify("Скоро", "Реакции появятся в следующем обновлении")}
           >
             <Svg width={24} height={24} viewBox="0 0 24 24">
-              <Path
-                d={d}
-                fill="none"
-                stroke={C.accentText}
-                strokeWidth={1.8}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+              <Path d={d} fill="none" stroke={C.accentText} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
             </Svg>
           </Pressable>
         ))}
@@ -721,247 +666,245 @@ export default function WatchScreen() {
   );
 }
 
-const styles = liveStyles(() =>
-  StyleSheet.create({
-    screen: { flex: 1, backgroundColor: C.background },
+const styles = liveStyles(() => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: C.background },
 
-    content: {
-      paddingHorizontal: 22,
-      paddingTop: 55,
-      paddingBottom: 40,
-      width: "100%",
-      maxWidth: 520,
-      alignSelf: "center",
-    },
+  content: {
+    paddingHorizontal: 22,
+    paddingTop: 55,
+    paddingBottom: 40,
+    width: "100%",
+    maxWidth: 520,
+    alignSelf: "center",
+  },
 
-    center: {
-      flex: 1,
-      backgroundColor: C.background,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 40,
-    },
+  center: {
+    flex: 1,
+    backgroundColor: C.background,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 40,
+  },
 
-    emptyTitle: {
-      color: C.text,
-      fontFamily: "Manrope_700Bold",
-      fontSize: 20,
-      marginBottom: 8,
-      textAlign: "center",
-    },
+  emptyTitle: {
+    color: C.text,
+    fontFamily: "Manrope_700Bold",
+    fontSize: 20,
+    marginBottom: 8,
+    textAlign: "center",
+  },
 
-    emptyText: {
-      color: C.muted,
-      fontSize: 14,
-      lineHeight: 20,
-      textAlign: "center",
-    },
+  emptyText: {
+    color: C.muted,
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
+  },
 
-    topRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 14,
-      marginBottom: 18,
-    },
+  topRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 18,
+  },
 
-    backButton: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: C.card,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+  backButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: C.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-    title: {
-      flex: 1,
-      color: C.text,
-      fontFamily: "PlayfairDisplay_700Bold",
-      fontSize: 32,
-    },
+  title: {
+    flex: 1,
+    color: C.text,
+    fontFamily: "PlayfairDisplay_700Bold",
+    fontSize: 32,
+  },
 
-    playerCard: {
-      width: "100%",
-      aspectRatio: 16 / 9,
-      borderRadius: 28,
-      backgroundColor: C.videoBg,
-      overflow: "hidden",
-    },
+  playerCard: {
+    width: "100%",
+    aspectRatio: 16 / 9,
+    borderRadius: 28,
+    backgroundColor: C.videoBg,
+    overflow: "hidden",
+  },
 
-    player: {
-      width: "100%",
-      height: "100%",
-    },
+  player: {
+    width: "100%",
+    height: "100%",
+  },
 
-    playerEmpty: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+  playerEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-    playCircle: {
-      width: 74,
-      height: 74,
-      borderRadius: 37,
-      backgroundColor: C.accent,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingLeft: 4,
-    },
+  playCircle: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingLeft: 4,
+  },
 
-    syncPill: {
-      position: "absolute",
-      top: 14,
-      left: 14,
-      zIndex: 2,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: "rgba(255,255,255,0.16)",
-      borderRadius: 999,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-    },
+  syncPill: {
+    position: "absolute",
+    top: 14,
+    left: 14,
+    zIndex: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
 
-    syncDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-      backgroundColor: C.accentPale,
-    },
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.accentPale,
+  },
 
-    syncDotOnline: {
-      backgroundColor: C.accentPale,
-    },
+  syncDotOnline: {
+    backgroundColor: C.accentPale,
+  },
 
-    syncText: {
-      color: C.accentOn,
-      fontSize: 13,
-      fontFamily: "Manrope_700Bold",
-    },
+  syncText: {
+    color: C.accentOn,
+    fontSize: 13,
+    fontFamily: "Manrope_700Bold",
+  },
 
-    openButton: {
-      marginTop: 12,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: C.accent,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+  openButton: {
+    marginTop: 12,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-    openButtonText: {
-      color: C.accentOn,
-      fontFamily: FONTS.textBold,
-      fontSize: 15,
-    },
+  openButtonText: {
+    color: C.accentOn,
+    fontFamily: FONTS.textBold,
+    fontSize: 15,
+  },
 
-    videoTitle: {
-      color: C.text,
-      fontFamily: "Manrope_700Bold",
-      fontSize: 20,
-      marginTop: 18,
-    },
+  videoTitle: {
+    color: C.text,
+    fontFamily: "Manrope_700Bold",
+    fontSize: 20,
+    marginTop: 18,
+  },
 
-    progressTrack: {
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: C.divider,
-      marginTop: 12,
-      overflow: "hidden",
-    },
+  progressTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: C.divider,
+    marginTop: 12,
+    overflow: "hidden",
+  },
 
-    progressFill: {
-      height: 5,
-      borderRadius: 3,
-      backgroundColor: C.accent,
-    },
+  progressFill: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: C.accent,
+  },
 
-    timeRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginTop: 8,
-    },
+  timeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
 
-    timeText: {
-      color: C.muted,
-      fontSize: 14,
-    },
+  timeText: {
+    color: C.muted,
+    fontSize: 14,
+  },
 
-    controlsRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 22,
-      marginTop: 22,
-    },
+  controlsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 22,
+    marginTop: 22,
+  },
 
-    seekButton: {
-      width: 62,
-      height: 62,
-      borderRadius: 31,
-      backgroundColor: C.card,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+  seekButton: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: C.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-    mainButton: {
-      width: 86,
-      height: 86,
-      borderRadius: 43,
-      backgroundColor: C.accent,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+  mainButton: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-    linkRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 10,
-      marginTop: 22,
-      width: "100%",
-    },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 22,
+    width: "100%",
+  },
 
-    linkInput: {
-      flex: 1,
-      minWidth: 0,
-      height: 52,
-      borderRadius: 26,
-      backgroundColor: C.card,
-      paddingHorizontal: 22,
-      fontSize: 15,
-      color: C.text,
-    },
+  linkInput: {
+    flex: 1,
+    minWidth: 0,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: C.card,
+    paddingHorizontal: 22,
+    fontSize: 15,
+    color: C.text,
+  },
 
-    connectButton: {
-      height: 52,
-      paddingHorizontal: 20,
-      flexShrink: 0,
-      borderRadius: 26,
-      backgroundColor: C.accent,
-      alignItems: "center",
-      justifyContent: "center",
-    },
+  connectButton: {
+    height: 52,
+    paddingHorizontal: 20,
+    flexShrink: 0,
+    borderRadius: 26,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-    connectText: {
-      color: C.accentOn,
-      fontSize: 16,
-      fontFamily: "Manrope_700Bold",
-    },
+  connectText: {
+    color: C.accentOn,
+    fontSize: 16,
+    fontFamily: "Manrope_700Bold",
+  },
 
-    reactionsRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      marginTop: 18,
-    },
+  reactionsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 18,
+  },
 
-    reactionPill: {
-      flex: 1,
-      height: 56,
-      marginHorizontal: 4,
-      borderRadius: 28,
-      backgroundColor: C.card,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-  }),
-);
+  reactionPill: {
+    flex: 1,
+    height: 56,
+    marginHorizontal: 4,
+    borderRadius: 28,
+    backgroundColor: C.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+}));
