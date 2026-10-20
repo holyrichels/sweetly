@@ -1,20 +1,10 @@
-import { C, liveStyles } from "@/constants/sweetly-theme";
+import { C, liveStyles, FONTS } from "@/constants/sweetly-theme";
 import SkeletonScreen from "@/components/skeleton-screen";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Linking } from "react-native";
 
 import { getAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -258,9 +248,12 @@ export default function WatchScreen() {
           height: "100%",
           width: "100%",
           videoId: room.video_id,
+          // Версия без cookies: не отправляет на вход в аккаунт Google
+          host: "https://www.youtube-nocookie.com",
           playerVars: { playsinline: 1, rel: 0 },
           events: {
             onStateChange: onLocalStateChange,
+            onError: (event: any) => setEmbedError(event?.data ?? 0),
           },
         });
 
@@ -395,6 +388,13 @@ export default function WatchScreen() {
 
   // Прогресс видео для полосы и времени
   const [progress, setProgress] = useState({ current: 0, duration: 0 });
+
+  // Код ошибки плеера: показываем кнопку «Открыть в YouTube», а не переходим сами
+  const [embedError, setEmbedError] = useState<number | null>(null);
+
+  useEffect(() => {
+    setEmbedError(null);
+  }, [room?.video_id]);
 
   useEffect(() => {
     if (!isWeb || !room?.video_id) return;
@@ -546,6 +546,15 @@ export default function WatchScreen() {
           </View>
         )}
       </View>
+
+      {embedError !== null && room?.video_id ? (
+        <Pressable
+          style={styles.openButton}
+          onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${room.video_id}`)}
+        >
+          <Text style={styles.openButtonText}>Открыть в YouTube</Text>
+        </Pressable>
+      ) : null}
 
       {/* ============ НАЗВАНИЕ И ПРОГРЕСС ============ */}
 
@@ -745,6 +754,21 @@ const styles = liveStyles(() => StyleSheet.create({
     color: C.accentOn,
     fontSize: 13,
     fontFamily: "Manrope_700Bold",
+  },
+
+  openButton: {
+    marginTop: 12,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  openButtonText: {
+    color: C.accentOn,
+    fontFamily: FONTS.textBold,
+    fontSize: 15,
   },
 
   videoTitle: {
