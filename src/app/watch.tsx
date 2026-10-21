@@ -46,6 +46,13 @@ function openYoutube(url: string) {
   }
 }
 
+const SUPABASE_URL = "https://lodzbjnakrweelsotnim.supabase.co";
+
+const SUPABASE_KEY = "sb_publishable_tCl2mvi0SCdq1HVYBL6lgA_YlbMIEFJ";
+
+// Открыт ли сайт внутри Telegram (тогда вход уже есть через Mini App)
+const insideTelegram = () => !!(globalThis as any).Telegram?.WebApp?.initData;
+
 let youtubeApiPromise: Promise<void> | null = null;
 
 function loadYoutubeApi(): Promise<void> {
@@ -415,10 +422,88 @@ export default function WatchScreen() {
   useEffect(() => {
     if (!blockEmbed) return;
 
-    const tg = (globalThis as any).Telegram?.WebApp;
+    (async () => {
+      const { data, error } = await supabase.functions.invoke("request-web-login");
 
-    tg?.openLink?.(`${window.location.origin}/watch`);
+      if (error || !data?.code) {
+        notify("Не получилось", "Попробуйте открыть экран ещё раз");
+
+        return;
+      }
+
+      const tg = (globalThis as any).Telegram?.WebApp;
+
+      tg?.openLink?.(`${window.location.origin}/watch?code=${data.code}`);
+    })();
   }, [blockEmbed]);
+
+  // Браузер: есть ли вход в аккаунт (в Telegram он уже есть всегда)
+  const [webSession, setWebSession] = useState<boolean | null>(null);
+
+  const [loginCode, setLoginCode] = useState("");
+
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  const [loginBusy, setLoginBusy] = useState(false);
+
+  // Код из ссылки (?code=...) меняем на вход сразу, и убираем его из адресной строки
+  useEffect(() => {
+    if (webSession !== false || insideTelegram()) return;
+
+    const fromLink = new URLSearchParams(window.location.search).get("code");
+
+    if (!fromLink) return;
+
+    window.history.replaceState({}, "", window.location.pathname);
+
+    setLoginCode(fromLink.toUpperCase());
+
+    redeemLoginCode(fromLink);
+  }, [webSession]);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setWebSession(!!data.session));
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => setWebSession(!!session));
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Меняем одноразовый код из бота на вход в аккаунт
+  async function redeemLoginCode(value?: string) {
+    const code = (value ?? loginCode).trim().toUpperCase();
+
+    setLoginError(null);
+
+    setLoginBusy(true);
+
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/redeem-web-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+        body: JSON.stringify({ code }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.token_hash) {
+        // Код истёк, уже использован или введён неверно
+        setLoginError("expired");
+
+        return;
+      }
+
+      const { error } = await supabase.auth.verifyOtp({ token_hash: result.token_hash, type: "magiclink" });
+
+      if (error) setLoginError(error.message);
+    } catch {
+      setLoginError("Нет связи, попробуйте ещё раз");
+    } finally {
+      setLoginBusy(false);
+    }
+  }
 
   useEffect(() => {
     setEmbedError(null);
@@ -505,6 +590,46 @@ export default function WatchScreen() {
     }
 
     return `${minutes}:${seconds}`;
+  }
+
+  // Браузер без входа: просим код из бота (один раз)
+  if (webSession === false && !insideTelegram()) {
+    return (
+      <View style={styles.loginWrap}>
+        <Text style={styles.loginTitle}>Смотрим вместе</Text>
+
+        <Text style={styles.loginText}>
+          Чтобы войти, откройте чат с ботом Sweetly в Telegram: там пришёл код. Введите его здесь. Дальше код не понадобится.
+        </Text>
+
+        <TextInput
+          style={styles.loginInput}
+          placeholder="XXXXXXXX"
+          placeholderTextColor={C.muted}
+          autoCapitalize="characters"
+          autoCorrect={false}
+          maxLength={8}
+          value={loginCode}
+          onChangeText={(value) => setLoginCode(value.toUpperCase())}
+        />
+
+        {loginError === "expired" ? (
+          <View style={styles.expiredBox}>
+            <Text style={styles.loginError}>Код истёк или уже использован</Text>
+
+            <Pressable style={styles.loginSecondary} onPress={() => Linking.openURL("https://t.me/sweetly_couple_bot")}>
+              <Text style={styles.loginSecondaryText}>Открыть бота</Text>
+            </Pressable>
+          </View>
+        ) : loginError ? (
+          <Text style={styles.loginError}>{loginError}</Text>
+        ) : null}
+
+        <Pressable style={styles.loginButton} onPress={() => redeemLoginCode()} disabled={loginBusy}>
+          <Text style={styles.loginButtonText}>{loginBusy ? "Проверяем..." : "Войти"}</Text>
+        </Pressable>
+      </View>
+    );
   }
 
   if (loading) return <SkeletonScreen />;
@@ -782,6 +907,77 @@ const styles = liveStyles(() => StyleSheet.create({
     color: C.accentOn,
     fontSize: 13,
     fontFamily: "Manrope_700Bold",
+  },
+
+  loginWrap: {
+    flex: 1,
+    backgroundColor: C.background,
+    paddingHorizontal: 22,
+    paddingTop: 60,
+    gap: 16,
+  },
+
+  loginTitle: {
+    color: C.text,
+    fontFamily: FONTS.display,
+    fontSize: 34,
+  },
+
+  loginText: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 15,
+    lineHeight: 22,
+  },
+
+  loginInput: {
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: C.card,
+    paddingHorizontal: 22,
+    fontSize: 22,
+    letterSpacing: 6,
+    color: C.text,
+    textAlign: "center",
+  },
+
+  loginError: {
+    color: C.error,
+    fontFamily: FONTS.textBold,
+    fontSize: 14,
+  },
+
+  expiredBox: {
+    gap: 10,
+  },
+
+  loginSecondary: {
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: C.text,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loginSecondaryText: {
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 15,
+  },
+
+  loginButton: {
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  loginButtonText: {
+    color: C.accentOn,
+    fontFamily: FONTS.textBold,
+    fontSize: 16,
   },
 
   openButton: {
