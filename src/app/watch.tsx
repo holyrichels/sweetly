@@ -53,6 +53,13 @@ type ReactionKind = (typeof REACTION_KINDS)[number];
 
 type ReactionRow = { id: string; user_id: string; kind: ReactionKind; at_seconds: number };
 
+const REACTION_PATHS: Record<ReactionKind, string> = {
+  heart: "M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z",
+  funny: "M12 3a9 9 0 100 18 9 9 0 000-18zM8 14s1.5 2.5 4 2.5S16 14 16 14M9 9.5h.01M15 9.5h.01",
+  star: "M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2-4.5-4.4 6.2-.9z",
+  like: "M7 11v9H4v-9zM7 11l4-7c1.5 0 2.5 1 2.5 2.5V10h5.5c1 0 1.8.9 1.6 2l-1.3 7c-.2 1-1 1.8-2 1.8H7",
+};
+
 const SUPABASE_URL = "https://lodzbjnakrweelsotnim.supabase.co";
 
 const SUPABASE_KEY = "sb_publishable_tCl2mvi0SCdq1HVYBL6lgA_YlbMIEFJ";
@@ -424,6 +431,17 @@ export default function WatchScreen() {
 
   const [reactions, setReactions] = useState<ReactionRow[]>([]);
 
+  // Реакция, до которой дошло воспроизведение: показываем её на две секунды
+  const [activeReaction, setActiveReaction] = useState<ReactionRow | null>(null);
+
+  const reactionsRef = useRef<ReactionRow[]>([]);
+
+  reactionsRef.current = reactions;
+
+  const lastTimeRef = useRef(0);
+
+  const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Код ошибки плеера: показываем кнопку «Открыть в YouTube», а не переходим сами
   const [embedError, setEmbedError] = useState<number | null>(null);
 
@@ -603,10 +621,29 @@ export default function WatchScreen() {
 
       if (!player?.getCurrentTime) return;
 
+      const now = player.getCurrentTime() ?? 0;
+
+      const previous = lastTimeRef.current;
+
+      lastTimeRef.current = now;
+
       setProgress({
-        current: player.getCurrentTime() ?? 0,
+        current: now,
         duration: player.getDuration?.() ?? 0,
       });
+
+      // Воспроизведение прошло момент реакции: показываем её
+      const passed = reactionsRef.current.find(
+        (item) => item.at_seconds > previous && item.at_seconds <= now,
+      );
+
+      if (passed) {
+        setActiveReaction(passed);
+
+        if (reactionTimer.current) clearTimeout(reactionTimer.current);
+
+        reactionTimer.current = setTimeout(() => setActiveReaction(null), 2000);
+      }
     }, 500);
 
     return () => clearInterval(timer);
@@ -799,8 +836,10 @@ export default function WatchScreen() {
 
       <Text style={styles.videoTitle}>Видео с YouTube</Text>
 
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+      <View style={styles.trackWrap}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+        </View>
 
         {reactions.map((item) => {
           const left = progress.duration > 0 ? (item.at_seconds / progress.duration) * 100 : 0;
@@ -817,6 +856,24 @@ export default function WatchScreen() {
           );
         })}
       </View>
+
+      {activeReaction ? (
+        <View style={styles.activeReaction}>
+          <Svg width={18} height={18} viewBox="0 0 24 24">
+            <Path
+              d={REACTION_PATHS[activeReaction.kind]}
+              fill="none"
+              stroke={activeReaction.user_id === userIdRef.current ? C.accent : C.text}
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </Svg>
+          <Text style={styles.activeReactionText}>
+            {activeReaction.user_id === userIdRef.current ? "Вы" : "Партнёр"} отметил(а) момент
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.timeRow}>
         <Text style={styles.timeText}>{formatTime(progress.current)}</Text>
@@ -1111,13 +1168,38 @@ const styles = liveStyles(() => StyleSheet.create({
     overflow: "hidden",
   },
 
+  trackWrap: {
+    height: 14,
+    justifyContent: "center",
+  },
+
   mark: {
     position: "absolute",
-    top: 0,
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginLeft: -2.5,
+    top: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: -4,
+    borderWidth: 1.5,
+    borderColor: C.background,
+  },
+
+  activeReaction: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    backgroundColor: C.card,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  activeReactionText: {
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 13,
   },
 
   progressFill: {
