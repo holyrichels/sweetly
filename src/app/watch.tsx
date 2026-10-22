@@ -46,6 +46,13 @@ function openYoutube(url: string) {
   }
 }
 
+// Реакции: сердце, смешно, звезда, класс (порядок совпадает с кнопками)
+const REACTION_KINDS = ["heart", "funny", "star", "like"] as const;
+
+type ReactionKind = (typeof REACTION_KINDS)[number];
+
+type ReactionRow = { id: string; user_id: string; kind: ReactionKind; at_seconds: number };
+
 const SUPABASE_URL = "https://lodzbjnakrweelsotnim.supabase.co";
 
 const SUPABASE_KEY = "sb_publishable_tCl2mvi0SCdq1HVYBL6lgA_YlbMIEFJ";
@@ -412,6 +419,11 @@ export default function WatchScreen() {
   // Прогресс видео для полосы и времени
   const [progress, setProgress] = useState({ current: 0, duration: 0 });
 
+  // Сохранённое видео пары и его реакции
+  const [videoRowId, setVideoRowId] = useState<string | null>(null);
+
+  const [reactions, setReactions] = useState<ReactionRow[]>([]);
+
   // Код ошибки плеера: показываем кнопку «Открыть в YouTube», а не переходим сами
   const [embedError, setEmbedError] = useState<number | null>(null);
 
@@ -436,6 +448,80 @@ export default function WatchScreen() {
       tg?.openLink?.(`${window.location.origin}/watch?code=${data.code}`);
     })();
   }, [blockEmbed]);
+
+  // Видео сохраняется в список автоматически, когда пара его открывает
+  useEffect(() => {
+    const youtubeId = room?.video_id;
+
+    const cid = coupleIdRef.current;
+
+    const uid = userIdRef.current;
+
+    if (!youtubeId || !cid || !uid) return;
+
+    (async () => {
+      let { data: row } = await supabase
+        .from("watch_videos")
+        .select("id")
+        .eq("couple_id", cid)
+        .eq("youtube_id", youtubeId)
+        .maybeSingle();
+
+      if (!row) {
+        const inserted = await supabase
+          .from("watch_videos")
+          .insert({
+            couple_id: cid,
+            youtube_id: youtubeId,
+            url: `https://www.youtube.com/watch?v=${youtubeId}`,
+            added_by: uid,
+          })
+          .select("id")
+          .single();
+
+        row = inserted.data;
+      }
+
+      if (!row) return;
+
+      setVideoRowId(row.id);
+
+      const { data: list } = await supabase
+        .from("watch_reactions")
+        .select("id, user_id, kind, at_seconds")
+        .eq("video_id", row.id)
+        .order("at_seconds", { ascending: true });
+
+      setReactions((list as ReactionRow[]) ?? []);
+    })();
+  }, [room?.video_id, coupleId]);
+
+  // Реакция сохраняется на текущей секунде видео
+  async function addReaction(kind: ReactionKind) {
+    const uid = userIdRef.current;
+
+    if (!videoRowId || !uid) {
+      notify("Подождите", "Видео ещё загружается");
+
+      return;
+    }
+
+    const at = Math.floor(progress.current);
+
+    const { data, error } = await supabase
+      .from("watch_reactions")
+      .insert({ video_id: videoRowId, user_id: uid, kind, at_seconds: at })
+      .select("id, user_id, kind, at_seconds")
+      .single();
+
+    if (error) {
+      notify("Ошибка", error.message);
+
+      return;
+    }
+
+    if (data) setReactions((previous) => [...previous, data as ReactionRow]);
+  }
 
   // Браузер: есть ли вход в аккаунт (в Telegram он уже есть всегда)
   const [webSession, setWebSession] = useState<boolean | null>(null);
@@ -715,6 +801,21 @@ export default function WatchScreen() {
 
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
+
+        {reactions.map((item) => {
+          const left = progress.duration > 0 ? (item.at_seconds / progress.duration) * 100 : 0;
+
+          const mine = item.user_id === userIdRef.current;
+
+          return (
+            <Pressable
+              key={item.id}
+              style={[styles.mark, { left: `${left}%`, backgroundColor: mine ? C.accent : C.text }]}
+              onPress={() => playerRef.current?.seekTo?.(item.at_seconds, true)}
+              accessibilityLabel={`Реакция на ${item.at_seconds} секунде`}
+            />
+          );
+        })}
       </View>
 
       <View style={styles.timeRow}>
@@ -779,7 +880,7 @@ export default function WatchScreen() {
           <Pressable
             key={index}
             style={styles.reactionPill}
-            onPress={() => notify("Скоро", "Реакции появятся в следующем обновлении")}
+            onPress={() => addReaction(REACTION_KINDS[index])}
           >
             <Svg width={24} height={24} viewBox="0 0 24 24">
               <Path d={d} fill="none" stroke={C.accentText} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
@@ -1008,6 +1109,15 @@ const styles = liveStyles(() => StyleSheet.create({
     backgroundColor: C.divider,
     marginTop: 12,
     overflow: "hidden",
+  },
+
+  mark: {
+    position: "absolute",
+    top: 0,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginLeft: -2.5,
   },
 
   progressFill: {
