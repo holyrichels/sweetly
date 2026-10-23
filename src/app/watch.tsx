@@ -1,10 +1,10 @@
 import { C, liveStyles, FONTS } from "@/constants/sweetly-theme";
 import SkeletonScreen from "@/components/skeleton-screen";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import Svg, { Path } from "react-native-svg";
 
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Linking } from "react-native";
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Linking, Image, useWindowDimensions } from "react-native";
 
 import { getAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -426,6 +426,12 @@ export default function WatchScreen() {
   // Прогресс видео для полосы и времени
   const [progress, setProgress] = useState({ current: 0, duration: 0 });
 
+  // Параметры со страницы видео: ?youtube=ID&t=секунды
+  const params = useLocalSearchParams<{ youtube?: string; t?: string }>();
+
+  // Сохранённые видео пары с количеством реакций по видам
+  const [savedVideos, setSavedVideos] = useState<any[]>([]);
+
   // Сохранённое видео пары и его реакции
   const [videoRowId, setVideoRowId] = useState<string | null>(null);
 
@@ -448,24 +454,150 @@ export default function WatchScreen() {
   // Проверка «не бот» от YouTube появляется только на Android внутри Telegram
   const [blockEmbed] = useState(() => isAndroid && !!(globalThis as any).Telegram?.WebApp?.initData);
 
-  // Android внутри Telegram: сразу открываем «Смотрим вместе» на сайте в браузере
+  // Экран «Смотреть вместе» на Android внутри Telegram: код, таймер, состояния
+  const [androidCode, setAndroidCode] = useState<string | null>(null);
+
+  const [codeExpiresAt, setCodeExpiresAt] = useState(0);
+
+  const [androidError, setAndroidError] = useState<string | null>(null);
+
+  const [linkState, setLinkState] = useState<"unknown" | "linked" | "notLinked">("unknown");
+
+  const [nowTs, setNowTs] = useState(Date.now());
+
+  // Ориентация: горизонтально — плеер слева, чат справа
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+
+  const landscape = screenWidth > screenHeight;
+
+  // Выдаём одноразовый код: живёт 10 минут
+  async function requestAndroidCode() {
+    setAndroidError(null);
+
+    setAndroidCode(null);
+
+    const { data, error } = await supabase.functions.invoke("request-web-login");
+
+    if (error || !data?.code) {
+      setAndroidError("Не получилось получить код. Попробуйте ещё раз.");
+
+      return;
+    }
+
+    setAndroidCode(data.code);
+
+    setCodeExpiresAt(Date.now() + 10 * 60 * 1000);
+
+    setLinkState("linked");
+  }
+
   useEffect(() => {
     if (!blockEmbed) return;
 
-    (async () => {
-      const { data, error } = await supabase.functions.invoke("request-web-login");
+    requestAndroidCode();
 
-      if (error || !data?.code) {
-        notify("Не получилось", "Попробуйте открыть экран ещё раз");
+    const timer = setInterval(() => setNowTs(Date.now()), 1000);
+
+    return () => clearInterval(timer);
+  }, [blockEmbed]);
+
+  const codeLeft = Math.max(0, Math.floor((codeExpiresAt - nowTs) / 1000));
+
+  const codeExpired = !!androidCode && codeLeft === 0;
+
+  function openInBrowser() {
+    const tg = (globalThis as any).Telegram?.WebApp;
+
+    tg?.openLink?.(`${window.location.origin}/watch?code=${androidCode}`);
+  }
+
+  function copyAndroidCode() {
+    if (androidCode && typeof navigator !== "undefined") navigator.clipboard?.writeText(androidCode);
+  }
+
+  // Realtime: реакции партнёра появляются сразу
+  useEffect(() => {
+    if (!videoRowId) return;
+
+    const channel = supabase
+      .channel(`reactions-${videoRowId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "watch_reactions", filter: `video_id=eq.${videoRowId}` },
+        (payload: any) => {
+          const row = payload.new as ReactionRow;
+
+          setReactions((previous) => (previous.some((item) => item.id === row.id) ? previous : [...previous, row]));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [videoRowId]);
+
+  // Со страницы видео: ставим нужное видео и момент в общий плеер
+  useEffect(() => {
+    const cid = coupleIdRef.current;
+
+    const uid = userIdRef.current;
+
+    if (!params.youtube || !cid || !uid) return;
+
+    supabase
+      .from("room_state")
+      .upsert(
+        {
+          couple_id: cid,
+          video_id: params.youtube,
+          is_playing: true,
+          position_seconds: Number(params.t) || 0,
+          updated_by: uid,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "couple_id" },
+      )
+      .then(() => {});
+  }, [params.youtube, params.t, coupleId]);
+
+  // Список сохранённых видео: новые сверху, у каждого плашки реакций
+  useEffect(() => {
+    const cid = coupleIdRef.current;
+
+    if (!cid) return;
+
+    (async () => {
+      const { data: videos } = await supabase
+        .from("watch_videos")
+        .select("id, youtube_id, title, watched_at, duration_seconds")
+        .eq("couple_id", cid)
+        .order("watched_at", { ascending: false });
+
+      const list = (videos as any[]) ?? [];
+
+      if (list.length === 0) {
+        setSavedVideos([]);
 
         return;
       }
 
-      const tg = (globalThis as any).Telegram?.WebApp;
+      const { data: reactions } = await supabase
+        .from("watch_reactions")
+        .select("video_id, kind")
+        .in("video_id", list.map((item) => item.id));
 
-      tg?.openLink?.(`${window.location.origin}/watch?code=${data.code}`);
+      const byVideo: Record<string, Record<string, number>> = {};
+
+      (reactions ?? []).forEach((item: any) => {
+        byVideo[item.video_id] = byVideo[item.video_id] ?? {};
+
+        byVideo[item.video_id][item.kind] = (byVideo[item.video_id][item.kind] ?? 0) + 1;
+      });
+
+      setSavedVideos(list.map((item) => ({ ...item, counts: byVideo[item.id] ?? {} })));
     })();
-  }, [blockEmbed]);
+  }, [coupleId, room?.video_id]);
 
   // Видео сохраняется в список автоматически, когда пара его открывает
   useEffect(() => {
@@ -755,6 +887,83 @@ export default function WatchScreen() {
     );
   }
 
+  // Android внутри Telegram: код, таймер и кнопка открыть в браузере
+  if (blockEmbed) {
+    return (
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Text style={styles.title}>Смотреть вместе</Text>
+
+        <Text style={styles.loginText}>Откройте комнату на Android в браузере</Text>
+
+        {linkState === "notLinked" ? (
+          <View style={styles.androidCard}>
+            <Text style={styles.androidTitle}>Telegram не привязан</Text>
+            <Text style={styles.loginText}>
+              Привяжите Telegram один раз через бота, либо войдите в аккаунт на сайте.
+            </Text>
+
+            <Pressable style={styles.loginButton} onPress={() => Linking.openURL("https://t.me/sweetly_couple_bot")}>
+              <Text style={styles.loginButtonText}>Привязать Telegram</Text>
+            </Pressable>
+
+            <Pressable style={styles.loginSecondary} onPress={() => notify("Скоро", "Вход в аккаунт появится позже")}>
+              <Text style={styles.loginSecondaryText}>Войти в аккаунт</Text>
+            </Pressable>
+          </View>
+        ) : androidCode ? (
+          <View style={styles.androidCard}>
+            <View style={styles.statusPill}>
+              <View style={styles.syncDot} />
+              <Text style={styles.statusText}>Telegram привязан</Text>
+            </View>
+
+            <View style={styles.codeCells}>
+              {androidCode.split("").map((char, index) => (
+                <View key={index} style={[styles.codeCell, codeExpired && styles.codeCellExpired]}>
+                  <Text style={styles.codeChar}>{codeExpired ? "" : char}</Text>
+                </View>
+              ))}
+            </View>
+
+            {codeExpired ? (
+              <Text style={styles.expiredText}>Код истёк</Text>
+            ) : (
+              <Text style={styles.timerText}>
+                Действует ещё {Math.floor(codeLeft / 60)}:{String(codeLeft % 60).padStart(2, "0")}
+              </Text>
+            )}
+
+            <Text style={styles.loginText}>Код можно не вводить: браузер откроется сам</Text>
+
+            <Pressable style={styles.loginSecondary} onPress={copyAndroidCode} disabled={codeExpired}>
+              <Text style={styles.loginSecondaryText}>Скопировать код</Text>
+            </Pressable>
+
+            <Pressable style={styles.loginButton} onPress={openInBrowser} disabled={codeExpired}>
+              <Text style={styles.loginButtonText}>Открыть в браузере</Text>
+            </Pressable>
+
+            {codeExpired ? (
+              <Pressable style={styles.loginSecondary} onPress={requestAndroidCode}>
+                <Text style={styles.loginSecondaryText}>Обновить код</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : (
+          <View style={styles.androidCard}>
+            <Text style={styles.loginText}>{androidError ?? "Готовим код…"}</Text>
+
+            {androidError ? (
+              <Pressable style={styles.loginButton} onPress={requestAndroidCode}>
+                <Text style={styles.loginButtonText}>Обновить код</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        )}
+      </ScrollView>
+    );
+  }
+
   if (loading) return <SkeletonScreen />;
 
   if (!coupleId) {
@@ -800,6 +1009,8 @@ export default function WatchScreen() {
         <Text style={styles.title}>Смотрим вместе</Text>
       </View>
 
+      <View style={landscape ? styles.wideRow : null}>
+        <View style={landscape ? styles.wideLeft : null}>
       {/* ============ ПЛЕЕР ============ */}
 
       <View style={styles.playerCard}>
@@ -833,6 +1044,13 @@ export default function WatchScreen() {
       ) : null}
 
       {/* ============ НАЗВАНИЕ И ПРОГРЕСС ============ */}
+
+      <View style={styles.statusLine}>
+        <Text style={styles.statusText}>
+          {partnerOnline ? "Вы вдвоём" : "Вы одни"}
+          {getAppData().couple?.invite_code ? ` · код ${getAppData().couple?.invite_code}` : ""}
+        </Text>
+      </View>
 
       <Text style={styles.videoTitle}>Видео с YouTube</Text>
 
@@ -944,6 +1162,96 @@ export default function WatchScreen() {
             </Svg>
           </Pressable>
         ))}
+      </View>
+        </View>
+
+        <View style={landscape ? styles.wideRight : null}>
+      <Text style={styles.sectionLabel}>СОХРАНЁННЫЕ ВИДЕО</Text>
+
+      {savedVideos.length === 0 ? (
+        <Text style={styles.savedEmpty}>Видео появятся здесь после просмотра</Text>
+      ) : (
+        savedVideos.map((item) => (
+          <Pressable
+            key={item.id}
+            style={styles.savedCard}
+            onPress={() => router.push(`/watch-video?id=${item.id}` as any)}
+          >
+            <Image
+              source={{ uri: `https://i.ytimg.com/vi/${item.youtube_id}/mqdefault.jpg` }}
+              style={styles.savedThumb}
+            />
+
+            <View style={styles.flex}>
+              <Text style={styles.savedTitle} numberOfLines={1}>
+                {item.title || "Видео"}
+              </Text>
+              <Text style={styles.savedDate}>
+                {new Date(item.watched_at).toLocaleDateString("ru-RU")}
+              </Text>
+
+              <View style={styles.savedPills}>
+                {Object.entries(item.counts as Record<string, number>).map(([kind, count]) => (
+                  <View key={kind} style={styles.savedPill}>
+                    <Svg width={12} height={12} viewBox="0 0 24 24">
+                      <Path
+                        d={REACTION_PATHS[kind as ReactionKind] ?? REACTION_PATHS.heart}
+                        fill="none"
+                        stroke={C.text}
+                        strokeWidth={2}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                    <Text style={styles.savedPillText}>{count}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </Pressable>
+        ))
+      )}
+
+      <Text style={styles.sectionLabel}>ЧАТ</Text>
+
+      <View style={styles.chatCard}>
+        <View style={styles.chatHeader}>
+          <Text style={styles.chatTitle}>Чат</Text>
+          <Text style={styles.chatSub}>{partnerOnline ? "вы вдвоём" : "вы одни"}</Text>
+        </View>
+
+        <ScrollView style={styles.chatList} contentContainerStyle={styles.chatListContent}>
+          {messages.length === 0 ? (
+            <Text style={styles.chatEmpty}>Здесь пока пусто. Напишите первым.</Text>
+          ) : (
+            messages.map((message) => {
+              const mine = message.user_id === userIdRef.current;
+
+              return (
+                <View key={message.id} style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+                  <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{message.text}</Text>
+                </View>
+              );
+            })
+          )}
+        </ScrollView>
+
+        <View style={styles.inputRow}>
+          <TextInput
+            style={styles.messageInput}
+            placeholder="Написать..."
+            placeholderTextColor={C.muted}
+            value={messageDraft}
+            onChangeText={setMessageDraft}
+            onSubmitEditing={sendMessage}
+          />
+
+          <Pressable style={styles.sendButton} onPress={sendMessage}>
+            <Text style={styles.sendText}>➤</Text>
+          </Pressable>
+        </View>
+      </View>
+        </View>
       </View>
     </ScrollView>
   );
@@ -1166,6 +1474,271 @@ const styles = liveStyles(() => StyleSheet.create({
     backgroundColor: C.divider,
     marginTop: 12,
     overflow: "hidden",
+  },
+
+  wideRow: {
+    flexDirection: "row",
+    gap: 16,
+    alignItems: "flex-start",
+  },
+
+  wideLeft: {
+    flex: 1,
+    gap: 10,
+  },
+
+  wideRight: {
+    width: 300,
+    gap: 4,
+  },
+
+  androidCard: {
+    backgroundColor: C.card,
+    borderRadius: 24,
+    padding: 18,
+    gap: 12,
+  },
+
+  androidTitle: {
+    color: C.text,
+    fontFamily: FONTS.display,
+    fontSize: 22,
+  },
+
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "flex-start",
+    backgroundColor: C.background,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  syncDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.accent,
+  },
+
+  codeCells: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  codeCell: {
+    width: 38,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: C.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  codeCellExpired: {
+    borderWidth: 1.5,
+    borderStyle: "dashed",
+    borderColor: C.dashed,
+    backgroundColor: "transparent",
+  },
+
+  codeChar: {
+    color: C.text,
+    fontFamily: FONTS.display,
+    fontSize: 22,
+  },
+
+  timerText: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 13,
+  },
+
+  expiredText: {
+    color: C.error,
+    fontFamily: FONTS.textBold,
+    fontSize: 14,
+  },
+
+  savedEmpty: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 14,
+  },
+
+  savedCard: {
+    backgroundColor: C.card,
+    borderRadius: 22,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+
+  savedThumb: {
+    width: 96,
+    height: 60,
+    borderRadius: 12,
+  },
+
+  savedTitle: {
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 15,
+  },
+
+  savedDate: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 12,
+    marginTop: 2,
+  },
+
+  savedPills: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 6,
+  },
+
+  savedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: C.background,
+    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+
+  savedPillText: {
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 11,
+  },
+
+  sectionLabel: {
+    color: C.muted,
+    fontFamily: FONTS.textBold,
+    fontSize: 13,
+    letterSpacing: 0.4,
+    marginTop: 18,
+    marginBottom: 8,
+  },
+
+  statusLine: {
+    marginTop: 12,
+  },
+
+  statusText: {
+    color: C.muted,
+    fontFamily: FONTS.textBold,
+    fontSize: 13,
+  },
+
+  chatCard: {
+    backgroundColor: C.card,
+    borderRadius: 22,
+    padding: 14,
+    height: 260,
+  },
+
+  chatHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+
+  chatTitle: {
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 15,
+  },
+
+  chatSub: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 12,
+  },
+
+  chatList: {
+    flex: 1,
+  },
+
+  chatListContent: {
+    gap: 8,
+    paddingBottom: 6,
+  },
+
+  chatEmpty: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 80,
+  },
+
+  bubble: {
+    maxWidth: "78%",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+
+  bubbleMine: {
+    alignSelf: "flex-end",
+    backgroundColor: C.accent,
+    borderBottomRightRadius: 4,
+  },
+
+  bubbleOther: {
+    alignSelf: "flex-start",
+    backgroundColor: C.peachLight,
+    borderBottomLeftRadius: 4,
+  },
+
+  bubbleText: {
+    color: C.text,
+    fontFamily: FONTS.text,
+    fontSize: 14,
+  },
+
+  bubbleTextMine: {
+    color: C.accentOn,
+  },
+
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 10,
+  },
+
+  messageInput: {
+    flex: 1,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: C.background,
+    paddingHorizontal: 16,
+    fontSize: 15,
+    color: C.text,
+  },
+
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  sendText: {
+    color: C.accentOn,
+    fontSize: 16,
   },
 
   trackWrap: {
