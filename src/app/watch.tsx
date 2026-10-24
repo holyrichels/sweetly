@@ -133,10 +133,12 @@ const ICON_FOLDER =
 const ICON_BUBBLE = "M4 5h16v11H9l-5 4z";
 const ICON_SEND = "M3 11l18-8-8 18-2-8-8-2z";
 
-// Реакции: сердце, смешно, звезда, класс (порядок совпадает с кнопками)
-const REACTION_KINDS = ["heart", "funny", "star", "like"] as const;
+type ReactionKind = "heart" | "funny" | "star" | "like";
 
-type ReactionKind = (typeof REACTION_KINDS)[number];
+const REACTION_BUTTON_KINDS = [
+  "heart",
+  "like",
+] as const satisfies readonly ReactionKind[];
 
 type ReactionRow = {
   id: string;
@@ -586,6 +588,7 @@ export default function WatchScreen() {
 
   // Ориентация: горизонтально — плеер слева, чат справа
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const [viewportHeight, setViewportHeight] = useState(0);
 
   const landscape = screenWidth > screenHeight && screenWidth >= 720;
   const compactControls = screenWidth < 440;
@@ -1173,10 +1176,20 @@ export default function WatchScreen() {
     progress.duration > 0
       ? Math.min(1, progress.current / progress.duration)
       : 0;
+  const availableHeight = viewportHeight || screenHeight;
+  const roomPlayerHeight = Math.max(
+    120,
+    availableHeight - (compactControls ? 270 : 300),
+  );
 
   return (
     <ScrollView
       style={styles.screen}
+      onLayout={(event) => {
+        const height = Math.round(event.nativeEvent.layout.height);
+        setViewportHeight((current) => (current === height ? current : height));
+      }}
+      scrollEnabled={!landscape}
       contentContainerStyle={[
         styles.content,
         compactControls && styles.contentCompact,
@@ -1216,7 +1229,15 @@ export default function WatchScreen() {
         const status = partnerOnline ? "Синхронно" : "Вы одни";
 
         const playerCard = (
-          <View style={styles.roomPlayer}>
+          <View
+            style={[
+              styles.roomPlayer,
+              landscape && {
+                height: roomPlayerHeight,
+                aspectRatio: undefined,
+              },
+            ]}
+          >
             {hasVideo && !blockEmbed ? (
               <View nativeID="room-player" style={styles.roomPlayerFrame} />
             ) : null}
@@ -1333,7 +1354,7 @@ export default function WatchScreen() {
           </Pressable>
         );
 
-        const reactionButtons = REACTION_KINDS.map((kind) => (
+        const reactionButtons = REACTION_BUTTON_KINDS.map((kind) => (
           <Pressable
             key={kind}
             style={[
