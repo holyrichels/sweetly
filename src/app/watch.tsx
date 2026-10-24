@@ -7,6 +7,7 @@ import Svg, { Path } from "react-native-svg";
 import {
   Animated,
   Alert,
+  Easing,
   Image,
   Linking,
   Platform,
@@ -601,6 +602,26 @@ export default function WatchScreen() {
   const landscape = screenWidth > screenHeight && screenWidth >= 720;
   const compactControls = screenWidth < 440;
   const extraCompactControls = screenWidth < 380;
+  const orientationAnimation = useRef(new Animated.Value(1)).current;
+  const previousLandscape = useRef(landscape);
+
+  useLayoutEffect(() => {
+    if (previousLandscape.current === landscape) return;
+
+    previousLandscape.current = landscape;
+    orientationAnimation.setValue(0);
+
+    const animation = Animated.timing(orientationAnimation, {
+      toValue: 1,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: Platform.OS !== "web",
+    });
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [landscape, orientationAnimation]);
 
   // Список сохранённых видео открывается кнопкой с папкой
   const [savedOpen, setSavedOpen] = useState(false);
@@ -1220,6 +1241,17 @@ export default function WatchScreen() {
     120,
     availableHeight - (compactControls ? 270 : 300),
   );
+  const orientationTransitionStyle = {
+    opacity: orientationAnimation,
+    transform: [
+      {
+        translateY: orientationAnimation.interpolate({
+          inputRange: [0, 1],
+          outputRange: [8, 0],
+        }),
+      },
+    ],
+  };
 
   return (
     <ScrollView
@@ -1563,7 +1595,9 @@ export default function WatchScreen() {
 
         if (!landscape) {
           return (
-            <View style={styles.roomColumn}>
+            <Animated.View
+              style={[styles.roomColumn, orientationTransitionStyle]}
+            >
               {playerCard}
 
               {timeline}
@@ -1594,12 +1628,14 @@ export default function WatchScreen() {
               >
                 {chat}
               </Animated.View>
-            </View>
+            </Animated.View>
           );
         }
 
         return (
-          <View style={styles.wideRow}>
+          <Animated.View
+            style={[styles.wideRow, orientationTransitionStyle]}
+          >
             <View style={styles.wideLeft}>
               {playerCard}
 
@@ -1633,7 +1669,7 @@ export default function WatchScreen() {
             >
               {chat}
             </Animated.View>
-          </View>
+          </Animated.View>
         );
       })()}
     </ScrollView>
