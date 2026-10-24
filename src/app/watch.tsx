@@ -87,13 +87,10 @@ function Ico({
   );
 }
 
-const ICON_SLIDERS = "M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6";
 const ICON_FOLDER =
   "M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z";
 const ICON_BUBBLE = "M4 5h16v11H9l-5 4z";
 const ICON_FULL = "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5";
-const ICON_PLAY = "M8 5v14l11-7z";
-const ICON_PAUSE = "M7 5h3v14H7zM14 5h3v14h-3z";
 const ICON_SEND = "M3 11l18-8-8 18-2-8-8-2z";
 
 // Реакции: сердце, смешно, звезда, класс (порядок совпадает с кнопками)
@@ -919,29 +916,7 @@ export default function WatchScreen() {
       .then(() => {});
   }
 
-  function togglePlay() {
-    const player = playerRef.current;
 
-    if (!player) return;
-
-    if (roomRef.current?.is_playing) {
-      player.pauseVideo();
-    } else {
-      player.playVideo();
-    }
-  }
-
-  function seekBy(seconds: number) {
-    const player = playerRef.current;
-
-    if (!player) return;
-
-    const target = Math.max(0, (player.getCurrentTime?.() ?? 0) + seconds);
-
-    player.seekTo(target, true);
-
-    saveRoom(roomRef.current?.is_playing ?? false, target);
-  }
 
   function formatTime(total: number) {
     const value = Math.floor(total);
@@ -1149,8 +1124,6 @@ export default function WatchScreen() {
     );
   }
 
-  const isPlaying = room?.is_playing ?? false;
-
   const hasVideo = !!room?.video_id;
 
   const ratio =
@@ -1188,7 +1161,7 @@ export default function WatchScreen() {
       {(() => {
         const code = getAppData().couple?.invite_code ?? "";
 
-        const status = partnerOnline ? "Вы вдвоём" : "Вы одни";
+        const status = partnerOnline ? "Синхронно · 2" : "Вы одни · 1";
 
         const playerCard = (
           <View style={styles.roomPlayer}>
@@ -1196,103 +1169,82 @@ export default function WatchScreen() {
               <View nativeID="room-player" style={styles.roomPlayerFrame} />
             ) : null}
 
-            <View style={styles.roomTop}>
-              <View style={styles.roomAvatar}>
-                <Text style={styles.roomAvatarText}>К</Text>
-              </View>
-
-              <View style={styles.flex}>
-                <Text style={styles.roomVideoTitle} numberOfLines={1}>
-                  {room?.video_id ? "Видео с YouTube" : "Название видео"}
-                </Text>
-                <Text style={styles.roomChannel}>канал</Text>
-              </View>
-
-              {landscape ? (
-                <View style={styles.roomCodePill}>
-                  <View style={styles.roomDot} />
-                  <Text style={styles.roomCodePillText}>
-                    {status} · {code}
-                  </Text>
-                </View>
-              ) : null}
-
-              <Pressable
-                style={styles.roomIconBtn}
-                onPress={() =>
-                  notify("Скоро", "Настройки видео появятся позже")
-                }
-              >
-                <Ico d={ICON_SLIDERS} color="#FFFFFF" size={18} />
-              </Pressable>
-            </View>
-
-            <View style={styles.roomCenter}>
-              <Pressable
-                style={styles.roomPlay}
-                onPress={togglePlay}
-                disabled={!hasVideo}
-              >
-                <Ico
-                  d={isPlaying ? ICON_PAUSE : ICON_PLAY}
-                  color="#FFFFFF"
-                  size={24}
-                  stroke={0}
-                />
-              </Pressable>
-            </View>
-
-            <View style={styles.roomBottom}>
-              <View style={styles.roomTimeRow}>
-                <Text style={styles.roomTime}>
-                  {formatTime(progress.current)} /{" "}
-                  {formatTime(progress.duration)}
-                </Text>
-
-                <Pressable
-                  style={styles.roomFsBtn}
-                  onPress={() =>
-                    (document as any).documentElement?.requestFullscreen?.()
-                  }
-                >
-                  <Ico d={ICON_FULL} color="#FFFFFF" size={16} />
-                </Pressable>
-              </View>
-
-              <View style={styles.trackWrap}>
-                <View style={styles.roomTrack}>
-                  <View
-                    style={[styles.roomFill, { width: `${ratio * 100}%` }]}
-                  />
-                </View>
-
-                {reactions.map((item) => {
-                  const left =
-                    progress.duration > 0
-                      ? (item.at_seconds / progress.duration) * 100
-                      : 0;
-
-                  const mine = item.user_id === userIdRef.current;
-
-                  return (
-                    <Pressable
-                      key={item.id}
-                      style={[
-                        styles.roomMark,
-                        {
-                          left: `${left}%`,
-                          backgroundColor: mine ? C.accentPale : "#FFFFFF",
-                        },
-                      ]}
-                      onPress={() =>
-                        playerRef.current?.seekTo?.(item.at_seconds, true)
-                      }
-                    />
-                  );
-                })}
-              </View>
+            <View style={styles.roomCodePill}>
+              <View
+                style={[
+                  styles.roomDot,
+                  partnerOnline && styles.roomDotOnline,
+                ]}
+              />
+              <Text style={styles.roomCodePillText}>
+                Код: {code} · {status}
+              </Text>
             </View>
           </View>
+        );
+
+        const timeline = (
+          <View style={styles.roomTimeline}>
+            <View style={styles.roomTimeRow}>
+              <Text style={styles.roomTimelineTime}>
+                {formatTime(progress.current)} /{" "}
+                {formatTime(progress.duration)}
+              </Text>
+            </View>
+
+            <View style={styles.trackWrap}>
+              <View style={styles.roomTrack}>
+                <View
+                  style={[styles.roomFill, { width: `${ratio * 100}%` }]}
+                />
+              </View>
+
+              {reactions.map((item) => {
+                const left =
+                  progress.duration > 0
+                    ? (item.at_seconds / progress.duration) * 100
+                    : 0;
+
+                const mine = item.user_id === userIdRef.current;
+
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={[
+                      styles.roomMark,
+                      {
+                        left: `${left}%`,
+                        backgroundColor: mine ? C.accentPale : "#FFFFFF",
+                      },
+                    ]}
+                    onPress={() =>
+                      playerRef.current?.seekTo?.(item.at_seconds, true)
+                    }
+                  />
+                );
+              })}
+            </View>
+          </View>
+        );
+
+        const savedButton = (
+          <Pressable
+            style={styles.roomSquareBtn}
+            onPress={() => setSavedOpen((value) => !value)}
+          >
+            <Ico d={ICON_BUBBLE} color={C.text} size={20} />
+          </Pressable>
+        );
+
+        const fullscreenButton = (
+          <Pressable
+            style={styles.roomSquareBtn}
+            onPress={() =>
+              (document as any).documentElement?.requestFullscreen?.()
+            }
+          >
+            <Ico d={ICON_FULL} color={C.text} size={20} />
+          </Pressable>
         );
 
         const linkInput = (
@@ -1315,7 +1267,7 @@ export default function WatchScreen() {
           </Pressable>
         );
 
-        const reactionButtons = REACTION_KINDS.map((kind, index) => (
+        const reactionButtons = REACTION_KINDS.map((kind) => (
           <Pressable
             key={kind}
             style={styles.roomReactBtn}
@@ -1329,6 +1281,22 @@ export default function WatchScreen() {
           <Pressable style={styles.roomConnect} onPress={startVideo}>
             <Text style={styles.roomConnectText}>Включить</Text>
           </Pressable>
+        );
+
+        const controls = (
+          <ScrollView
+            horizontal
+            style={styles.roomControlsScroll}
+            contentContainerStyle={styles.roomControlsRow}
+            showsHorizontalScrollIndicator={false}
+          >
+            {linkInput}
+            {folderButton}
+            {savedButton}
+            {fullscreenButton}
+            {connectButton}
+            {reactionButtons}
+          </ScrollView>
         );
 
         const savedList = savedOpen ? (
@@ -1434,24 +1402,8 @@ export default function WatchScreen() {
             <View style={styles.roomColumn}>
               {playerCard}
 
-              <View style={styles.roomStatusRow}>
-                <View style={styles.roomPill}>
-                  <View style={styles.roomDot} />
-                  <Text style={styles.roomPillText}>{status}</Text>
-                </View>
-
-                <Text style={styles.roomCode}>Код: {code}</Text>
-              </View>
-
-              <View style={styles.roomInputRow}>
-                {linkInput}
-                {folderButton}
-              </View>
-
-              <View style={styles.roomReactRow}>
-                {connectButton}
-                {reactionButtons}
-              </View>
+              {timeline}
+              {controls}
 
               {savedList}
 
@@ -1465,29 +1417,8 @@ export default function WatchScreen() {
             <View style={styles.wideLeft}>
               {playerCard}
 
-              <View style={styles.roomInputRow}>
-                {linkInput}
-                {folderButton}
-                <Pressable
-                  style={styles.roomSquareBtn}
-                  onPress={() => setSavedOpen((value) => !value)}
-                >
-                  <Ico d={ICON_BUBBLE} color={C.text} size={20} />
-                </Pressable>
-                <Pressable
-                  style={styles.roomSquareBtn}
-                  onPress={() =>
-                    (document as any).documentElement?.requestFullscreen?.()
-                  }
-                >
-                  <Ico d={ICON_FULL} color={C.text} size={20} />
-                </Pressable>
-              </View>
-
-              <View style={styles.roomReactRow}>
-                {connectButton}
-                {reactionButtons}
-              </View>
+              {timeline}
+              {controls}
 
               {savedList}
             </View>
@@ -1733,6 +1664,7 @@ const styles = liveStyles(() =>
     },
 
     roomPlayer: {
+      position: "relative",
       width: "100%",
       aspectRatio: 16 / 9,
       borderRadius: 22,
@@ -1748,62 +1680,18 @@ const styles = liveStyles(() =>
       bottom: 0,
     },
 
-    roomTop: {
+    roomCodePill: {
       position: "absolute",
-      left: 14,
-      right: 12,
+      left: 12,
       top: 12,
       flexDirection: "row",
       alignItems: "center",
-      gap: 10,
-      zIndex: 2,
-    },
-
-    roomAvatar: {
-      width: 28,
-      height: 28,
-      borderRadius: 14,
-      backgroundColor: C.accent,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-
-    roomAvatarText: {
-      color: C.accentOn,
-      fontFamily: FONTS.textBold,
-      fontSize: 13,
-    },
-
-    roomVideoTitle: {
-      color: "#FFFFFF",
-      fontFamily: FONTS.textBold,
-      fontSize: 13,
-    },
-
-    roomChannel: {
-      color: "#FFFFFF",
-      fontFamily: FONTS.text,
-      fontSize: 11,
-      opacity: 0.75,
-    },
-
-    roomIconBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: "rgba(255,255,255,0.16)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-
-    roomCodePill: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-      backgroundColor: "rgba(255,255,255,0.9)",
+      gap: 7,
+      backgroundColor: "rgba(255,255,255,0.92)",
       borderRadius: 999,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 8,
+      zIndex: 2,
     },
 
     roomCodePillText: {
@@ -1812,52 +1700,24 @@ const styles = liveStyles(() =>
       fontSize: 12,
     },
 
-    roomCenter: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-
-    roomPlay: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
-      backgroundColor: "rgba(255,255,255,0.16)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-
-    roomBottom: {
-      position: "absolute",
-      left: 14,
-      right: 14,
-      bottom: 10,
-      gap: 6,
-    },
-
     roomTimeRow: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
     },
 
-    roomTime: {
-      color: "#FFFFFF",
-      fontFamily: FONTS.textBold,
-      fontSize: 12,
+    roomTimeline: {
+      backgroundColor: C.card,
+      borderRadius: 18,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      gap: 8,
     },
 
-    roomFsBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
-      backgroundColor: "rgba(255,255,255,0.16)",
-      alignItems: "center",
-      justifyContent: "center",
+    roomTimelineTime: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 12,
     },
 
     roomTrack: {
@@ -1867,7 +1727,7 @@ const styles = liveStyles(() =>
       top: 3,
       height: 6,
       borderRadius: 3,
-      backgroundColor: "rgba(255,255,255,0.3)",
+      backgroundColor: C.divider,
     },
 
     roomFill: {
@@ -1887,29 +1747,7 @@ const styles = liveStyles(() =>
       borderRadius: 6,
       marginLeft: -6,
       borderWidth: 2,
-      borderColor: "#3B1F2B",
-    },
-
-    roomStatusRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-
-    roomPill: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-      backgroundColor: C.card,
-      borderRadius: 999,
-      paddingHorizontal: 12,
-      paddingVertical: 7,
-    },
-
-    roomPillText: {
-      color: C.text,
-      fontFamily: FONTS.textBold,
-      fontSize: 12,
+      borderColor: C.card,
     },
 
     roomDot: {
@@ -1919,52 +1757,51 @@ const styles = liveStyles(() =>
       backgroundColor: C.muted,
     },
 
-    roomCode: {
-      color: C.muted,
-      fontFamily: FONTS.textBold,
-      fontSize: 12,
-      letterSpacing: 1,
-    },
-
-    roomInputRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
+    roomDotOnline: {
+      backgroundColor: C.accent,
     },
 
     roomLinkInput: {
-      flex: 1,
-      minWidth: 140,
-      height: 48,
+      width: 220,
+      height: 40,
       borderRadius: 24,
       backgroundColor: C.card,
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       fontSize: 14,
       color: C.text,
     },
 
     roomSquareBtn: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       backgroundColor: C.card,
       alignItems: "center",
       justifyContent: "center",
     },
 
-    roomReactRow: {
+    roomControlsScroll: {
+      width: "100%",
+      height: 48,
+      flexGrow: 0,
+    },
+
+    roomControlsRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
+      paddingRight: 2,
     },
 
     roomConnect: {
-      flex: 1,
-      height: 44,
+      width: 104,
+      height: 40,
       borderRadius: 22,
       backgroundColor: C.accent,
       alignItems: "center",
       justifyContent: "center",
+      flexGrow: 0,
+      flexShrink: 0,
     },
 
     roomConnectText: {
@@ -1974,9 +1811,9 @@ const styles = liveStyles(() =>
     },
 
     roomReactBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       backgroundColor: C.card,
       alignItems: "center",
       justifyContent: "center",
@@ -2365,6 +2202,7 @@ const styles = liveStyles(() =>
     },
 
     trackWrap: {
+      position: "relative",
       height: 14,
       justifyContent: "center",
     },
