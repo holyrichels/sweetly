@@ -573,6 +573,7 @@ export default function WatchScreen() {
   const [codeExpiresAt, setCodeExpiresAt] = useState(0);
 
   const [androidError, setAndroidError] = useState<string | null>(null);
+  const [browserOpening, setBrowserOpening] = useState(false);
 
   const [linkState, setLinkState] = useState<
     "unknown" | "linked" | "notLinked"
@@ -645,7 +646,7 @@ export default function WatchScreen() {
   }, [savedAnimation, savedOpen]);
 
   // Выдаём одноразовый код: живёт 10 минут
-  async function requestAndroidCode() {
+  async function requestAndroidCode(): Promise<string | null> {
     setAndroidError(null);
 
     setAndroidCode(null);
@@ -656,7 +657,7 @@ export default function WatchScreen() {
     if (error || !data?.code) {
       setAndroidError("Не получилось получить код. Попробуйте ещё раз.");
 
-      return;
+      return null;
     }
 
     setAndroidCode(data.code);
@@ -664,6 +665,8 @@ export default function WatchScreen() {
     setCodeExpiresAt(Date.now() + 10 * 60 * 1000);
 
     setLinkState("linked");
+
+    return data.code;
   }
 
   useEffect(() => {
@@ -680,10 +683,34 @@ export default function WatchScreen() {
 
   const codeExpired = !!androidCode && codeLeft === 0;
 
-  function openInBrowser() {
+  async function openInBrowser() {
     const tg = (globalThis as any).Telegram?.WebApp;
+    setBrowserOpening(true);
 
-    tg?.openLink?.(`${window.location.origin}/watch?code=${androidCode}`);
+    try {
+      const code =
+        androidCode && !codeExpired
+          ? androidCode
+          : await requestAndroidCode();
+
+      if (!code) return;
+
+      const url = `${window.location.origin}/watch?code=${encodeURIComponent(code)}`;
+
+      if (tg?.openLink) {
+        tg.openLink(url);
+      } else {
+        await Linking.openURL(url);
+      }
+    } catch (error) {
+      setAndroidError(
+        error instanceof Error
+          ? error.message
+          : "Не получилось открыть браузер.",
+      );
+    } finally {
+      setBrowserOpening(false);
+    }
   }
 
   function copyAndroidCode() {
@@ -1231,7 +1258,7 @@ export default function WatchScreen() {
   const roomPlayerHeight = landscape
     ? Math.max(
         120,
-        Math.min(availableHeight - 220, landscapePlayerWidth * (9 / 16)),
+        Math.min(availableHeight - 100, landscapePlayerWidth * (9 / 16)),
       )
     : Math.max(120, availableHeight - (compactControls ? 270 : 300));
   const orientationTransitionStyle = {
@@ -1303,7 +1330,9 @@ export default function WatchScreen() {
               styles.roomPlayer,
               landscape && {
                 height: roomPlayerHeight,
+                minHeight: roomPlayerHeight,
                 aspectRatio: undefined,
+                flexShrink: 0,
               },
             ]}
           >
@@ -1370,6 +1399,28 @@ export default function WatchScreen() {
             </View>
           </View>
         );
+
+        const browserFallback = insideTelegram() ? (
+          <View style={styles.roomBrowserFallback}>
+            <Pressable
+              onPress={openInBrowser}
+              disabled={browserOpening}
+              accessibilityRole="button"
+              accessibilityLabel="Открыть просмотр в браузере"
+            >
+              <Text style={styles.roomBrowserFallbackText}>
+                {browserOpening
+                  ? "Открываем браузер..."
+                  : "Проблемы с видео? Смотреть в браузере"}
+              </Text>
+            </Pressable>
+            {androidError ? (
+              <Text style={styles.roomBrowserFallbackError}>
+                {androidError}
+              </Text>
+            ) : null}
+          </View>
+        ) : null;
 
         const chatButton = (
           <Pressable
@@ -1599,6 +1650,7 @@ export default function WatchScreen() {
               {playerCard}
 
               {timeline}
+              {browserFallback}
               {controls}
 
               {savedList}
@@ -1638,6 +1690,7 @@ export default function WatchScreen() {
               {playerCard}
 
               {timeline}
+              {browserFallback}
               {controls}
 
               {savedList}
@@ -1995,6 +2048,25 @@ const styles = liveStyles(() =>
       paddingHorizontal: 14,
       paddingVertical: 10,
       gap: 8,
+      flexShrink: 0,
+    },
+
+    roomBrowserFallback: {
+      alignSelf: "flex-start",
+      paddingVertical: 2,
+    },
+
+    roomBrowserFallbackText: {
+      color: C.muted,
+      fontFamily: FONTS.textBold,
+      fontSize: 12,
+    },
+
+    roomBrowserFallbackError: {
+      color: C.error,
+      fontFamily: FONTS.text,
+      fontSize: 12,
+      marginTop: 4,
     },
 
     roomTimelineTime: {
@@ -2278,6 +2350,7 @@ const styles = liveStyles(() =>
     wideLeft: {
       flex: 1,
       minWidth: 0,
+      flexDirection: "column",
       alignSelf: "stretch",
       gap: 10,
     },
