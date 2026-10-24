@@ -35,27 +35,35 @@ function Pressable({
   style?: StyleProp<ViewStyle>;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
+  const opacity = useRef(new Animated.Value(1)).current;
   const useNativeDriver = Platform.OS !== "web";
 
-  function animateScale(value: number) {
-    Animated.spring(scale, {
-      toValue: value,
-      speed: 32,
-      bounciness: 4,
-      useNativeDriver,
-    }).start();
+  function animatePress(pressed: boolean) {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: pressed ? 0.94 : 1,
+        speed: 32,
+        bounciness: 4,
+        useNativeDriver,
+      }),
+      Animated.timing(opacity, {
+        toValue: pressed ? 0.78 : 1,
+        duration: pressed ? 70 : 120,
+        useNativeDriver,
+      }),
+    ]).start();
   }
 
   return (
     <AnimatedNativePressable
       {...props}
-      style={[style, { transform: [{ scale }] }]}
+      style={[style, { opacity, transform: [{ scale }] }]}
       onPressIn={(event) => {
-        animateScale(0.96);
+        animatePress(true);
         onPressIn?.(event);
       }}
       onPressOut={(event) => {
-        animateScale(1);
+        animatePress(false);
         onPressOut?.(event);
       }}
     />
@@ -596,7 +604,38 @@ export default function WatchScreen() {
 
   // Список сохранённых видео открывается кнопкой с папкой
   const [savedOpen, setSavedOpen] = useState(false);
+  const [savedMounted, setSavedMounted] = useState(false);
   const [chatVisible, setChatVisible] = useState(true);
+  const chatAnimation = useRef(new Animated.Value(1)).current;
+  const savedAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.timing(chatAnimation, {
+      toValue: chatVisible ? 1 : 0,
+      duration: 240,
+      useNativeDriver: false,
+    });
+
+    animation.start();
+
+    return () => animation.stop();
+  }, [chatAnimation, chatVisible]);
+
+  useEffect(() => {
+    if (savedOpen) setSavedMounted(true);
+
+    const animation = Animated.timing(savedAnimation, {
+      toValue: savedOpen ? 1 : 0,
+      duration: 240,
+      useNativeDriver: false,
+    });
+
+    animation.start(({ finished }) => {
+      if (finished && !savedOpen) setSavedMounted(false);
+    });
+
+    return () => animation.stop();
+  }, [savedAnimation, savedOpen]);
 
   // Выдаём одноразовый код: живёт 10 минут
   async function requestAndroidCode() {
@@ -1408,8 +1447,24 @@ export default function WatchScreen() {
           </View>
         );
 
-        const savedList = savedOpen ? (
-          <View style={styles.roomSaved}>
+        const savedList = savedMounted ? (
+          <Animated.View
+            style={[
+              styles.roomSaved,
+              {
+                opacity: savedAnimation,
+                transform: [
+                  {
+                    translateY: savedAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-10, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+            pointerEvents={savedOpen ? "auto" : "none"}
+          >
             <Text style={styles.roomSavedLabel}>СОХРАНЁННЫЕ ВИДЕО</Text>
 
             {savedVideos.length === 0 ? (
@@ -1443,7 +1498,7 @@ export default function WatchScreen() {
                 </Pressable>
               ))
             )}
-          </View>
+          </Animated.View>
         ) : null;
 
         const chat = (
@@ -1516,9 +1571,29 @@ export default function WatchScreen() {
 
               {savedList}
 
-              {chatVisible ? (
-                <View style={styles.roomChatWrap}>{chat}</View>
-              ) : null}
+              <Animated.View
+                style={[
+                  styles.roomChatWrap,
+                  {
+                    height: chatAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 260],
+                    }),
+                    opacity: chatAnimation,
+                    transform: [
+                      {
+                        translateY: chatAnimation.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [-12, 0],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+                pointerEvents={chatVisible ? "auto" : "none"}
+              >
+                {chat}
+              </Animated.View>
             </View>
           );
         }
@@ -1534,9 +1609,30 @@ export default function WatchScreen() {
               {savedList}
             </View>
 
-            {chatVisible ? (
-              <View style={styles.wideRight}>{chat}</View>
-            ) : null}
+            <Animated.View
+              style={[
+                styles.wideRight,
+                {
+                  width: chatAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 300],
+                  }),
+                  minWidth: 0,
+                  opacity: chatAnimation,
+                  transform: [
+                    {
+                      translateX: chatAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [12, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+              pointerEvents={chatVisible ? "auto" : "none"}
+            >
+              {chat}
+            </Animated.View>
           </View>
         );
       })()}
@@ -2000,8 +2096,7 @@ const styles = liveStyles(() =>
     },
 
     roomChatWrap: {
-      flex: 1,
-      minHeight: 260,
+      overflow: "hidden",
     },
 
     roomChat: {
@@ -2137,6 +2232,7 @@ const styles = liveStyles(() =>
       width: 300,
       minWidth: 260,
       alignSelf: "stretch",
+      overflow: "hidden",
     },
 
     androidCard: {
