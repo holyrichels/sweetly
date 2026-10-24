@@ -1,10 +1,22 @@
-import { C, liveStyles, FONTS } from "@/constants/sweetly-theme";
 import SkeletonScreen from "@/components/skeleton-screen";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { C, FONTS, liveStyles } from "@/constants/sweetly-theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Svg, { Path } from "react-native-svg";
 
-import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, Linking, Image, useWindowDimensions } from "react-native";
+import {
+  Alert,
+  Image,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 import { getAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -26,14 +38,17 @@ type Message = {
 
 // Достаём ID видео из обычной ссылки, короткой youtu.be и ссылки shorts
 function extractYoutubeId(input: string): string | null {
-  const match = input.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/);
+  const match = input.match(
+    /(?:v=|youtu\.be\/|embed\/|shorts\/)([A-Za-z0-9_-]{11})/,
+  );
   return match ? match[1] : null;
 }
 
 // Загружаем API плеера YouTube один раз
 // На Android проверка «не бот» от YouTube появляется во встроенном плеере,
 // поэтому там не встраиваем плеер, а даём кнопку «Открыть в YouTube»
-const isAndroid = typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
+const isAndroid =
+  typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 
 // Открываем видео во внешнем браузере: Telegram openLink выводит ссылку из своего окна
 function openYoutube(url: string) {
@@ -47,16 +62,34 @@ function openYoutube(url: string) {
 }
 
 // Контурная иконка по пути SVG
-function Ico({ d, color, size = 20, stroke = 1.8 }: { d: string; color: string; size?: number; stroke?: number }) {
+function Ico({
+  d,
+  color,
+  size = 20,
+  stroke = 1.8,
+}: {
+  d: string;
+  color: string;
+  size?: number;
+  stroke?: number;
+}) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">
-      <Path d={d} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d={d}
+        fill="none"
+        stroke={color}
+        strokeWidth={stroke}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Svg>
   );
 }
 
 const ICON_SLIDERS = "M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6";
-const ICON_FOLDER = "M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z";
+const ICON_FOLDER =
+  "M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z";
 const ICON_BUBBLE = "M4 5h16v11H9l-5 4z";
 const ICON_FULL = "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5";
 const ICON_PLAY = "M8 5v14l11-7z";
@@ -68,11 +101,17 @@ const REACTION_KINDS = ["heart", "funny", "star", "like"] as const;
 
 type ReactionKind = (typeof REACTION_KINDS)[number];
 
-type ReactionRow = { id: string; user_id: string; kind: ReactionKind; at_seconds: number };
+type ReactionRow = {
+  id: string;
+  user_id: string;
+  kind: ReactionKind;
+  at_seconds: number;
+};
 
 const REACTION_PATHS: Record<ReactionKind, string> = {
   heart: "M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z",
-  funny: "M12 3a9 9 0 100 18 9 9 0 000-18zM8 14s1.5 2.5 4 2.5S16 14 16 14M9 9.5h.01M15 9.5h.01",
+  funny:
+    "M12 3a9 9 0 100 18 9 9 0 000-18zM8 14s1.5 2.5 4 2.5S16 14 16 14M9 9.5h.01M15 9.5h.01",
   star: "M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2-4.5-4.4 6.2-.9z",
   like: "M7 11v9H4v-9zM7 11l4-7c1.5 0 2.5 1 2.5 2.5V10h5.5c1 0 1.8.9 1.6 2l-1.3 7c-.2 1-1 1.8-2 1.8H7",
 };
@@ -236,19 +275,31 @@ export default function WatchScreen() {
       .channel(`room-${coupleId}`, { config: { presence: { key: userId } } })
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "room_state", filter: `couple_id=eq.${coupleId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "room_state",
+          filter: `couple_id=eq.${coupleId}`,
+        },
         (payload: any) => {
           if (payload.new) setRoom(payload.new as RoomState);
         },
       )
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "room_messages", filter: `couple_id=eq.${coupleId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "room_messages",
+          filter: `couple_id=eq.${coupleId}`,
+        },
         (payload: any) => {
           const message = payload.new as Message;
 
           setMessages((previous) =>
-            previous.some((item) => item.id === message.id) ? previous : [...previous, message],
+            previous.some((item) => item.id === message.id)
+              ? previous
+              : [...previous, message],
           );
         },
       )
@@ -278,7 +329,12 @@ export default function WatchScreen() {
 
     // Своё изменение плеер уже показывает, если видео то же самое.
     // Новое видео загружаем всегда, иначе оно появится только со второго раза.
-    if (room.updated_by && room.updated_by === userIdRef.current && loadedVideoRef.current === room.video_id) return;
+    if (
+      room.updated_by &&
+      room.updated_by === userIdRef.current &&
+      loadedVideoRef.current === room.video_id
+    )
+      return;
 
     if (blockEmbed) return;
 
@@ -290,7 +346,10 @@ export default function WatchScreen() {
       if (cancelled) return;
 
       // Сколько прошло с последнего изменения, чтобы догнать время
-      const elapsed = Math.max(0, (Date.now() - new Date(room.updated_at).getTime()) / 1000);
+      const elapsed = Math.max(
+        0,
+        (Date.now() - new Date(room.updated_at).getTime()) / 1000,
+      );
       const targetPosition = room.is_playing
         ? room.position_seconds + elapsed
         : room.position_seconds;
@@ -455,7 +514,9 @@ export default function WatchScreen() {
   const [reactions, setReactions] = useState<ReactionRow[]>([]);
 
   // Реакция, до которой дошло воспроизведение: показываем её на две секунды
-  const [activeReaction, setActiveReaction] = useState<ReactionRow | null>(null);
+  const [activeReaction, setActiveReaction] = useState<ReactionRow | null>(
+    null,
+  );
 
   const reactionsRef = useRef<ReactionRow[]>([]);
 
@@ -469,7 +530,9 @@ export default function WatchScreen() {
   const [embedError, setEmbedError] = useState<number | null>(null);
 
   // Проверка «не бот» от YouTube появляется только на Android внутри Telegram
-  const [blockEmbed] = useState(() => isAndroid && !!(globalThis as any).Telegram?.WebApp?.initData);
+  const [blockEmbed] = useState(
+    () => isAndroid && !!(globalThis as any).Telegram?.WebApp?.initData,
+  );
 
   // Экран «Смотреть вместе» на Android внутри Telegram: код, таймер, состояния
   const [androidCode, setAndroidCode] = useState<string | null>(null);
@@ -478,7 +541,9 @@ export default function WatchScreen() {
 
   const [androidError, setAndroidError] = useState<string | null>(null);
 
-  const [linkState, setLinkState] = useState<"unknown" | "linked" | "notLinked">("unknown");
+  const [linkState, setLinkState] = useState<
+    "unknown" | "linked" | "notLinked"
+  >("unknown");
 
   const [nowTs, setNowTs] = useState(Date.now());
 
@@ -496,7 +561,8 @@ export default function WatchScreen() {
 
     setAndroidCode(null);
 
-    const { data, error } = await supabase.functions.invoke("request-web-login");
+    const { data, error } =
+      await supabase.functions.invoke("request-web-login");
 
     if (error || !data?.code) {
       setAndroidError("Не получилось получить код. Попробуйте ещё раз.");
@@ -532,7 +598,8 @@ export default function WatchScreen() {
   }
 
   function copyAndroidCode() {
-    if (androidCode && typeof navigator !== "undefined") navigator.clipboard?.writeText(androidCode);
+    if (androidCode && typeof navigator !== "undefined")
+      navigator.clipboard?.writeText(androidCode);
   }
 
   // Realtime: реакции партнёра появляются сразу
@@ -543,11 +610,20 @@ export default function WatchScreen() {
       .channel(`reactions-${videoRowId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "watch_reactions", filter: `video_id=eq.${videoRowId}` },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "watch_reactions",
+          filter: `video_id=eq.${videoRowId}`,
+        },
         (payload: any) => {
           const row = payload.new as ReactionRow;
 
-          setReactions((previous) => (previous.some((item) => item.id === row.id) ? previous : [...previous, row]));
+          setReactions((previous) =>
+            previous.some((item) => item.id === row.id)
+              ? previous
+              : [...previous, row],
+          );
         },
       )
       .subscribe();
@@ -605,17 +681,23 @@ export default function WatchScreen() {
       const { data: reactions } = await supabase
         .from("watch_reactions")
         .select("video_id, kind")
-        .in("video_id", list.map((item) => item.id));
+        .in(
+          "video_id",
+          list.map((item) => item.id),
+        );
 
       const byVideo: Record<string, Record<string, number>> = {};
 
       (reactions ?? []).forEach((item: any) => {
         byVideo[item.video_id] = byVideo[item.video_id] ?? {};
 
-        byVideo[item.video_id][item.kind] = (byVideo[item.video_id][item.kind] ?? 0) + 1;
+        byVideo[item.video_id][item.kind] =
+          (byVideo[item.video_id][item.kind] ?? 0) + 1;
       });
 
-      setSavedVideos(list.map((item) => ({ ...item, counts: byVideo[item.id] ?? {} })));
+      setSavedVideos(
+        list.map((item) => ({ ...item, counts: byVideo[item.id] ?? {} })),
+      );
     })();
   }, [coupleId, room?.video_id]);
 
@@ -718,11 +800,15 @@ export default function WatchScreen() {
   }, [webSession]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setWebSession(!!data.session));
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setWebSession(!!data.session));
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => setWebSession(!!session));
+    } = supabase.auth.onAuthStateChange((_event, session) =>
+      setWebSession(!!session),
+    );
 
     return () => subscription.unsubscribe();
   }, []);
@@ -736,11 +822,14 @@ export default function WatchScreen() {
     setLoginBusy(true);
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/redeem-web-login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
-        body: JSON.stringify({ code }),
-      });
+      const response = await fetch(
+        `${SUPABASE_URL}/functions/v1/redeem-web-login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SUPABASE_KEY },
+          body: JSON.stringify({ code }),
+        },
+      );
 
       const result = await response.json();
 
@@ -751,7 +840,10 @@ export default function WatchScreen() {
         return;
       }
 
-      const { error } = await supabase.auth.verifyOtp({ token_hash: result.token_hash, type: "magiclink" });
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: result.token_hash,
+        type: "magiclink",
+      });
 
       if (error) setLoginError(error.message);
     } catch {
@@ -874,7 +966,8 @@ export default function WatchScreen() {
         <Text style={styles.loginTitle}>Смотрим вместе</Text>
 
         <Text style={styles.loginText}>
-          Чтобы войти, откройте чат с ботом Sweetly в Telegram: там пришёл код. Введите его здесь. Дальше код не понадобится.
+          Чтобы войти, откройте чат с ботом Sweetly в Telegram: там пришёл код.
+          Введите его здесь. Дальше код не понадобится.
         </Text>
 
         <TextInput
@@ -892,7 +985,10 @@ export default function WatchScreen() {
           <View style={styles.expiredBox}>
             <Text style={styles.loginError}>Код истёк или уже использован</Text>
 
-            <Pressable style={styles.loginSecondary} onPress={() => Linking.openURL("https://t.me/sweetly_couple_bot")}>
+            <Pressable
+              style={styles.loginSecondary}
+              onPress={() => Linking.openURL("https://t.me/sweetly_couple_bot")}
+            >
               <Text style={styles.loginSecondaryText}>Открыть бота</Text>
             </Pressable>
           </View>
@@ -900,8 +996,14 @@ export default function WatchScreen() {
           <Text style={styles.loginError}>{loginError}</Text>
         ) : null}
 
-        <Pressable style={styles.loginButton} onPress={() => redeemLoginCode()} disabled={loginBusy}>
-          <Text style={styles.loginButtonText}>{loginBusy ? "Проверяем..." : "Войти"}</Text>
+        <Pressable
+          style={styles.loginButton}
+          onPress={() => redeemLoginCode()}
+          disabled={loginBusy}
+        >
+          <Text style={styles.loginButtonText}>
+            {loginBusy ? "Проверяем..." : "Войти"}
+          </Text>
         </Pressable>
       </View>
     );
@@ -910,23 +1012,36 @@ export default function WatchScreen() {
   // Android внутри Telegram: код, таймер и кнопка открыть в браузере
   if (blockEmbed) {
     return (
-      <ScrollView style={styles.screen} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>Смотреть вместе</Text>
 
-        <Text style={styles.loginText}>Откройте комнату на Android в браузере</Text>
+        <Text style={styles.loginText}>
+          Откройте комнату на Android в браузере
+        </Text>
 
         {linkState === "notLinked" ? (
           <View style={styles.androidCard}>
             <Text style={styles.androidTitle}>Telegram не привязан</Text>
             <Text style={styles.loginText}>
-              Привяжите Telegram один раз через бота, либо войдите в аккаунт на сайте.
+              Привяжите Telegram один раз через бота, либо войдите в аккаунт на
+              сайте.
             </Text>
 
-            <Pressable style={styles.loginButton} onPress={() => Linking.openURL("https://t.me/sweetly_couple_bot")}>
+            <Pressable
+              style={styles.loginButton}
+              onPress={() => Linking.openURL("https://t.me/sweetly_couple_bot")}
+            >
               <Text style={styles.loginButtonText}>Привязать Telegram</Text>
             </Pressable>
 
-            <Pressable style={styles.loginSecondary} onPress={() => notify("Скоро", "Вход в аккаунт появится позже")}>
+            <Pressable
+              style={styles.loginSecondary}
+              onPress={() => notify("Скоро", "Вход в аккаунт появится позже")}
+            >
               <Text style={styles.loginSecondaryText}>Войти в аккаунт</Text>
             </Pressable>
           </View>
@@ -939,7 +1054,13 @@ export default function WatchScreen() {
 
             <View style={styles.codeCells}>
               {androidCode.split("").map((char, index) => (
-                <View key={index} style={[styles.codeCell, codeExpired && styles.codeCellExpired]}>
+                <View
+                  key={index}
+                  style={[
+                    styles.codeCell,
+                    codeExpired && styles.codeCellExpired,
+                  ]}
+                >
                   <Text style={styles.codeChar}>{codeExpired ? "" : char}</Text>
                 </View>
               ))}
@@ -949,32 +1070,51 @@ export default function WatchScreen() {
               <Text style={styles.expiredText}>Код истёк</Text>
             ) : (
               <Text style={styles.timerText}>
-                Действует ещё {Math.floor(codeLeft / 60)}:{String(codeLeft % 60).padStart(2, "0")}
+                Действует ещё {Math.floor(codeLeft / 60)}:
+                {String(codeLeft % 60).padStart(2, "0")}
               </Text>
             )}
 
-            <Text style={styles.loginText}>Код можно не вводить: браузер откроется сам</Text>
+            <Text style={styles.loginText}>
+              Код можно не вводить: браузер откроется сам
+            </Text>
 
-            <Pressable style={styles.loginSecondary} onPress={copyAndroidCode} disabled={codeExpired}>
+            <Pressable
+              style={styles.loginSecondary}
+              onPress={copyAndroidCode}
+              disabled={codeExpired}
+            >
               <Text style={styles.loginSecondaryText}>Скопировать код</Text>
             </Pressable>
 
-            <Pressable style={styles.loginButton} onPress={openInBrowser} disabled={codeExpired}>
+            <Pressable
+              style={styles.loginButton}
+              onPress={openInBrowser}
+              disabled={codeExpired}
+            >
               <Text style={styles.loginButtonText}>Открыть в браузере</Text>
             </Pressable>
 
             {codeExpired ? (
-              <Pressable style={styles.loginSecondary} onPress={requestAndroidCode}>
+              <Pressable
+                style={styles.loginSecondary}
+                onPress={requestAndroidCode}
+              >
                 <Text style={styles.loginSecondaryText}>Обновить код</Text>
               </Pressable>
             ) : null}
           </View>
         ) : (
           <View style={styles.androidCard}>
-            <Text style={styles.loginText}>{androidError ?? "Готовим код…"}</Text>
+            <Text style={styles.loginText}>
+              {androidError ?? "Готовим код…"}
+            </Text>
 
             {androidError ? (
-              <Pressable style={styles.loginButton} onPress={requestAndroidCode}>
+              <Pressable
+                style={styles.loginButton}
+                onPress={requestAndroidCode}
+              >
                 <Text style={styles.loginButtonText}>Обновить код</Text>
               </Pressable>
             ) : null}
@@ -990,7 +1130,9 @@ export default function WatchScreen() {
     return (
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>Сначала создайте пару</Text>
-        <Text style={styles.emptyText}>Совместный просмотр доступен, когда вы в паре.</Text>
+        <Text style={styles.emptyText}>
+          Совместный просмотр доступен, когда вы в паре.
+        </Text>
       </View>
     );
   }
@@ -1000,7 +1142,8 @@ export default function WatchScreen() {
       <View style={styles.center}>
         <Text style={styles.emptyTitle}>Совместный просмотр</Text>
         <Text style={styles.emptyText}>
-          Пока открывается в браузере или в Telegram. В приложении на iPhone добавим позже.
+          Пока открывается в браузере или в Telegram. В приложении на iPhone
+          добавим позже.
         </Text>
       </View>
     );
@@ -1010,7 +1153,10 @@ export default function WatchScreen() {
 
   const hasVideo = !!room?.video_id;
 
-  const ratio = progress.duration > 0 ? Math.min(1, progress.current / progress.duration) : 0;
+  const ratio =
+    progress.duration > 0
+      ? Math.min(1, progress.current / progress.duration)
+      : 0;
 
   return (
     <ScrollView
@@ -1022,7 +1168,14 @@ export default function WatchScreen() {
       <View style={styles.topRow}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Svg width={22} height={22} viewBox="0 0 24 24">
-            <Path d="M15 6l-6 6 6 6" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+            <Path
+              d="M15 6l-6 6 6 6"
+              fill="none"
+              stroke={C.text}
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </Svg>
         </Pressable>
 
@@ -1061,43 +1214,76 @@ export default function WatchScreen() {
                 </View>
               ) : null}
 
-              <Pressable style={styles.roomIconBtn} onPress={() => notify("Скоро", "Настройки видео появятся позже")}>
+              <Pressable
+                style={styles.roomIconBtn}
+                onPress={() =>
+                  notify("Скоро", "Настройки видео появятся позже")
+                }
+              >
                 <Ico d={ICON_SLIDERS} color="#FFFFFF" size={18} />
               </Pressable>
             </View>
 
             <View style={styles.roomCenter}>
-              <Pressable style={styles.roomPlay} onPress={togglePlay} disabled={!hasVideo}>
-                <Ico d={isPlaying ? ICON_PAUSE : ICON_PLAY} color="#FFFFFF" size={24} stroke={0} />
+              <Pressable
+                style={styles.roomPlay}
+                onPress={togglePlay}
+                disabled={!hasVideo}
+              >
+                <Ico
+                  d={isPlaying ? ICON_PAUSE : ICON_PLAY}
+                  color="#FFFFFF"
+                  size={24}
+                  stroke={0}
+                />
               </Pressable>
             </View>
 
             <View style={styles.roomBottom}>
               <View style={styles.roomTimeRow}>
                 <Text style={styles.roomTime}>
-                  {formatTime(progress.current)} / {formatTime(progress.duration)}
+                  {formatTime(progress.current)} /{" "}
+                  {formatTime(progress.duration)}
                 </Text>
 
-                <Pressable style={styles.roomFsBtn} onPress={() => (document as any).documentElement?.requestFullscreen?.()}>
+                <Pressable
+                  style={styles.roomFsBtn}
+                  onPress={() =>
+                    (document as any).documentElement?.requestFullscreen?.()
+                  }
+                >
                   <Ico d={ICON_FULL} color="#FFFFFF" size={16} />
                 </Pressable>
               </View>
 
               <View style={styles.trackWrap}>
                 <View style={styles.roomTrack}>
-                  <View style={[styles.roomFill, { width: `${ratio * 100}%` }]} />
+                  <View
+                    style={[styles.roomFill, { width: `${ratio * 100}%` }]}
+                  />
                 </View>
 
                 {reactions.map((item) => {
-                  const left = progress.duration > 0 ? (item.at_seconds / progress.duration) * 100 : 0;
+                  const left =
+                    progress.duration > 0
+                      ? (item.at_seconds / progress.duration) * 100
+                      : 0;
 
                   const mine = item.user_id === userIdRef.current;
 
                   return (
                     <Pressable
                       key={item.id}
-                      style={[styles.roomMark, { left: `${left}%`, backgroundColor: mine ? C.accentPale ?? C.accentText : "#FFFFFF" }]}
-                      onPress={() => playerRef.current?.seekTo?.(item.at_seconds, true)}
+                      style={[
+                        styles.roomMark,
+                        {
+                          left: `${left}%`,
+                          backgroundColor: mine ? C.accentText : "#FFFFFF",
+                        },
+                      ]}
+                      onPress={() =>
+                        playerRef.current?.seekTo?.(item.at_seconds, true)
+                      }
                     />
                   );
                 })}
@@ -1118,13 +1304,20 @@ export default function WatchScreen() {
         );
 
         const folderButton = (
-          <Pressable style={styles.roomSquareBtn} onPress={() => setSavedOpen((value) => !value)}>
+          <Pressable
+            style={styles.roomSquareBtn}
+            onPress={() => setSavedOpen((value) => !value)}
+          >
             <Ico d={ICON_FOLDER} color={C.text} size={20} />
           </Pressable>
         );
 
         const reactionButtons = REACTION_KINDS.map((kind, index) => (
-          <Pressable key={kind} style={styles.roomReactBtn} onPress={() => addReaction(kind)}>
+          <Pressable
+            key={kind}
+            style={styles.roomReactBtn}
+            onPress={() => addReaction(kind)}
+          >
             <Ico d={REACTION_PATHS[kind]} color={C.accentText} size={20} />
           </Pressable>
         ));
@@ -1140,16 +1333,22 @@ export default function WatchScreen() {
             <Text style={styles.roomSavedLabel}>СОХРАНЁННЫЕ ВИДЕО</Text>
 
             {savedVideos.length === 0 ? (
-              <Text style={styles.roomSavedEmpty}>Видео появятся здесь после просмотра</Text>
+              <Text style={styles.roomSavedEmpty}>
+                Видео появятся здесь после просмотра
+              </Text>
             ) : (
               savedVideos.map((item) => (
                 <Pressable
                   key={item.id}
                   style={styles.roomSavedCard}
-                  onPress={() => router.push(`/watch-video?id=${item.id}` as any)}
+                  onPress={() =>
+                    router.push(`/watch-video?id=${item.id}` as any)
+                  }
                 >
                   <Image
-                    source={{ uri: `https://i.ytimg.com/vi/${item.youtube_id}/mqdefault.jpg` }}
+                    source={{
+                      uri: `https://i.ytimg.com/vi/${item.youtube_id}/mqdefault.jpg`,
+                    }}
                     style={styles.roomSavedThumb}
                   />
 
@@ -1171,19 +1370,39 @@ export default function WatchScreen() {
           <View style={[styles.roomChat, landscape && styles.flex]}>
             <View style={styles.roomChatHeader}>
               <Text style={styles.roomChatTitle}>Чат</Text>
-              <Text style={styles.roomChatSub}>{partnerOnline ? "вдвоём" : "вы одни"}</Text>
+              <Text style={styles.roomChatSub}>
+                {partnerOnline ? "вдвоём" : "вы одни"}
+              </Text>
             </View>
 
-            <ScrollView style={styles.flex} contentContainerStyle={styles.roomChatList}>
+            <ScrollView
+              style={styles.flex}
+              contentContainerStyle={styles.roomChatList}
+            >
               {messages.length === 0 ? (
-                <Text style={styles.roomChatEmpty}>Здесь пока пусто. Напишите первым.</Text>
+                <Text style={styles.roomChatEmpty}>
+                  Здесь пока пусто. Напишите первым.
+                </Text>
               ) : (
                 messages.map((message) => {
                   const mine = message.user_id === userIdRef.current;
 
                   return (
-                    <View key={message.id} style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
-                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{message.text}</Text>
+                    <View
+                      key={message.id}
+                      style={[
+                        styles.bubble,
+                        mine ? styles.bubbleMine : styles.bubbleOther,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.bubbleText,
+                          mine && styles.bubbleTextMine,
+                        ]}
+                      >
+                        {message.text}
+                      </Text>
                     </View>
                   );
                 })
@@ -1246,10 +1465,18 @@ export default function WatchScreen() {
               <View style={styles.roomInputRow}>
                 {linkInput}
                 {folderButton}
-                <Pressable style={styles.roomSquareBtn} onPress={() => setSavedOpen((value) => !value)}>
+                <Pressable
+                  style={styles.roomSquareBtn}
+                  onPress={() => setSavedOpen((value) => !value)}
+                >
                   <Ico d={ICON_BUBBLE} color={C.text} size={20} />
                 </Pressable>
-                <Pressable style={styles.roomSquareBtn} onPress={() => (document as any).documentElement?.requestFullscreen?.()}>
+                <Pressable
+                  style={styles.roomSquareBtn}
+                  onPress={() =>
+                    (document as any).documentElement?.requestFullscreen?.()
+                  }
+                >
                   <Ico d={ICON_FULL} color={C.text} size={20} />
                 </Pressable>
               </View>
@@ -1270,1002 +1497,997 @@ export default function WatchScreen() {
   );
 }
 
-const styles = liveStyles(() => StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.background },
-
-  content: {
-    paddingHorizontal: 22,
-    paddingTop: 55,
-    paddingBottom: 40,
-    width: "100%",
-    maxWidth: 520,
-    alignSelf: "center",
-  },
-
-  center: {
-    flex: 1,
-    backgroundColor: C.background,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 40,
-  },
-
-  emptyTitle: {
-    color: C.text,
-    fontFamily: "Manrope_700Bold",
-    fontSize: 20,
-    marginBottom: 8,
-    textAlign: "center",
-  },
-
-  emptyText: {
-    color: C.muted,
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
-  },
-
-  topRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 18,
-  },
-
-  backButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: C.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  title: {
-    flex: 1,
-    color: C.text,
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 32,
-  },
-
-  playerCard: {
-    width: "100%",
-    aspectRatio: 16 / 9,
-    borderRadius: 28,
-    backgroundColor: C.videoBg,
-    overflow: "hidden",
-  },
-
-  player: {
-    width: "100%",
-    height: "100%",
-  },
-
-  playerEmpty: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  playCircle: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingLeft: 4,
-  },
-
-  syncPill: {
-    position: "absolute",
-    top: 14,
-    left: 14,
-    zIndex: 2,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-
-  syncDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.accentPale,
-  },
-
-  syncDotOnline: {
-    backgroundColor: C.accentPale,
-  },
-
-  syncText: {
-    color: C.accentOn,
-    fontSize: 13,
-    fontFamily: "Manrope_700Bold",
-  },
-
-  loginWrap: {
-    flex: 1,
-    backgroundColor: C.background,
-    paddingHorizontal: 22,
-    paddingTop: 60,
-    gap: 16,
-  },
-
-  loginTitle: {
-    color: C.text,
-    fontFamily: FONTS.display,
-    fontSize: 34,
-  },
-
-  loginText: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 15,
-    lineHeight: 22,
-  },
-
-  loginInput: {
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: C.card,
-    paddingHorizontal: 22,
-    fontSize: 22,
-    letterSpacing: 6,
-    color: C.text,
-    textAlign: "center",
-  },
-
-  loginError: {
-    color: C.error,
-    fontFamily: FONTS.textBold,
-    fontSize: 14,
-  },
-
-  expiredBox: {
-    gap: 10,
-  },
-
-  loginSecondary: {
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    borderColor: C.text,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  loginSecondaryText: {
-    color: C.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 15,
-  },
-
-  loginButton: {
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  loginButtonText: {
-    color: C.accentOn,
-    fontFamily: FONTS.textBold,
-    fontSize: 16,
-  },
-
-  openButton: {
-    marginTop: 12,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  openButtonText: {
-    color: C.accentOn,
-    fontFamily: FONTS.textBold,
-    fontSize: 15,
-  },
-
-  videoTitle: {
-    color: C.text,
-    fontFamily: "Manrope_700Bold",
-    fontSize: 20,
-    marginTop: 18,
-  },
-
-  progressTrack: {
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: C.divider,
-    marginTop: 12,
-    overflow: "hidden",
-  },
-
-  flex: {
-    flex: 1,
-  },
-
-  roomColumn: {
-    gap: 12,
-  },
-
-  roomPlayer: {
-    height: 212,
-    borderRadius: 22,
-    backgroundColor: C.videoBg,
-    overflow: "hidden",
-  },
-
-  roomPlayerWide: {
-    width: "100%",
-    height: undefined,
-    aspectRatio: 16 / 9,
-  },
-
-  roomPlayerFrame: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
-
-  roomTop: {
-    position: "absolute",
-    left: 14,
-    right: 12,
-    top: 12,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    zIndex: 2,
-  },
-
-  roomAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomAvatarText: {
-    color: C.accentOn,
-    fontFamily: FONTS.textBold,
-    fontSize: 13,
-  },
-
-  roomVideoTitle: {
-    color: "#FFFFFF",
-    fontFamily: FONTS.textBold,
-    fontSize: 13,
-  },
-
-  roomChannel: {
-    color: "#FFFFFF",
-    fontFamily: FONTS.text,
-    fontSize: 11,
-    opacity: 0.75,
-  },
-
-  roomIconBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomCodePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(255,255,255,0.9)",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-
-  roomCodePillText: {
-    color: "#3B1F2B",
-    fontFamily: FONTS.textBold,
-    fontSize: 12,
-  },
-
-  roomCenter: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomPlay: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomBottom: {
-    position: "absolute",
-    left: 14,
-    right: 14,
-    bottom: 10,
-    gap: 6,
-  },
-
-  roomTimeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  roomTime: {
-    color: "#FFFFFF",
-    fontFamily: FONTS.textBold,
-    fontSize: 12,
-  },
-
-  roomFsBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "rgba(255,255,255,0.16)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomTrack: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 3,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "rgba(255,255,255,0.3)",
-  },
-
-  roomFill: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: C.accent,
-  },
-
-  roomMark: {
-    position: "absolute",
-    top: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginLeft: -6,
-    borderWidth: 2,
-    borderColor: "#3B1F2B",
-  },
-
-  roomStatusRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  roomPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: C.card,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-
-  roomPillText: {
-    color: C.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 12,
-  },
-
-  roomDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.muted,
-  },
-
-  roomCode: {
-    color: C.muted,
-    fontFamily: FONTS.textBold,
-    fontSize: 12,
-    letterSpacing: 1,
-  },
-
-  roomInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-
-  roomLinkInput: {
-    flex: 1,
-    minWidth: 140,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: C.card,
-    paddingHorizontal: 20,
-    fontSize: 14,
-    color: C.text,
-  },
-
-  roomSquareBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: C.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomReactRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-
-  roomConnect: {
-    flex: 1,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomConnectText: {
-    color: C.accentOn,
-    fontFamily: FONTS.textBold,
-    fontSize: 15,
-  },
-
-  roomReactBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomChatWrap: {
-    flex: 1,
-    minHeight: 260,
-  },
-
-  roomChat: {
-    flex: 1,
-    minHeight: 260,
-    backgroundColor: C.card,
-    borderRadius: 22,
-    overflow: "hidden",
-  },
-
-  roomChatHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-
-  roomChatTitle: {
-    color: C.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 15,
-  },
-
-  roomChatSub: {
-    color: C.muted,
-    fontFamily: FONTS.textBold,
-    fontSize: 12,
-  },
-
-  roomChatList: {
-    flexGrow: 1,
-    gap: 8,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-  },
-
-  roomChatEmpty: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 13,
-    textAlign: "center",
-    paddingHorizontal: 40,
-    lineHeight: 20,
-  },
-
-  roomChatInput: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 10,
-  },
-
-  roomChatField: {
-    flex: 1,
-    minWidth: 0,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.background,
-    paddingHorizontal: 20,
-    fontSize: 14,
-    color: C.text,
-  },
-
-  roomSend: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  roomSaved: {
-    backgroundColor: C.card,
-    borderRadius: 22,
-    padding: 14,
-    gap: 8,
-  },
-
-  roomSavedLabel: {
-    color: C.muted,
-    fontFamily: FONTS.textBold,
-    fontSize: 12,
-    letterSpacing: 0.4,
-  },
-
-  roomSavedEmpty: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 13,
-  },
-
-  roomSavedCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-
-  roomSavedThumb: {
-    width: 80,
-    height: 48,
-    borderRadius: 10,
-  },
-
-  roomSavedTitle: {
-    color: C.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 13,
-  },
-
-  roomSavedDate: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 11,
-    marginTop: 2,
-  },
-
-  wideRow: {
-    flexDirection: "row",
-    gap: 16,
-    alignItems: "stretch",
-  },
-
-  wideLeft: {
-    flex: 1,
-    minWidth: 0,
-    alignSelf: "stretch",
-    gap: 10,
-  },
-
-  wideRight: {
-    width: 300,
-    minWidth: 260,
-    alignSelf: "stretch",
-  },
-
-  androidCard: {
-    backgroundColor: C.card,
-    borderRadius: 24,
-    padding: 18,
-    gap: 12,
-  },
-
-  androidTitle: {
-    color: C.text,
-    fontFamily: FONTS.display,
-    fontSize: 22,
-  },
-
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    alignSelf: "flex-start",
-    backgroundColor: C.background,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-
-  syncDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.accent,
-  },
-
-  codeCells: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  codeCell: {
-    width: 38,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: C.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  codeCellExpired: {
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-    borderColor: C.dashed,
-    backgroundColor: "transparent",
-  },
-
-  codeChar: {
-    color: C.text,
-    fontFamily: FONTS.display,
-    fontSize: 22,
-  },
-
-  timerText: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 13,
-  },
-
-  expiredText: {
-    color: C.error,
-    fontFamily: FONTS.textBold,
-    fontSize: 14,
-  },
-
-  savedEmpty: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 14,
-  },
-
-  savedCard: {
-    backgroundColor: C.card,
-    borderRadius: 22,
-    padding: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 8,
-  },
-
-  savedThumb: {
-    width: 96,
-    height: 60,
-    borderRadius: 12,
-  },
-
-  savedTitle: {
-    color: C.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 15,
-  },
-
-  savedDate: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 12,
-    marginTop: 2,
-  },
-
-  savedPills: {
-    flexDirection: "row",
-    gap: 6,
-    marginTop: 6,
-  },
-
-  savedPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: C.background,
-    borderRadius: 12,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-
-  savedPillText: {
-    color: C.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 11,
-  },
-
-  sectionLabel: {
-    color: C.muted,
-    fontFamily: FONTS.textBold,
-    fontSize: 13,
-    letterSpacing: 0.4,
-    marginTop: 18,
-    marginBottom: 8,
-  },
-
-  statusLine: {
-    marginTop: 12,
-  },
-
-  statusText: {
-    color: C.muted,
-    fontFamily: FONTS.textBold,
-    fontSize: 13,
-  },
-
-  chatCard: {
-    backgroundColor: C.card,
-    borderRadius: 22,
-    padding: 14,
-    height: 260,
-  },
-
-  chatHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-
-  chatTitle: {
-    color: C.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 15,
-  },
-
-  chatSub: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 12,
-  },
-
-  chatList: {
-    flex: 1,
-  },
-
-  chatListContent: {
-    gap: 8,
-    paddingBottom: 6,
-  },
-
-  chatEmpty: {
-    color: C.muted,
-    fontFamily: FONTS.text,
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 80,
-  },
-
-  bubble: {
-    maxWidth: "78%",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-  },
-
-  bubbleMine: {
-    alignSelf: "flex-end",
-    backgroundColor: C.accent,
-    borderBottomRightRadius: 4,
-  },
-
-  bubbleOther: {
-    alignSelf: "flex-start",
-    backgroundColor: C.peachLight,
-    borderBottomLeftRadius: 4,
-  },
-
-  bubbleText: {
-    color: C.text,
-    fontFamily: FONTS.text,
-    fontSize: 14,
-  },
-
-  bubbleTextMine: {
-    color: C.accentOn,
-  },
-
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 10,
-  },
-
-  messageInput: {
-    flex: 1,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.background,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: C.text,
-  },
-
-  sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  sendText: {
-    color: C.accentOn,
-    fontSize: 16,
-  },
-
-  trackWrap: {
-    height: 14,
-    justifyContent: "center",
-  },
-
-  mark: {
-    position: "absolute",
-    top: 3,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginLeft: -4,
-    borderWidth: 1.5,
-    borderColor: C.background,
-  },
-
-  activeReaction: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    alignSelf: "flex-start",
-    backgroundColor: C.card,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-
-  activeReactionText: {
-    color: C.text,
-    fontFamily: FONTS.textBold,
-    fontSize: 13,
-  },
-
-  progressFill: {
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: C.accent,
-  },
-
-  timeRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 8,
-  },
-
-  timeText: {
-    color: C.muted,
-    fontSize: 14,
-  },
-
-  controlsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 22,
-    marginTop: 22,
-  },
-
-  seekButton: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: C.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  mainButton: {
-    width: 86,
-    height: 86,
-    borderRadius: 43,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  linkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 22,
-    width: "100%",
-  },
-
-  linkInput: {
-    flex: 1,
-    minWidth: 0,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: C.card,
-    paddingHorizontal: 22,
-    fontSize: 15,
-    color: C.text,
-  },
-
-  connectButton: {
-    height: 52,
-    paddingHorizontal: 20,
-    flexShrink: 0,
-    borderRadius: 26,
-    backgroundColor: C.accent,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  connectText: {
-    color: C.accentOn,
-    fontSize: 16,
-    fontFamily: "Manrope_700Bold",
-  },
-
-  reactionsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 18,
-  },
-
-  reactionPill: {
-    flex: 1,
-    height: 56,
-    marginHorizontal: 4,
-    borderRadius: 28,
-    backgroundColor: C.card,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-}));
+const styles = liveStyles(() =>
+  StyleSheet.create({
+    screen: { flex: 1, backgroundColor: C.background },
+
+    content: {
+      paddingHorizontal: 22,
+      paddingTop: 55,
+      paddingBottom: 40,
+      width: "100%",
+      maxWidth: 520,
+      alignSelf: "center",
+    },
+
+    center: {
+      flex: 1,
+      backgroundColor: C.background,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 40,
+    },
+
+    emptyTitle: {
+      color: C.text,
+      fontFamily: "Manrope_700Bold",
+      fontSize: 20,
+      marginBottom: 8,
+      textAlign: "center",
+    },
+
+    emptyText: {
+      color: C.muted,
+      fontSize: 14,
+      lineHeight: 20,
+      textAlign: "center",
+    },
+
+    topRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+      marginBottom: 18,
+    },
+
+    backButton: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: C.card,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    title: {
+      flex: 1,
+      color: C.text,
+      fontFamily: "PlayfairDisplay_700Bold",
+      fontSize: 32,
+    },
+
+    playerCard: {
+      width: "100%",
+      aspectRatio: 16 / 9,
+      borderRadius: 28,
+      backgroundColor: C.videoBg,
+      overflow: "hidden",
+    },
+
+    player: {
+      width: "100%",
+      height: "100%",
+    },
+
+    playerEmpty: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    playCircle: {
+      width: 74,
+      height: 74,
+      borderRadius: 37,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+      paddingLeft: 4,
+    },
+
+    syncPill: {
+      position: "absolute",
+      top: 14,
+      left: 14,
+      zIndex: 2,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: "rgba(255,255,255,0.16)",
+      borderRadius: 999,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+    },
+
+    syncDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: C.accent,
+    },
+
+    syncDotOnline: {
+      backgroundColor: C.accent,
+    },
+
+    syncText: {
+      color: C.accentOn,
+      fontSize: 13,
+      fontFamily: "Manrope_700Bold",
+    },
+
+    loginWrap: {
+      flex: 1,
+      backgroundColor: C.background,
+      paddingHorizontal: 22,
+      paddingTop: 60,
+      gap: 16,
+    },
+
+    loginTitle: {
+      color: C.text,
+      fontFamily: FONTS.display,
+      fontSize: 34,
+    },
+
+    loginText: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 15,
+      lineHeight: 22,
+    },
+
+    loginInput: {
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: C.card,
+      paddingHorizontal: 22,
+      fontSize: 22,
+      letterSpacing: 6,
+      color: C.text,
+      textAlign: "center",
+    },
+
+    loginError: {
+      color: C.error,
+      fontFamily: FONTS.textBold,
+      fontSize: 14,
+    },
+
+    expiredBox: {
+      gap: 10,
+    },
+
+    loginSecondary: {
+      height: 48,
+      borderRadius: 24,
+      borderWidth: 1.5,
+      borderColor: C.text,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    loginSecondaryText: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 15,
+    },
+
+    loginButton: {
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    loginButtonText: {
+      color: C.accentOn,
+      fontFamily: FONTS.textBold,
+      fontSize: 16,
+    },
+
+    openButton: {
+      marginTop: 12,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    openButtonText: {
+      color: C.accentOn,
+      fontFamily: FONTS.textBold,
+      fontSize: 15,
+    },
+
+    videoTitle: {
+      color: C.text,
+      fontFamily: "Manrope_700Bold",
+      fontSize: 20,
+      marginTop: 18,
+    },
+
+    progressTrack: {
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: C.divider,
+      marginTop: 12,
+      overflow: "hidden",
+    },
+
+    flex: {
+      flex: 1,
+    },
+
+    roomColumn: {
+      gap: 12,
+    },
+
+    roomPlayer: {
+      height: 212,
+      borderRadius: 22,
+      backgroundColor: C.videoBg,
+      overflow: "hidden",
+    },
+
+    roomPlayerWide: {
+      width: "100%",
+      height: undefined,
+      aspectRatio: 16 / 9,
+    },
+
+    roomPlayerFrame: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+    },
+
+    roomTop: {
+      position: "absolute",
+      left: 14,
+      right: 12,
+      top: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      zIndex: 2,
+    },
+
+    roomAvatar: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomAvatarText: {
+      color: C.accentOn,
+      fontFamily: FONTS.textBold,
+      fontSize: 13,
+    },
+
+    roomVideoTitle: {
+      color: "#FFFFFF",
+      fontFamily: FONTS.textBold,
+      fontSize: 13,
+    },
+
+    roomChannel: {
+      color: "#FFFFFF",
+      fontFamily: FONTS.text,
+      fontSize: 11,
+      opacity: 0.75,
+    },
+
+    roomIconBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: "rgba(255,255,255,0.16)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomCodePill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: "rgba(255,255,255,0.9)",
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+
+    roomCodePillText: {
+      color: "#3B1F2B",
+      fontFamily: FONTS.textBold,
+      fontSize: 12,
+    },
+
+    roomCenter: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 0,
+      bottom: 0,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomPlay: {
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: "rgba(255,255,255,0.16)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomBottom: {
+      position: "absolute",
+      left: 14,
+      right: 14,
+      bottom: 10,
+      gap: 6,
+    },
+
+    roomTimeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+
+    roomTime: {
+      color: "#FFFFFF",
+      fontFamily: FONTS.textBold,
+      fontSize: 12,
+    },
+
+    roomFsBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: "rgba(255,255,255,0.16)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomTrack: {
+      position: "absolute",
+      left: 0,
+      right: 0,
+      top: 3,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: "rgba(255,255,255,0.3)",
+    },
+
+    roomFill: {
+      position: "absolute",
+      left: 0,
+      top: 0,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: C.accent,
+    },
+
+    roomMark: {
+      position: "absolute",
+      top: 0,
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginLeft: -6,
+      borderWidth: 2,
+      borderColor: "#3B1F2B",
+    },
+
+    roomStatusRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+
+    roomPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: C.card,
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+    },
+
+    roomPillText: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 12,
+    },
+
+    roomDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      backgroundColor: C.muted,
+    },
+
+    roomCode: {
+      color: C.muted,
+      fontFamily: FONTS.textBold,
+      fontSize: 12,
+      letterSpacing: 1,
+    },
+
+    roomInputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+
+    roomLinkInput: {
+      flex: 1,
+      minWidth: 140,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: C.card,
+      paddingHorizontal: 20,
+      fontSize: 14,
+      color: C.text,
+    },
+
+    roomSquareBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: C.card,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomReactRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+
+    roomConnect: {
+      flex: 1,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomConnectText: {
+      color: C.accentOn,
+      fontFamily: FONTS.textBold,
+      fontSize: 15,
+    },
+
+    roomReactBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: C.card,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomChatWrap: {
+      flex: 1,
+      minHeight: 260,
+    },
+
+    roomChat: {
+      flex: 1,
+      minHeight: 260,
+      backgroundColor: C.card,
+      borderRadius: 22,
+      overflow: "hidden",
+    },
+
+    roomChatHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+
+    roomChatTitle: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 15,
+    },
+
+    roomChatSub: {
+      color: C.muted,
+      fontFamily: FONTS.textBold,
+      fontSize: 12,
+    },
+
+    roomChatList: {
+      flexGrow: 1,
+      gap: 8,
+      paddingHorizontal: 16,
+      justifyContent: "center",
+    },
+
+    roomChatEmpty: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 13,
+      textAlign: "center",
+      paddingHorizontal: 40,
+      lineHeight: 20,
+    },
+
+    roomChatInput: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      padding: 10,
+    },
+
+    roomChatField: {
+      flex: 1,
+      minWidth: 0,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: C.background,
+      paddingHorizontal: 20,
+      fontSize: 14,
+      color: C.text,
+    },
+
+    roomSend: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    roomSaved: {
+      backgroundColor: C.card,
+      borderRadius: 22,
+      padding: 14,
+      gap: 8,
+    },
+
+    roomSavedLabel: {
+      color: C.muted,
+      fontFamily: FONTS.textBold,
+      fontSize: 12,
+      letterSpacing: 0.4,
+    },
+
+    roomSavedEmpty: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 13,
+    },
+
+    roomSavedCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+
+    roomSavedThumb: {
+      width: 80,
+      height: 48,
+      borderRadius: 10,
+    },
+
+    roomSavedTitle: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 13,
+    },
+
+    roomSavedDate: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 11,
+      marginTop: 2,
+    },
+
+    wideRow: {
+      flexDirection: "row",
+      gap: 16,
+      alignItems: "stretch",
+    },
+
+    wideLeft: {
+      flex: 1,
+      minWidth: 0,
+      alignSelf: "stretch",
+      gap: 10,
+    },
+
+    wideRight: {
+      width: 300,
+      minWidth: 260,
+      alignSelf: "stretch",
+    },
+
+    androidCard: {
+      backgroundColor: C.card,
+      borderRadius: 24,
+      padding: 18,
+      gap: 12,
+    },
+
+    androidTitle: {
+      color: C.text,
+      fontFamily: FONTS.display,
+      fontSize: 22,
+    },
+
+    statusPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      alignSelf: "flex-start",
+      backgroundColor: C.background,
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+
+    codeCells: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+    },
+
+    codeCell: {
+      width: 38,
+      height: 48,
+      borderRadius: 12,
+      backgroundColor: C.background,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    codeCellExpired: {
+      borderWidth: 1.5,
+      borderStyle: "dashed",
+      borderColor: C.dashed,
+      backgroundColor: "transparent",
+    },
+
+    codeChar: {
+      color: C.text,
+      fontFamily: FONTS.display,
+      fontSize: 22,
+    },
+
+    timerText: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 13,
+    },
+
+    expiredText: {
+      color: C.error,
+      fontFamily: FONTS.textBold,
+      fontSize: 14,
+    },
+
+    savedEmpty: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 14,
+    },
+
+    savedCard: {
+      backgroundColor: C.card,
+      borderRadius: 22,
+      padding: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      marginBottom: 8,
+    },
+
+    savedThumb: {
+      width: 96,
+      height: 60,
+      borderRadius: 12,
+    },
+
+    savedTitle: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 15,
+    },
+
+    savedDate: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 12,
+      marginTop: 2,
+    },
+
+    savedPills: {
+      flexDirection: "row",
+      gap: 6,
+      marginTop: 6,
+    },
+
+    savedPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: C.background,
+      borderRadius: 12,
+      paddingHorizontal: 6,
+      paddingVertical: 3,
+    },
+
+    savedPillText: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 11,
+    },
+
+    sectionLabel: {
+      color: C.muted,
+      fontFamily: FONTS.textBold,
+      fontSize: 13,
+      letterSpacing: 0.4,
+      marginTop: 18,
+      marginBottom: 8,
+    },
+
+    statusLine: {
+      marginTop: 12,
+    },
+
+    statusText: {
+      color: C.muted,
+      fontFamily: FONTS.textBold,
+      fontSize: 13,
+    },
+
+    chatCard: {
+      backgroundColor: C.card,
+      borderRadius: 22,
+      padding: 14,
+      height: 260,
+    },
+
+    chatHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 8,
+    },
+
+    chatTitle: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 15,
+    },
+
+    chatSub: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 12,
+    },
+
+    chatList: {
+      flex: 1,
+    },
+
+    chatListContent: {
+      gap: 8,
+      paddingBottom: 6,
+    },
+
+    chatEmpty: {
+      color: C.muted,
+      fontFamily: FONTS.text,
+      fontSize: 14,
+      textAlign: "center",
+      marginTop: 80,
+    },
+
+    bubble: {
+      maxWidth: "78%",
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 16,
+    },
+
+    bubbleMine: {
+      alignSelf: "flex-end",
+      backgroundColor: C.accent,
+      borderBottomRightRadius: 4,
+    },
+
+    bubbleOther: {
+      alignSelf: "flex-start",
+      backgroundColor: C.peachLight,
+      borderBottomLeftRadius: 4,
+    },
+
+    bubbleText: {
+      color: C.text,
+      fontFamily: FONTS.text,
+      fontSize: 14,
+    },
+
+    bubbleTextMine: {
+      color: C.accentOn,
+    },
+
+    inputRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 10,
+    },
+
+    messageInput: {
+      flex: 1,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: C.background,
+      paddingHorizontal: 16,
+      fontSize: 15,
+      color: C.text,
+    },
+
+    sendButton: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    sendText: {
+      color: C.accentOn,
+      fontSize: 16,
+    },
+
+    trackWrap: {
+      height: 14,
+      justifyContent: "center",
+    },
+
+    mark: {
+      position: "absolute",
+      top: 3,
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginLeft: -4,
+      borderWidth: 1.5,
+      borderColor: C.background,
+    },
+
+    activeReaction: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      alignSelf: "flex-start",
+      backgroundColor: C.card,
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+    },
+
+    activeReactionText: {
+      color: C.text,
+      fontFamily: FONTS.textBold,
+      fontSize: 13,
+    },
+
+    progressFill: {
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: C.accent,
+    },
+
+    timeRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 8,
+    },
+
+    timeText: {
+      color: C.muted,
+      fontSize: 14,
+    },
+
+    controlsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 22,
+      marginTop: 22,
+    },
+
+    seekButton: {
+      width: 62,
+      height: 62,
+      borderRadius: 31,
+      backgroundColor: C.card,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    mainButton: {
+      width: 86,
+      height: 86,
+      borderRadius: 43,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    linkRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      marginTop: 22,
+      width: "100%",
+    },
+
+    linkInput: {
+      flex: 1,
+      minWidth: 0,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: C.card,
+      paddingHorizontal: 22,
+      fontSize: 15,
+      color: C.text,
+    },
+
+    connectButton: {
+      height: 52,
+      paddingHorizontal: 20,
+      flexShrink: 0,
+      borderRadius: 26,
+      backgroundColor: C.accent,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    connectText: {
+      color: C.accentOn,
+      fontSize: 16,
+      fontFamily: "Manrope_700Bold",
+    },
+
+    reactionsRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: 18,
+    },
+
+    reactionPill: {
+      flex: 1,
+      height: 56,
+      marginHorizontal: 4,
+      borderRadius: 28,
+      backgroundColor: C.card,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  }),
+);
