@@ -79,6 +79,7 @@ export type Palette = {
   muted: string;
   accent: string;
   accentText: string;
+  accentPale: string;
   accentOn: string;
   dashed: string;
   error: string;
@@ -107,6 +108,7 @@ export function getPalette(theme: ResolvedTheme, accent: AccentName): Palette {
       muted: '#B89AA6',
       accent: color,
       accentText: lighten(color, 0.4),
+      accentPale: SWEETLY.accentPale,
       accentOn: onAccent,
       dashed: '#7A5A66',
       error: '#FF8FA3',
@@ -128,6 +130,7 @@ export function getPalette(theme: ResolvedTheme, accent: AccentName): Palette {
     muted: '#7A5A66',
     accent: color,
     accentText: color,
+    accentPale: SWEETLY.accentPale,
     accentOn: onAccent,
     dashed: '#D98BA0',
     error: '#B5304F',

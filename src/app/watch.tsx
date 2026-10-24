@@ -1278,7 +1278,7 @@ export default function WatchScreen() {
                         styles.roomMark,
                         {
                           left: `${left}%`,
-                          backgroundColor: mine ? C.accentText : "#FFFFFF",
+                          backgroundColor: mine ? C.accentPale : "#FFFFFF",
                         },
                       ]}
                       onPress={() =>
