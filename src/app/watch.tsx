@@ -1252,8 +1252,11 @@ export default function WatchScreen() {
                 <Pressable style={styles.roomSquareBtn} onPress={() => (document as any).documentElement?.requestFullscreen?.()}>
                   <Ico d={ICON_FULL} color={C.text} size={20} />
                 </Pressable>
-                {reactionButtons}
+              </View>
+
+              <View style={styles.roomReactRow}>
                 {connectButton}
+                {reactionButtons}
               </View>
 
               {savedList}
@@ -1502,7 +1505,9 @@ const styles = liveStyles(() => StyleSheet.create({
   },
 
   roomPlayerWide: {
-    height: 330,
+    width: "100%",
+    height: undefined,
+    aspectRatio: 16 / 9,
   },
 
   roomPlayerFrame: {
@@ -1699,7 +1704,7 @@ const styles = liveStyles(() => StyleSheet.create({
 
   roomLinkInput: {
     flex: 1,
-    minWidth: 0,
+    minWidth: 140,
     height: 48,
     borderRadius: 24,
     backgroundColor: C.card,
@@ -1871,17 +1876,20 @@ const styles = liveStyles(() => StyleSheet.create({
   wideRow: {
     flexDirection: "row",
     gap: 16,
-    alignItems: "flex-start",
+    alignItems: "stretch",
   },
 
   wideLeft: {
     flex: 1,
+    minWidth: 0,
+    alignSelf: "stretch",
     gap: 10,
   },
 
   wideRight: {
     width: 300,
-    gap: 4,
+    minWidth: 260,
+    alignSelf: "stretch",
   },
 
   androidCard: {
