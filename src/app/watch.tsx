@@ -550,7 +550,7 @@ export default function WatchScreen() {
   // Ориентация: горизонтально — плеер слева, чат справа
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
-  const landscape = screenWidth > screenHeight;
+  const landscape = screenWidth > screenHeight && screenWidth >= 720;
 
   // Список сохранённых видео открывается кнопкой с папкой
   const [savedOpen, setSavedOpen] = useState(false);
@@ -1161,7 +1161,10 @@ export default function WatchScreen() {
   return (
     <ScrollView
       style={styles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        landscape && styles.contentWide,
+      ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
@@ -1188,7 +1191,7 @@ export default function WatchScreen() {
         const status = partnerOnline ? "Вы вдвоём" : "Вы одни";
 
         const playerCard = (
-          <View style={[styles.roomPlayer, landscape && styles.roomPlayerWide]}>
+          <View style={styles.roomPlayer}>
             {hasVideo && !blockEmbed ? (
               <View nativeID="room-player" style={styles.roomPlayerFrame} />
             ) : null}
@@ -1510,6 +1513,10 @@ const styles = liveStyles(() =>
       alignSelf: "center",
     },
 
+    contentWide: {
+      maxWidth: 1100,
+    },
+
     center: {
       flex: 1,
       backgroundColor: C.background,
@@ -1726,16 +1733,11 @@ const styles = liveStyles(() =>
     },
 
     roomPlayer: {
-      height: 212,
+      width: "100%",
+      aspectRatio: 16 / 9,
       borderRadius: 22,
       backgroundColor: C.videoBg,
       overflow: "hidden",
-    },
-
-    roomPlayerWide: {
-      width: "100%",
-      height: undefined,
-      aspectRatio: 16 / 9,
     },
 
     roomPlayerFrame: {
