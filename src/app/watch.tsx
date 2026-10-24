@@ -100,17 +100,6 @@ function extractYoutubeId(input: string): string | null {
 const isAndroid =
   typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
 
-// Открываем видео во внешнем браузере: Telegram openLink выводит ссылку из своего окна
-function openYoutube(url: string) {
-  const tg = (globalThis as any).Telegram?.WebApp;
-
-  if (tg?.openLink) {
-    tg.openLink(url);
-  } else {
-    Linking.openURL(url);
-  }
-}
-
 // Контурная иконка по пути SVG
 function Ico({
   d,
@@ -414,7 +403,6 @@ export default function WatchScreen() {
           playerVars: { playsinline: 1, rel: 0 },
           events: {
             onStateChange: onLocalStateChange,
-            onError: (event: any) => setEmbedError(event?.data ?? 0),
           },
         });
 
@@ -574,9 +562,6 @@ export default function WatchScreen() {
 
   const reactionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Код ошибки плеера: показываем кнопку «Открыть в YouTube», а не переходим сами
-  const [embedError, setEmbedError] = useState<number | null>(null);
-
   // Проверка «не бот» от YouTube появляется только на Android внутри Telegram
   const [blockEmbed] = useState(
     () => isAndroid && !!(globalThis as any).Telegram?.WebApp?.initData,
@@ -600,7 +585,7 @@ export default function WatchScreen() {
   const [viewportHeight, setViewportHeight] = useState(0);
 
   const landscape = screenWidth > screenHeight;
-  const wideLayout = landscape && screenHeight >= 560;
+  const wideLayout = landscape;
   const compactControls = screenWidth < 440;
   const extraCompactControls = screenWidth < 380;
   const orientationAnimation = useRef(new Animated.Value(1)).current;
@@ -958,10 +943,6 @@ export default function WatchScreen() {
   }
 
   useEffect(() => {
-    setEmbedError(null);
-  }, [room?.video_id]);
-
-  useEffect(() => {
     if (!isWeb || !room?.video_id) return;
 
     const timer = setInterval(() => {
@@ -1241,10 +1222,18 @@ export default function WatchScreen() {
     viewportHeight || screenHeight,
     screenHeight,
   );
-  const roomPlayerHeight = Math.max(
-    120,
-    availableHeight - (compactControls ? 270 : 300),
+  const landscapePlayerWidth = Math.max(
+    0,
+    screenWidth -
+      (extraCompactControls ? 24 : compactControls ? 28 : 44) -
+      316,
   );
+  const roomPlayerHeight = landscape
+    ? Math.max(
+        120,
+        Math.min(availableHeight - 220, landscapePlayerWidth * (9 / 16)),
+      )
+    : Math.max(120, availableHeight - (compactControls ? 270 : 300));
   const orientationTransitionStyle = {
     opacity: orientationAnimation,
     transform: [
