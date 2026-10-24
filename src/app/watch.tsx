@@ -5,11 +5,12 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Svg, { Path } from "react-native-svg";
 
 import {
+  Animated,
   Alert,
   Image,
   Linking,
   Platform,
-  Pressable,
+  Pressable as NativePressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,9 +18,52 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import type { PressableStateCallbackType } from "react-native";
 
 import { getAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
+
+const AnimatedNativePressable = Animated.createAnimatedComponent(NativePressable);
+
+function Pressable({
+  style,
+  onPressIn,
+  onPressOut,
+  ...props
+}: React.ComponentProps<typeof NativePressable>) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const useNativeDriver = Platform.OS !== "web";
+
+  function animateScale(value: number) {
+    Animated.spring(scale, {
+      toValue: value,
+      speed: 32,
+      bounciness: 4,
+      useNativeDriver,
+    }).start();
+  }
+
+  const animatedStyle = { transform: [{ scale }] };
+  const combinedStyle = (state: PressableStateCallbackType) => [
+    typeof style === "function" ? style(state) : style,
+    animatedStyle,
+  ];
+
+  return (
+    <AnimatedNativePressable
+      {...props}
+      style={combinedStyle}
+      onPressIn={(event) => {
+        animateScale(0.96);
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        animateScale(1);
+        onPressOut?.(event);
+      }}
+    />
+  );
+}
 
 type RoomState = {
   video_id: string | null;
@@ -90,7 +134,6 @@ function Ico({
 const ICON_FOLDER =
   "M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z";
 const ICON_BUBBLE = "M4 5h16v11H9l-5 4z";
-const ICON_FULL = "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5";
 const ICON_SEND = "M3 11l18-8-8 18-2-8-8-2z";
 
 // Реакции: сердце, смешно, звезда, класс (порядок совпадает с кнопками)
@@ -548,9 +591,12 @@ export default function WatchScreen() {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const landscape = screenWidth > screenHeight && screenWidth >= 720;
+  const compactControls = screenWidth < 440;
+  const extraCompactControls = screenWidth < 380;
 
   // Список сохранённых видео открывается кнопкой с папкой
   const [savedOpen, setSavedOpen] = useState(false);
+  const [chatVisible, setChatVisible] = useState(true);
 
   // Выдаём одноразовый код: живёт 10 минут
   async function requestAndroidCode() {
@@ -1136,6 +1182,8 @@ export default function WatchScreen() {
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
+        compactControls && styles.contentCompact,
+        extraCompactControls && styles.contentExtraCompact,
         landscape && styles.contentWide,
       ]}
       showsVerticalScrollIndicator={false}
@@ -1155,13 +1203,21 @@ export default function WatchScreen() {
           </Svg>
         </Pressable>
 
-        <Text style={styles.title}>Смотрим вместе</Text>
+        <Text
+          style={[
+            styles.title,
+            screenWidth < 400 && styles.titleCompact,
+            screenWidth < 360 && styles.titleExtraCompact,
+          ]}
+        >
+          Смотрим вместе
+        </Text>
       </View>
 
       {(() => {
         const code = getAppData().couple?.invite_code ?? "";
 
-        const status = partnerOnline ? "Синхронно · 2" : "Вы одни · 1";
+        const status = partnerOnline ? "Синхронно" : "Вы одни";
 
         const playerCard = (
           <View style={styles.roomPlayer}>
@@ -1169,16 +1225,18 @@ export default function WatchScreen() {
               <View nativeID="room-player" style={styles.roomPlayerFrame} />
             ) : null}
 
-            <View style={styles.roomCodePill}>
-              <View
-                style={[
-                  styles.roomDot,
-                  partnerOnline && styles.roomDotOnline,
-                ]}
-              />
-              <Text style={styles.roomCodePillText}>
-                Код: {code} · {status}
-              </Text>
+            <View style={styles.roomCodePillWrap}>
+              <View style={styles.roomCodePill}>
+                <View
+                  style={[
+                    styles.roomDot,
+                    partnerOnline && styles.roomDotOnline,
+                  ]}
+                />
+                <Text style={styles.roomCodePillText}>
+                  Код: {code} · {status}
+                </Text>
+              </View>
             </View>
           </View>
         );
@@ -1227,29 +1285,33 @@ export default function WatchScreen() {
           </View>
         );
 
-        const savedButton = (
+        const chatButton = (
           <Pressable
-            style={styles.roomSquareBtn}
-            onPress={() => setSavedOpen((value) => !value)}
+            style={[
+              styles.roomSquareBtn,
+              compactControls && styles.roomSquareBtnCompact,
+              extraCompactControls && styles.roomSquareBtnExtraCompact,
+              chatVisible && styles.roomSquareBtnActive,
+            ]}
+            onPress={() => setChatVisible((visible) => !visible)}
+            accessibilityRole="button"
+            accessibilityLabel={chatVisible ? "Скрыть чат" : "Показать чат"}
+            accessibilityState={{ selected: chatVisible }}
           >
-            <Ico d={ICON_BUBBLE} color={C.text} size={20} />
-          </Pressable>
-        );
-
-        const fullscreenButton = (
-          <Pressable
-            style={styles.roomSquareBtn}
-            onPress={() =>
-              (document as any).documentElement?.requestFullscreen?.()
-            }
-          >
-            <Ico d={ICON_FULL} color={C.text} size={20} />
+            <Ico
+              d={ICON_BUBBLE}
+              color={chatVisible ? C.accent : C.text}
+              size={extraCompactControls ? 15 : compactControls ? 17 : 20}
+            />
           </Pressable>
         );
 
         const linkInput = (
           <TextInput
-            style={styles.roomLinkInput}
+            style={[
+              styles.roomLinkInput,
+              compactControls && styles.roomLinkInputCompact,
+            ]}
             placeholder="Вставьте ссылку на видео"
             placeholderTextColor={C.muted}
             value={linkDraft}
@@ -1260,43 +1322,73 @@ export default function WatchScreen() {
 
         const folderButton = (
           <Pressable
-            style={styles.roomSquareBtn}
+            style={[
+              styles.roomSquareBtn,
+              compactControls && styles.roomSquareBtnCompact,
+              extraCompactControls && styles.roomSquareBtnExtraCompact,
+            ]}
             onPress={() => setSavedOpen((value) => !value)}
           >
-            <Ico d={ICON_FOLDER} color={C.text} size={20} />
+            <Ico
+              d={ICON_FOLDER}
+              color={C.text}
+              size={extraCompactControls ? 15 : compactControls ? 17 : 20}
+            />
           </Pressable>
         );
 
         const reactionButtons = REACTION_KINDS.map((kind) => (
           <Pressable
             key={kind}
-            style={styles.roomReactBtn}
+            style={[
+              styles.roomReactBtn,
+              compactControls && styles.roomReactBtnCompact,
+              extraCompactControls && styles.roomReactBtnExtraCompact,
+            ]}
             onPress={() => addReaction(kind)}
           >
-            <Ico d={REACTION_PATHS[kind]} color={C.accentText} size={20} />
+            <Ico
+              d={REACTION_PATHS[kind]}
+              color={C.accentText}
+              size={extraCompactControls ? 15 : compactControls ? 17 : 20}
+            />
           </Pressable>
         ));
 
         const connectButton = (
-          <Pressable style={styles.roomConnect} onPress={startVideo}>
-            <Text style={styles.roomConnectText}>Включить</Text>
+          <Pressable
+            style={[
+              styles.roomConnect,
+              compactControls && styles.roomConnectCompact,
+              extraCompactControls && styles.roomConnectExtraCompact,
+            ]}
+            onPress={startVideo}
+          >
+            <Text
+              style={[
+                styles.roomConnectText,
+                compactControls && styles.roomConnectTextCompact,
+              ]}
+            >
+              Включить
+            </Text>
           </Pressable>
         );
 
         const controls = (
-          <ScrollView
-            horizontal
-            style={styles.roomControlsScroll}
-            contentContainerStyle={styles.roomControlsRow}
-            showsHorizontalScrollIndicator={false}
+          <View
+            style={[
+              styles.roomControlsRow,
+              compactControls && styles.roomControlsRowCompact,
+              extraCompactControls && styles.roomControlsRowExtraCompact,
+            ]}
           >
             {linkInput}
             {folderButton}
-            {savedButton}
-            {fullscreenButton}
-            {connectButton}
+            {chatButton}
             {reactionButtons}
-          </ScrollView>
+            {connectButton}
+          </View>
         );
 
         const savedList = savedOpen ? (
@@ -1391,7 +1483,7 @@ export default function WatchScreen() {
               />
 
               <Pressable style={styles.roomSend} onPress={sendMessage}>
-                <Ico d={ICON_SEND} color="#FFFFFF" size={18} stroke={0} />
+                <Ico d={ICON_SEND} color="#FFFFFF" size={18} />
               </Pressable>
             </View>
           </View>
@@ -1407,7 +1499,9 @@ export default function WatchScreen() {
 
               {savedList}
 
-              <View style={styles.roomChatWrap}>{chat}</View>
+              {chatVisible ? (
+                <View style={styles.roomChatWrap}>{chat}</View>
+              ) : null}
             </View>
           );
         }
@@ -1423,7 +1517,9 @@ export default function WatchScreen() {
               {savedList}
             </View>
 
-            <View style={styles.wideRight}>{chat}</View>
+            {chatVisible ? (
+              <View style={styles.wideRight}>{chat}</View>
+            ) : null}
           </View>
         );
       })()}
@@ -1446,6 +1542,16 @@ const styles = liveStyles(() =>
 
     contentWide: {
       maxWidth: 1100,
+    },
+
+    contentCompact: {
+      paddingHorizontal: 14,
+      paddingTop: 36,
+    },
+
+    contentExtraCompact: {
+      paddingHorizontal: 12,
+      paddingTop: 28,
     },
 
     center: {
@@ -1492,6 +1598,14 @@ const styles = liveStyles(() =>
       color: C.text,
       fontFamily: "PlayfairDisplay_700Bold",
       fontSize: 32,
+    },
+
+    titleCompact: {
+      fontSize: 27,
+    },
+
+    titleExtraCompact: {
+      fontSize: 23,
     },
 
     playerCard: {
@@ -1680,10 +1794,16 @@ const styles = liveStyles(() =>
       bottom: 0,
     },
 
-    roomCodePill: {
+    roomCodePillWrap: {
       position: "absolute",
-      left: 12,
+      left: 0,
+      right: 0,
       top: 12,
+      alignItems: "center",
+      zIndex: 2,
+    },
+
+    roomCodePill: {
       flexDirection: "row",
       alignItems: "center",
       gap: 7,
@@ -1762,7 +1882,8 @@ const styles = liveStyles(() =>
     },
 
     roomLinkInput: {
-      width: 220,
+      flex: 1,
+      minWidth: 0,
       height: 40,
       borderRadius: 24,
       backgroundColor: C.card,
@@ -1780,17 +1901,39 @@ const styles = liveStyles(() =>
       justifyContent: "center",
     },
 
-    roomControlsScroll: {
-      width: "100%",
-      height: 48,
-      flexGrow: 0,
+    roomSquareBtnActive: {
+      backgroundColor: C.peachLight,
     },
 
     roomControlsRow: {
+      width: "100%",
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
-      paddingRight: 2,
+    },
+
+    roomControlsRowCompact: {
+      gap: 4,
+    },
+
+    roomControlsRowExtraCompact: {
+      gap: 2,
+    },
+
+    roomSquareBtnCompact: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+    },
+
+    roomSquareBtnExtraCompact: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+    },
+
+    roomLinkInputCompact: {
+      paddingHorizontal: 10,
     },
 
     roomConnect: {
@@ -1810,6 +1953,18 @@ const styles = liveStyles(() =>
       fontSize: 15,
     },
 
+    roomConnectTextCompact: {
+      fontSize: 13,
+    },
+
+    roomConnectCompact: {
+      width: 84,
+    },
+
+    roomConnectExtraCompact: {
+      width: 68,
+    },
+
     roomReactBtn: {
       width: 36,
       height: 36,
@@ -1817,6 +1972,18 @@ const styles = liveStyles(() =>
       backgroundColor: C.card,
       alignItems: "center",
       justifyContent: "center",
+    },
+
+    roomReactBtnCompact: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+    },
+
+    roomReactBtnExtraCompact: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
     },
 
     roomChatWrap: {
