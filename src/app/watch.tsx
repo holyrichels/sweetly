@@ -13,12 +13,13 @@ import {
   Pressable as NativePressable,
   ScrollView,
   StyleSheet,
+  type StyleProp,
   Text,
   TextInput,
   useWindowDimensions,
   View,
+  type ViewStyle,
 } from "react-native";
-import type { PressableStateCallbackType } from "react-native";
 
 import { getAppData, useAppData } from "@/lib/app-data";
 import { supabase } from "@/lib/supabase";
@@ -30,7 +31,9 @@ function Pressable({
   onPressIn,
   onPressOut,
   ...props
-}: React.ComponentProps<typeof NativePressable>) {
+}: Omit<React.ComponentProps<typeof NativePressable>, "style"> & {
+  style?: StyleProp<ViewStyle>;
+}) {
   const scale = useRef(new Animated.Value(1)).current;
   const useNativeDriver = Platform.OS !== "web";
 
@@ -43,16 +46,10 @@ function Pressable({
     }).start();
   }
 
-  const animatedStyle = { transform: [{ scale }] };
-  const combinedStyle = (state: PressableStateCallbackType) => [
-    typeof style === "function" ? style(state) : style,
-    animatedStyle,
-  ];
-
   return (
     <AnimatedNativePressable
       {...props}
-      style={combinedStyle}
+      style={[style, { transform: [{ scale }] }]}
       onPressIn={(event) => {
         animateScale(0.96);
         onPressIn?.(event);
@@ -1184,7 +1181,6 @@ export default function WatchScreen() {
         styles.content,
         compactControls && styles.contentCompact,
         extraCompactControls && styles.contentExtraCompact,
-        landscape && styles.contentWide,
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
@@ -1536,12 +1532,8 @@ const styles = liveStyles(() =>
       paddingTop: 55,
       paddingBottom: 40,
       width: "100%",
-      maxWidth: 520,
-      alignSelf: "center",
-    },
-
-    contentWide: {
-      maxWidth: 1100,
+      flexGrow: 1,
+      alignSelf: "stretch",
     },
 
     contentCompact: {
