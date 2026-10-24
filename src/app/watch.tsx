@@ -46,6 +46,23 @@ function openYoutube(url: string) {
   }
 }
 
+// Контурная иконка по пути SVG
+function Ico({ d, color, size = 20, stroke = 1.8 }: { d: string; color: string; size?: number; stroke?: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d={d} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+const ICON_SLIDERS = "M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M6 14v6";
+const ICON_FOLDER = "M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z";
+const ICON_BUBBLE = "M4 5h16v11H9l-5 4z";
+const ICON_FULL = "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5";
+const ICON_PLAY = "M8 5v14l11-7z";
+const ICON_PAUSE = "M7 5h3v14H7zM14 5h3v14h-3z";
+const ICON_SEND = "M3 11l18-8-8 18-2-8-8-2z";
+
 // Реакции: сердце, смешно, звезда, класс (порядок совпадает с кнопками)
 const REACTION_KINDS = ["heart", "funny", "star", "like"] as const;
 
@@ -469,6 +486,9 @@ export default function WatchScreen() {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const landscape = screenWidth > screenHeight;
+
+  // Список сохранённых видео открывается кнопкой с папкой
+  const [savedOpen, setSavedOpen] = useState(false);
 
   // Выдаём одноразовый код: живёт 10 минут
   async function requestAndroidCode() {
@@ -1009,250 +1029,240 @@ export default function WatchScreen() {
         <Text style={styles.title}>Смотрим вместе</Text>
       </View>
 
-      <View style={landscape ? styles.wideRow : null}>
-        <View style={landscape ? styles.wideLeft : null}>
-      {/* ============ ПЛЕЕР ============ */}
+      {(() => {
+        const code = getAppData().couple?.invite_code ?? "";
 
-      <View style={styles.playerCard}>
-        <View style={styles.syncPill}>
-          <View style={[styles.syncDot, partnerOnline && styles.syncDotOnline]} />
-          <Text style={styles.syncText}>
-            {partnerOnline ? "Синхронно с партнёром" : "Вы один"}
-          </Text>
-        </View>
+        const status = partnerOnline ? "Вы вдвоём" : "Вы одни";
 
-        {hasVideo && !blockEmbed ? (
-          <View nativeID="room-player" style={styles.player} />
-        ) : (
-          <View style={styles.playerEmpty}>
-            <View style={styles.playCircle}>
-              <Svg width={26} height={26} viewBox="0 0 24 24">
-                <Path d="M8 5v14l11-7z" fill={C.accentOn} />
-              </Svg>
+        const playerCard = (
+          <View style={[styles.roomPlayer, landscape && styles.roomPlayerWide]}>
+            {hasVideo && !blockEmbed ? (
+              <View nativeID="room-player" style={styles.roomPlayerFrame} />
+            ) : null}
+
+            <View style={styles.roomTop}>
+              <View style={styles.roomAvatar}>
+                <Text style={styles.roomAvatarText}>К</Text>
+              </View>
+
+              <View style={styles.flex}>
+                <Text style={styles.roomVideoTitle} numberOfLines={1}>
+                  {room?.video_id ? "Видео с YouTube" : "Название видео"}
+                </Text>
+                <Text style={styles.roomChannel}>канал</Text>
+              </View>
+
+              {landscape ? (
+                <View style={styles.roomCodePill}>
+                  <View style={styles.roomDot} />
+                  <Text style={styles.roomCodePillText}>
+                    {status} · {code}
+                  </Text>
+                </View>
+              ) : null}
+
+              <Pressable style={styles.roomIconBtn} onPress={() => notify("Скоро", "Настройки видео появятся позже")}>
+                <Ico d={ICON_SLIDERS} color="#FFFFFF" size={18} />
+              </Pressable>
             </View>
-          </View>
-        )}
-      </View>
 
-      {(embedError !== null || blockEmbed) && room?.video_id ? (
-        <Pressable
-          style={styles.openButton}
-          onPress={() => openYoutube(`https://www.youtube.com/watch?v=${room.video_id}`)}
-        >
-          <Text style={styles.openButtonText}>Открыть в YouTube</Text>
-        </Pressable>
-      ) : null}
+            <View style={styles.roomCenter}>
+              <Pressable style={styles.roomPlay} onPress={togglePlay} disabled={!hasVideo}>
+                <Ico d={isPlaying ? ICON_PAUSE : ICON_PLAY} color="#FFFFFF" size={24} stroke={0} />
+              </Pressable>
+            </View>
 
-      {/* ============ НАЗВАНИЕ И ПРОГРЕСС ============ */}
+            <View style={styles.roomBottom}>
+              <View style={styles.roomTimeRow}>
+                <Text style={styles.roomTime}>
+                  {formatTime(progress.current)} / {formatTime(progress.duration)}
+                </Text>
 
-      <View style={styles.statusLine}>
-        <Text style={styles.statusText}>
-          {partnerOnline ? "Вы вдвоём" : "Вы одни"}
-          {getAppData().couple?.invite_code ? ` · код ${getAppData().couple?.invite_code}` : ""}
-        </Text>
-      </View>
+                <Pressable style={styles.roomFsBtn} onPress={() => (document as any).documentElement?.requestFullscreen?.()}>
+                  <Ico d={ICON_FULL} color="#FFFFFF" size={16} />
+                </Pressable>
+              </View>
 
-      <Text style={styles.videoTitle}>Видео с YouTube</Text>
+              <View style={styles.trackWrap}>
+                <View style={styles.roomTrack}>
+                  <View style={[styles.roomFill, { width: `${ratio * 100}%` }]} />
+                </View>
 
-      <View style={styles.trackWrap}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${ratio * 100}%` }]} />
-        </View>
+                {reactions.map((item) => {
+                  const left = progress.duration > 0 ? (item.at_seconds / progress.duration) * 100 : 0;
 
-        {reactions.map((item) => {
-          const left = progress.duration > 0 ? (item.at_seconds / progress.duration) * 100 : 0;
+                  const mine = item.user_id === userIdRef.current;
 
-          const mine = item.user_id === userIdRef.current;
-
-          return (
-            <Pressable
-              key={item.id}
-              style={[styles.mark, { left: `${left}%`, backgroundColor: mine ? C.accent : C.text }]}
-              onPress={() => playerRef.current?.seekTo?.(item.at_seconds, true)}
-              accessibilityLabel={`Реакция на ${item.at_seconds} секунде`}
-            />
-          );
-        })}
-      </View>
-
-      {activeReaction ? (
-        <View style={styles.activeReaction}>
-          <Svg width={18} height={18} viewBox="0 0 24 24">
-            <Path
-              d={REACTION_PATHS[activeReaction.kind]}
-              fill="none"
-              stroke={activeReaction.user_id === userIdRef.current ? C.accent : C.text}
-              strokeWidth={1.8}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </Svg>
-          <Text style={styles.activeReactionText}>
-            {activeReaction.user_id === userIdRef.current ? "Вы" : "Партнёр"} отметил(а) момент
-          </Text>
-        </View>
-      ) : null}
-
-      <View style={styles.timeRow}>
-        <Text style={styles.timeText}>{formatTime(progress.current)}</Text>
-        <Text style={styles.timeText}>{formatTime(progress.duration)}</Text>
-      </View>
-
-      {/* ============ УПРАВЛЕНИЕ ============ */}
-
-      <View style={styles.controlsRow}>
-        <Pressable style={styles.seekButton} onPress={() => seekBy(-12)} disabled={!hasVideo}>
-          <Svg width={26} height={26} viewBox="0 0 24 24">
-            <Path d="M4 12a8 8 0 102.3-5.7M4 4v4h4" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
-        </Pressable>
-
-        <Pressable style={styles.mainButton} onPress={togglePlay} disabled={!hasVideo}>
-          {isPlaying ? (
-            <Svg width={30} height={30} viewBox="0 0 24 24">
-              <Path d="M7 5h3v14H7zM14 5h3v14h-3z" fill={C.accentOn} />
-            </Svg>
-          ) : (
-            <Svg width={30} height={30} viewBox="0 0 24 24">
-              <Path d="M8 5v14l11-7z" fill={C.accentOn} />
-            </Svg>
-          )}
-        </Pressable>
-
-        <Pressable style={styles.seekButton} onPress={() => seekBy(12)} disabled={!hasVideo}>
-          <Svg width={26} height={26} viewBox="0 0 24 24">
-            <Path d="M20 12a8 8 0 11-2.3-5.7M20 4v4h-4" fill="none" stroke={C.text} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-          </Svg>
-        </Pressable>
-      </View>
-
-      {/* ============ ССЫЛКА ============ */}
-
-      <View style={styles.linkRow}>
-        <TextInput
-          style={styles.linkInput}
-          placeholder="Вставьте ссылку на видео"
-          placeholderTextColor={C.muted}
-          value={linkDraft}
-          onChangeText={setLinkDraft}
-          autoCapitalize="none"
-        />
-
-        <Pressable style={styles.connectButton} onPress={startVideo}>
-          <Text style={styles.connectText}>Включить</Text>
-        </Pressable>
-      </View>
-
-      {/* ============ РЕАКЦИИ ============ */}
-
-      <View style={styles.reactionsRow}>
-        {[
-          "M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z",
-          "M12 3a9 9 0 100 18 9 9 0 000-18zM8 14s1.5 2.5 4 2.5S16 14 16 14M9 9.5h.01M15 9.5h.01",
-          "M12 3l2.8 5.7 6.2.9-4.5 4.4 1 6.2L12 17.3 6.5 20.2l1-6.2-4.5-4.4 6.2-.9z",
-          "M7 11v9H4v-9zM7 11l4-7c1.5 0 2.5 1 2.5 2.5V10h5.5c1 0 1.8.9 1.6 2l-1.3 7c-.2 1-1 1.8-2 1.8H7",
-        ].map((d, index) => (
-          <Pressable
-            key={index}
-            style={styles.reactionPill}
-            onPress={() => addReaction(REACTION_KINDS[index])}
-          >
-            <Svg width={24} height={24} viewBox="0 0 24 24">
-              <Path d={d} fill="none" stroke={C.accentText} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-            </Svg>
-          </Pressable>
-        ))}
-      </View>
-        </View>
-
-        <View style={landscape ? styles.wideRight : null}>
-      <Text style={styles.sectionLabel}>СОХРАНЁННЫЕ ВИДЕО</Text>
-
-      {savedVideos.length === 0 ? (
-        <Text style={styles.savedEmpty}>Видео появятся здесь после просмотра</Text>
-      ) : (
-        savedVideos.map((item) => (
-          <Pressable
-            key={item.id}
-            style={styles.savedCard}
-            onPress={() => router.push(`/watch-video?id=${item.id}` as any)}
-          >
-            <Image
-              source={{ uri: `https://i.ytimg.com/vi/${item.youtube_id}/mqdefault.jpg` }}
-              style={styles.savedThumb}
-            />
-
-            <View style={styles.flex}>
-              <Text style={styles.savedTitle} numberOfLines={1}>
-                {item.title || "Видео"}
-              </Text>
-              <Text style={styles.savedDate}>
-                {new Date(item.watched_at).toLocaleDateString("ru-RU")}
-              </Text>
-
-              <View style={styles.savedPills}>
-                {Object.entries(item.counts as Record<string, number>).map(([kind, count]) => (
-                  <View key={kind} style={styles.savedPill}>
-                    <Svg width={12} height={12} viewBox="0 0 24 24">
-                      <Path
-                        d={REACTION_PATHS[kind as ReactionKind] ?? REACTION_PATHS.heart}
-                        fill="none"
-                        stroke={C.text}
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </Svg>
-                    <Text style={styles.savedPillText}>{count}</Text>
-                  </View>
-                ))}
+                  return (
+                    <Pressable
+                      key={item.id}
+                      style={[styles.roomMark, { left: `${left}%`, backgroundColor: mine ? C.accentPale ?? C.accentText : "#FFFFFF" }]}
+                      onPress={() => playerRef.current?.seekTo?.(item.at_seconds, true)}
+                    />
+                  );
+                })}
               </View>
             </View>
-          </Pressable>
-        ))
-      )}
+          </View>
+        );
 
-      <Text style={styles.sectionLabel}>ЧАТ</Text>
-
-      <View style={styles.chatCard}>
-        <View style={styles.chatHeader}>
-          <Text style={styles.chatTitle}>Чат</Text>
-          <Text style={styles.chatSub}>{partnerOnline ? "вы вдвоём" : "вы одни"}</Text>
-        </View>
-
-        <ScrollView style={styles.chatList} contentContainerStyle={styles.chatListContent}>
-          {messages.length === 0 ? (
-            <Text style={styles.chatEmpty}>Здесь пока пусто. Напишите первым.</Text>
-          ) : (
-            messages.map((message) => {
-              const mine = message.user_id === userIdRef.current;
-
-              return (
-                <View key={message.id} style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
-                  <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{message.text}</Text>
-                </View>
-              );
-            })
-          )}
-        </ScrollView>
-
-        <View style={styles.inputRow}>
+        const linkInput = (
           <TextInput
-            style={styles.messageInput}
-            placeholder="Написать..."
+            style={styles.roomLinkInput}
+            placeholder="Вставьте ссылку на видео"
             placeholderTextColor={C.muted}
-            value={messageDraft}
-            onChangeText={setMessageDraft}
-            onSubmitEditing={sendMessage}
+            value={linkDraft}
+            onChangeText={setLinkDraft}
+            autoCapitalize="none"
           />
+        );
 
-          <Pressable style={styles.sendButton} onPress={sendMessage}>
-            <Text style={styles.sendText}>➤</Text>
+        const folderButton = (
+          <Pressable style={styles.roomSquareBtn} onPress={() => setSavedOpen((value) => !value)}>
+            <Ico d={ICON_FOLDER} color={C.text} size={20} />
           </Pressable>
-        </View>
-      </View>
-        </View>
-      </View>
+        );
+
+        const reactionButtons = REACTION_KINDS.map((kind, index) => (
+          <Pressable key={kind} style={styles.roomReactBtn} onPress={() => addReaction(kind)}>
+            <Ico d={REACTION_PATHS[kind]} color={C.accentText} size={20} />
+          </Pressable>
+        ));
+
+        const connectButton = (
+          <Pressable style={styles.roomConnect} onPress={startVideo}>
+            <Text style={styles.roomConnectText}>Включить</Text>
+          </Pressable>
+        );
+
+        const savedList = savedOpen ? (
+          <View style={styles.roomSaved}>
+            <Text style={styles.roomSavedLabel}>СОХРАНЁННЫЕ ВИДЕО</Text>
+
+            {savedVideos.length === 0 ? (
+              <Text style={styles.roomSavedEmpty}>Видео появятся здесь после просмотра</Text>
+            ) : (
+              savedVideos.map((item) => (
+                <Pressable
+                  key={item.id}
+                  style={styles.roomSavedCard}
+                  onPress={() => router.push(`/watch-video?id=${item.id}` as any)}
+                >
+                  <Image
+                    source={{ uri: `https://i.ytimg.com/vi/${item.youtube_id}/mqdefault.jpg` }}
+                    style={styles.roomSavedThumb}
+                  />
+
+                  <View style={styles.flex}>
+                    <Text style={styles.roomSavedTitle} numberOfLines={1}>
+                      {item.title || "Видео"}
+                    </Text>
+                    <Text style={styles.roomSavedDate}>
+                      {new Date(item.watched_at).toLocaleDateString("ru-RU")}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))
+            )}
+          </View>
+        ) : null;
+
+        const chat = (
+          <View style={[styles.roomChat, landscape && styles.flex]}>
+            <View style={styles.roomChatHeader}>
+              <Text style={styles.roomChatTitle}>Чат</Text>
+              <Text style={styles.roomChatSub}>{partnerOnline ? "вдвоём" : "вы одни"}</Text>
+            </View>
+
+            <ScrollView style={styles.flex} contentContainerStyle={styles.roomChatList}>
+              {messages.length === 0 ? (
+                <Text style={styles.roomChatEmpty}>Здесь пока пусто. Напишите первым.</Text>
+              ) : (
+                messages.map((message) => {
+                  const mine = message.user_id === userIdRef.current;
+
+                  return (
+                    <View key={message.id} style={[styles.bubble, mine ? styles.bubbleMine : styles.bubbleOther]}>
+                      <Text style={[styles.bubbleText, mine && styles.bubbleTextMine]}>{message.text}</Text>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+
+            <View style={styles.roomChatInput}>
+              <TextInput
+                style={styles.roomChatField}
+                placeholder="Написать..."
+                placeholderTextColor={C.muted}
+                value={messageDraft}
+                onChangeText={setMessageDraft}
+                onSubmitEditing={sendMessage}
+              />
+
+              <Pressable style={styles.roomSend} onPress={sendMessage}>
+                <Ico d={ICON_SEND} color="#FFFFFF" size={18} stroke={0} />
+              </Pressable>
+            </View>
+          </View>
+        );
+
+        if (!landscape) {
+          return (
+            <View style={styles.roomColumn}>
+              {playerCard}
+
+              <View style={styles.roomStatusRow}>
+                <View style={styles.roomPill}>
+                  <View style={styles.roomDot} />
+                  <Text style={styles.roomPillText}>{status}</Text>
+                </View>
+
+                <Text style={styles.roomCode}>Код: {code}</Text>
+              </View>
+
+              <View style={styles.roomInputRow}>
+                {linkInput}
+                {folderButton}
+              </View>
+
+              <View style={styles.roomReactRow}>
+                {connectButton}
+                {reactionButtons}
+              </View>
+
+              {savedList}
+
+              <View style={styles.roomChatWrap}>{chat}</View>
+            </View>
+          );
+        }
+
+        return (
+          <View style={styles.wideRow}>
+            <View style={styles.wideLeft}>
+              {playerCard}
+
+              <View style={styles.roomInputRow}>
+                {linkInput}
+                {folderButton}
+                <Pressable style={styles.roomSquareBtn} onPress={() => setSavedOpen((value) => !value)}>
+                  <Ico d={ICON_BUBBLE} color={C.text} size={20} />
+                </Pressable>
+                <Pressable style={styles.roomSquareBtn} onPress={() => (document as any).documentElement?.requestFullscreen?.()}>
+                  <Ico d={ICON_FULL} color={C.text} size={20} />
+                </Pressable>
+                {reactionButtons}
+                {connectButton}
+              </View>
+
+              {savedList}
+            </View>
+
+            <View style={styles.wideRight}>{chat}</View>
+          </View>
+        );
+      })()}
     </ScrollView>
   );
 }
@@ -1474,6 +1484,388 @@ const styles = liveStyles(() => StyleSheet.create({
     backgroundColor: C.divider,
     marginTop: 12,
     overflow: "hidden",
+  },
+
+  flex: {
+    flex: 1,
+  },
+
+  roomColumn: {
+    gap: 12,
+  },
+
+  roomPlayer: {
+    height: 212,
+    borderRadius: 22,
+    backgroundColor: C.videoBg,
+    overflow: "hidden",
+  },
+
+  roomPlayerWide: {
+    height: 330,
+  },
+
+  roomPlayerFrame: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+  },
+
+  roomTop: {
+    position: "absolute",
+    left: 14,
+    right: 12,
+    top: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    zIndex: 2,
+  },
+
+  roomAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomAvatarText: {
+    color: C.accentOn,
+    fontFamily: FONTS.textBold,
+    fontSize: 13,
+  },
+
+  roomVideoTitle: {
+    color: "#FFFFFF",
+    fontFamily: FONTS.textBold,
+    fontSize: 13,
+  },
+
+  roomChannel: {
+    color: "#FFFFFF",
+    fontFamily: FONTS.text,
+    fontSize: 11,
+    opacity: 0.75,
+  },
+
+  roomIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomCodePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  roomCodePillText: {
+    color: "#3B1F2B",
+    fontFamily: FONTS.textBold,
+    fontSize: 12,
+  },
+
+  roomCenter: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomPlay: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomBottom: {
+    position: "absolute",
+    left: 14,
+    right: 14,
+    bottom: 10,
+    gap: 6,
+  },
+
+  roomTimeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  roomTime: {
+    color: "#FFFFFF",
+    fontFamily: FONTS.textBold,
+    fontSize: 12,
+  },
+
+  roomFsBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.16)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomTrack: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 3,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
+
+  roomFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: C.accent,
+  },
+
+  roomMark: {
+    position: "absolute",
+    top: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginLeft: -6,
+    borderWidth: 2,
+    borderColor: "#3B1F2B",
+  },
+
+  roomStatusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  roomPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: C.card,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+
+  roomPillText: {
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 12,
+  },
+
+  roomDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.muted,
+  },
+
+  roomCode: {
+    color: C.muted,
+    fontFamily: FONTS.textBold,
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+
+  roomInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  roomLinkInput: {
+    flex: 1,
+    minWidth: 0,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.card,
+    paddingHorizontal: 20,
+    fontSize: 14,
+    color: C.text,
+  },
+
+  roomSquareBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomReactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+
+  roomConnect: {
+    flex: 1,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomConnectText: {
+    color: C.accentOn,
+    fontFamily: FONTS.textBold,
+    fontSize: 15,
+  },
+
+  roomReactBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: C.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomChatWrap: {
+    flex: 1,
+    minHeight: 260,
+  },
+
+  roomChat: {
+    flex: 1,
+    minHeight: 260,
+    backgroundColor: C.card,
+    borderRadius: 22,
+    overflow: "hidden",
+  },
+
+  roomChatHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+
+  roomChatTitle: {
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 15,
+  },
+
+  roomChatSub: {
+    color: C.muted,
+    fontFamily: FONTS.textBold,
+    fontSize: 12,
+  },
+
+  roomChatList: {
+    flexGrow: 1,
+    gap: 8,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+  },
+
+  roomChatEmpty: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 13,
+    textAlign: "center",
+    paddingHorizontal: 40,
+    lineHeight: 20,
+  },
+
+  roomChatInput: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 10,
+  },
+
+  roomChatField: {
+    flex: 1,
+    minWidth: 0,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: C.background,
+    paddingHorizontal: 20,
+    fontSize: 14,
+    color: C.text,
+  },
+
+  roomSend: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: C.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  roomSaved: {
+    backgroundColor: C.card,
+    borderRadius: 22,
+    padding: 14,
+    gap: 8,
+  },
+
+  roomSavedLabel: {
+    color: C.muted,
+    fontFamily: FONTS.textBold,
+    fontSize: 12,
+    letterSpacing: 0.4,
+  },
+
+  roomSavedEmpty: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 13,
+  },
+
+  roomSavedCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+
+  roomSavedThumb: {
+    width: 80,
+    height: 48,
+    borderRadius: 10,
+  },
+
+  roomSavedTitle: {
+    color: C.text,
+    fontFamily: FONTS.textBold,
+    fontSize: 13,
+  },
+
+  roomSavedDate: {
+    color: C.muted,
+    fontFamily: FONTS.text,
+    fontSize: 11,
+    marginTop: 2,
   },
 
   wideRow: {
