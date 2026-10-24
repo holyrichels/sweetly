@@ -1228,7 +1228,7 @@ export default function WatchScreen() {
         const height = Math.round(event.nativeEvent.layout.height);
         setViewportHeight((current) => (current === height ? current : height));
       }}
-      scrollEnabled={!landscape}
+      scrollEnabled={!landscape || savedOpen}
       contentContainerStyle={[
         styles.content,
         compactControls && styles.contentCompact,
