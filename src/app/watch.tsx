@@ -599,16 +599,17 @@ export default function WatchScreen() {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [viewportHeight, setViewportHeight] = useState(0);
 
-  const landscape = screenWidth > screenHeight && screenWidth >= 720;
+  const landscape = screenWidth > screenHeight;
+  const wideLayout = landscape && screenHeight >= 560;
   const compactControls = screenWidth < 440;
   const extraCompactControls = screenWidth < 380;
   const orientationAnimation = useRef(new Animated.Value(1)).current;
-  const previousLandscape = useRef(landscape);
+  const previousWideLayout = useRef(wideLayout);
 
   useLayoutEffect(() => {
-    if (previousLandscape.current === landscape) return;
+    if (previousWideLayout.current === wideLayout) return;
 
-    previousLandscape.current = landscape;
+    previousWideLayout.current = wideLayout;
     orientationAnimation.setValue(0);
 
     const animation = Animated.timing(orientationAnimation, {
@@ -621,7 +622,7 @@ export default function WatchScreen() {
     animation.start();
 
     return () => animation.stop();
-  }, [landscape, orientationAnimation]);
+  }, [wideLayout, orientationAnimation]);
 
   // Список сохранённых видео открывается кнопкой с папкой
   const [savedOpen, setSavedOpen] = useState(false);
@@ -1236,7 +1237,10 @@ export default function WatchScreen() {
     progress.duration > 0
       ? Math.min(1, progress.current / progress.duration)
       : 0;
-  const availableHeight = viewportHeight || screenHeight;
+  const availableHeight = Math.min(
+    viewportHeight || screenHeight,
+    screenHeight,
+  );
   const roomPlayerHeight = Math.max(
     120,
     availableHeight - (compactControls ? 270 : 300),
@@ -1260,17 +1264,21 @@ export default function WatchScreen() {
         const height = Math.round(event.nativeEvent.layout.height);
         setViewportHeight((current) => (current === height ? current : height));
       }}
-      scrollEnabled={!landscape || savedOpen}
+      scrollEnabled
       contentContainerStyle={[
         styles.content,
         compactControls && styles.contentCompact,
         extraCompactControls && styles.contentExtraCompact,
+        landscape && styles.contentLandscape,
       ]}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={styles.topRow}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
+      <View style={[styles.topRow, landscape && styles.topRowLandscape]}>
+        <Pressable
+          style={[styles.backButton, landscape && styles.backButtonLandscape]}
+          onPress={() => router.back()}
+        >
           <Svg width={22} height={22} viewBox="0 0 24 24">
             <Path
               d="M15 6l-6 6 6 6"
@@ -1286,6 +1294,7 @@ export default function WatchScreen() {
         <Text
           style={[
             styles.title,
+            landscape && styles.titleLandscape,
             screenWidth < 400 && styles.titleCompact,
             screenWidth < 360 && styles.titleExtraCompact,
           ]}
@@ -1534,7 +1543,7 @@ export default function WatchScreen() {
         ) : null;
 
         const chat = (
-          <View style={[styles.roomChat, landscape && styles.flex]}>
+          <View style={[styles.roomChat, wideLayout && styles.flex]}>
             <View style={styles.roomChatHeader}>
               <Text style={styles.roomChatTitle}>Чат</Text>
               <Text style={styles.roomChatSub}>
@@ -1593,7 +1602,7 @@ export default function WatchScreen() {
           </View>
         );
 
-        if (!landscape) {
+        if (!wideLayout) {
           return (
             <Animated.View
               style={[styles.roomColumn, orientationTransitionStyle]}
@@ -1694,6 +1703,11 @@ const styles = liveStyles(() =>
       paddingTop: 36,
     },
 
+    contentLandscape: {
+      paddingTop: 12,
+      paddingBottom: 20,
+    },
+
     contentExtraCompact: {
       paddingHorizontal: 12,
       paddingTop: 28,
@@ -1729,6 +1743,11 @@ const styles = liveStyles(() =>
       marginBottom: 18,
     },
 
+    topRowLandscape: {
+      gap: 10,
+      marginBottom: 10,
+    },
+
     backButton: {
       width: 56,
       height: 56,
@@ -1738,11 +1757,21 @@ const styles = liveStyles(() =>
       justifyContent: "center",
     },
 
+    backButtonLandscape: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+    },
+
     title: {
       flex: 1,
       color: C.text,
       fontFamily: "PlayfairDisplay_700Bold",
       fontSize: 32,
+    },
+
+    titleLandscape: {
+      fontSize: 24,
     },
 
     titleCompact: {
