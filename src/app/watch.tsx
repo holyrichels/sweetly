@@ -13,6 +13,7 @@ import {
   Linking,
   Platform,
   Pressable as NativePressable,
+  PanResponder,
   ScrollView,
   StyleSheet,
   type StyleProp,
@@ -133,6 +134,7 @@ const ICON_BUBBLE = "M4 5h16v11H9l-5 4z";
 const ICON_SEND = "M3 11l18-8-8 18-2-8-8-2z";
 const ICON_EXTERNAL_LINK =
   "M14 3h7v7m0-7L10 14m8-1v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6";
+const LANDSCAPE_SPLITTER_WIDTH = 16;
 
 type ReactionKind = "heart" | "funny" | "star" | "like";
 
@@ -598,6 +600,12 @@ export default function WatchScreen() {
   // Ориентация: горизонтально — плеер слева, чат справа
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [viewportHeight, setViewportHeight] = useState(0);
+  const [landscapeChatWidth, setLandscapeChatWidth] = useState(() =>
+    Math.max(220, Math.round(screenWidth * 0.28)),
+  );
+  const splitterStartWidth = useRef(landscapeChatWidth);
+  const landscapeChatWidthRef = useRef(landscapeChatWidth);
+  landscapeChatWidthRef.current = landscapeChatWidth;
   const [deviceLandscape, setDeviceLandscape] = useState(() => {
     if (Platform.OS === "web" && typeof window !== "undefined") {
       const orientation = window.screen.orientation?.type;
@@ -636,6 +644,46 @@ export default function WatchScreen() {
   const extraCompactControls = landscape
     ? screenWidth < 700
     : screenWidth < 380;
+  const minLandscapeChatWidth = 200;
+  const minLandscapePlayerWidth = 220;
+  const landscapeAvailableWidth =
+    screenWidth -
+    (extraCompactControls ? 24 : compactControls ? 28 : 44) -
+    24 -
+    LANDSCAPE_SPLITTER_WIDTH;
+  const maxLandscapeChatWidth = Math.max(
+    minLandscapeChatWidth,
+    landscapeAvailableWidth - minLandscapePlayerWidth,
+  );
+  const maxLandscapeChatWidthRef = useRef(maxLandscapeChatWidth);
+  maxLandscapeChatWidthRef.current = maxLandscapeChatWidth;
+  const landscapeSplitter = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_event, gesture) =>
+        Math.abs(gesture.dx) > Math.abs(gesture.dy),
+      onPanResponderGrant: () => {
+        splitterStartWidth.current = landscapeChatWidthRef.current;
+      },
+      onPanResponderMove: (_event, gesture) => {
+        const nextWidth = Math.min(
+          maxLandscapeChatWidthRef.current,
+          Math.max(
+            minLandscapeChatWidth,
+            splitterStartWidth.current - gesture.dx,
+          ),
+        );
+        setLandscapeChatWidth(nextWidth);
+      },
+    }),
+  ).current;
+
+  useEffect(() => {
+    setLandscapeChatWidth((width) =>
+      Math.min(maxLandscapeChatWidth, Math.max(minLandscapeChatWidth, width)),
+    );
+  }, [maxLandscapeChatWidth]);
+
   const orientationAnimation = useRef(new Animated.Value(1)).current;
   const previousWideLayout = useRef(wideLayout);
 
@@ -1336,15 +1384,8 @@ export default function WatchScreen() {
     screenHeight,
   );
   const landscapePlayerWidth = Math.max(
-    0,
-    screenWidth -
-      (extraCompactControls ? 24 : compactControls ? 28 : 44) -
-      Math.min(360, Math.max(220, Math.round(screenWidth * 0.28))) -
-      12,
-  );
-  const landscapeChatWidth = Math.min(
-    360,
-    Math.max(220, Math.round(screenWidth * 0.28)),
+    minLandscapePlayerWidth,
+    landscapeAvailableWidth - landscapeChatWidth,
   );
   const roomPlayerHeight = landscape
     ? Math.max(
@@ -1391,12 +1432,15 @@ export default function WatchScreen() {
         style={[
           styles.topRow,
           landscape && styles.topRowLandscape,
-          landscape && styles.topRowHidden,
         ]}
       >
         <Pressable
           style={[styles.backButton, landscape && styles.backButtonLandscape]}
-          onPress={() => router.back()}
+          onPress={() =>
+            landscape ? router.replace("/room" as any) : router.back()
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Вернуться в комнату"
         >
           <Svg width={22} height={22} viewBox="0 0 24 24">
             <Path
@@ -1428,16 +1472,31 @@ export default function WatchScreen() {
         const status = partnerOnline ? "Синхронно" : "Вы одни";
 
         const timeline = (
-          <View style={styles.roomTimeline}>
+          <View
+            style={[
+              styles.roomTimeline,
+              wideLayout && styles.roomTimelineOverlay,
+            ]}
+          >
             <View style={styles.roomTimeRow}>
-              <Text style={styles.roomTimelineTime}>
+              <Text
+                style={[
+                  styles.roomTimelineTime,
+                  wideLayout && styles.roomTimelineTimeOverlay,
+                ]}
+              >
                 {formatTime(progress.current)} /{" "}
                 {formatTime(progress.duration)}
               </Text>
             </View>
 
             <View style={styles.trackWrap}>
-              <View style={styles.roomTrack}>
+              <View
+                style={[
+                  styles.roomTrack,
+                  wideLayout && styles.roomTrackOverlay,
+                ]}
+              >
                 <View
                   style={[styles.roomFill, { width: `${ratio * 100}%` }]}
                 />
@@ -1484,7 +1543,10 @@ export default function WatchScreen() {
             ]}
           >
             {hasVideo && !blockEmbed ? (
-              <View nativeID="room-player" style={styles.roomPlayerFrame} />
+              <View
+                nativeID="room-player"
+                style={styles.roomPlayerFrame}
+              />
             ) : null}
 
             {wideLayout ? (
@@ -1821,6 +1883,17 @@ export default function WatchScreen() {
               {savedList}
             </View>
 
+            {wideLayout && chatVisible ? (
+              <View
+                {...landscapeSplitter.panHandlers}
+                style={styles.landscapeSplitter}
+                accessibilityLabel="Изменить ширину чата"
+                accessibilityRole="adjustable"
+              >
+                <View style={styles.landscapeSplitterHandle} />
+              </View>
+            ) : null}
+
             <Animated.View
               style={[
                 styles.wideRight,
@@ -1829,7 +1902,7 @@ export default function WatchScreen() {
                   ? {
                       width: chatAnimation.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [0, 300],
+                        outputRange: [0, landscapeChatWidth],
                       }),
                       height: "100%",
                       minWidth: 0,
@@ -1935,10 +2008,6 @@ const styles = liveStyles(() =>
       marginBottom: 10,
     },
 
-    topRowHidden: {
-      display: "none",
-    },
-
     backButton: {
       width: 56,
       height: 56,
@@ -1963,6 +2032,7 @@ const styles = liveStyles(() =>
 
     titleLandscape: {
       fontSize: 24,
+      fontFamily: FONTS.textBold,
     },
 
     titleCompact: {
@@ -2157,6 +2227,7 @@ const styles = liveStyles(() =>
       right: 0,
       top: 0,
       bottom: 0,
+      zIndex: 0,
     },
 
     landscapeVideoMeta: {
@@ -2250,6 +2321,18 @@ const styles = liveStyles(() =>
       flexShrink: 0,
     },
 
+    roomTimelineOverlay: {
+      backgroundColor: "rgba(20,10,14,0.62)",
+    },
+
+    roomTimelineTimeOverlay: {
+      color: "#FFFFFF",
+    },
+
+    roomTrackOverlay: {
+      backgroundColor: "rgba(255,255,255,0.4)",
+    },
+
     roomBrowserFallbackError: {
       color: C.error,
       fontFamily: FONTS.text,
@@ -2312,6 +2395,7 @@ const styles = liveStyles(() =>
       backgroundColor: C.card,
       paddingHorizontal: 16,
       fontSize: 14,
+      fontFamily: FONTS.text,
       color: C.text,
     },
 
@@ -2487,14 +2571,29 @@ const styles = liveStyles(() =>
       flexShrink: 0,
     },
 
+    landscapeSplitter: {
+      width: LANDSCAPE_SPLITTER_WIDTH,
+      flexShrink: 0,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    landscapeSplitterHandle: {
+      width: 3,
+      height: 44,
+      borderRadius: 2,
+      backgroundColor: C.divider,
+    },
+
     roomChatField: {
       flex: 1,
       minWidth: 0,
       height: 44,
       borderRadius: 22,
-      backgroundColor: C.background,
+      backgroundColor: C.peachLight,
       paddingHorizontal: 20,
       fontSize: 14,
+      fontFamily: FONTS.text,
       color: C.text,
     },
 
@@ -2570,6 +2669,7 @@ const styles = liveStyles(() =>
     wideRight: {
       width: 300,
       alignSelf: "stretch",
+      minWidth: 0,
     },
 
     androidCard: {
