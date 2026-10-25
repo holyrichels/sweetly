@@ -130,6 +130,8 @@ const ICON_FOLDER =
   "M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z";
 const ICON_BUBBLE = "M4 5h16v11H9l-5 4z";
 const ICON_SEND = "M3 11l18-8-8 18-2-8-8-2z";
+const ICON_EXTERNAL_LINK =
+  "M14 3h7v7m0-7L10 14m8-1v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6";
 
 type ReactionKind = "heart" | "funny" | "star" | "like";
 
@@ -1400,26 +1402,8 @@ export default function WatchScreen() {
           </View>
         );
 
-        const browserFallback = insideTelegram() ? (
-          <View style={styles.roomBrowserFallback}>
-            <Pressable
-              onPress={openInBrowser}
-              disabled={browserOpening}
-              accessibilityRole="button"
-              accessibilityLabel="Открыть просмотр в браузере"
-            >
-              <Text style={styles.roomBrowserFallbackText}>
-                {browserOpening
-                  ? "Открываем браузер..."
-                  : "Проблемы с видео? Смотреть в браузере"}
-              </Text>
-            </Pressable>
-            {androidError ? (
-              <Text style={styles.roomBrowserFallbackError}>
-                {androidError}
-              </Text>
-            ) : null}
-          </View>
+        const browserError = androidError ? (
+          <Text style={styles.roomBrowserFallbackError}>{androidError}</Text>
         ) : null;
 
         const chatButton = (
@@ -1492,6 +1476,30 @@ export default function WatchScreen() {
           </Pressable>
         ));
 
+        const browserButton = (
+          <Pressable
+            style={[
+              styles.roomReactBtn,
+              compactControls && styles.roomReactBtnCompact,
+              extraCompactControls && styles.roomReactBtnExtraCompact,
+            ]}
+            onPress={openInBrowser}
+            disabled={browserOpening}
+            accessibilityRole="button"
+            accessibilityLabel="Открыть просмотр в браузере"
+            accessibilityState={{
+              busy: browserOpening,
+              disabled: browserOpening,
+            }}
+          >
+            <Ico
+              d={ICON_EXTERNAL_LINK}
+              color={browserOpening ? C.muted : C.accentText}
+              size={extraCompactControls ? 15 : compactControls ? 17 : 20}
+            />
+          </Pressable>
+        );
+
         const connectButton = (
           <Pressable
             style={[
@@ -1524,6 +1532,7 @@ export default function WatchScreen() {
             {folderButton}
             {chatButton}
             {reactionButtons}
+            {browserButton}
             {connectButton}
           </View>
         );
@@ -1650,7 +1659,7 @@ export default function WatchScreen() {
               {playerCard}
 
               {timeline}
-              {browserFallback}
+              {browserError}
               {controls}
 
               {savedList}
@@ -1690,7 +1699,7 @@ export default function WatchScreen() {
               {playerCard}
 
               {timeline}
-              {browserFallback}
+              {browserError}
               {controls}
 
               {savedList}
@@ -2049,17 +2058,6 @@ const styles = liveStyles(() =>
       paddingVertical: 10,
       gap: 8,
       flexShrink: 0,
-    },
-
-    roomBrowserFallback: {
-      alignSelf: "flex-start",
-      paddingVertical: 2,
-    },
-
-    roomBrowserFallbackText: {
-      color: C.muted,
-      fontFamily: FONTS.textBold,
-      fontSize: 12,
     },
 
     roomBrowserFallbackError: {
