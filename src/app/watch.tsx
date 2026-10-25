@@ -1472,31 +1472,16 @@ export default function WatchScreen() {
         const status = partnerOnline ? "Синхронно" : "Вы одни";
 
         const timeline = (
-          <View
-            style={[
-              styles.roomTimeline,
-              wideLayout && styles.roomTimelineOverlay,
-            ]}
-          >
+          <View style={styles.roomTimeline}>
             <View style={styles.roomTimeRow}>
-              <Text
-                style={[
-                  styles.roomTimelineTime,
-                  wideLayout && styles.roomTimelineTimeOverlay,
-                ]}
-              >
+              <Text style={styles.roomTimelineTime}>
                 {formatTime(progress.current)} /{" "}
                 {formatTime(progress.duration)}
               </Text>
             </View>
 
             <View style={styles.trackWrap}>
-              <View
-                style={[
-                  styles.roomTrack,
-                  wideLayout && styles.roomTrackOverlay,
-                ]}
-              >
+              <View style={styles.roomTrack}>
                 <View
                   style={[styles.roomFill, { width: `${ratio * 100}%` }]}
                 />
@@ -1570,7 +1555,6 @@ export default function WatchScreen() {
                     {status} · {code}
                   </Text>
                 </View>
-                <View style={styles.landscapeTimeline}>{timeline}</View>
               </>
             ) : null}
 
@@ -1876,7 +1860,7 @@ export default function WatchScreen() {
             <View style={wideLayout ? styles.wideLeft : styles.roomColumn}>
               {playerCard}
 
-              {!wideLayout ? timeline : null}
+              {timeline}
               {browserError}
               {controls}
 
@@ -2272,14 +2256,6 @@ const styles = liveStyles(() =>
       fontSize: 11,
     },
 
-    landscapeTimeline: {
-      position: "absolute",
-      left: 10,
-      right: 10,
-      bottom: 8,
-      zIndex: 2,
-    },
-
     roomCodePillWrap: {
       position: "absolute",
       left: 0,
@@ -2319,18 +2295,6 @@ const styles = liveStyles(() =>
       paddingVertical: 10,
       gap: 8,
       flexShrink: 0,
-    },
-
-    roomTimelineOverlay: {
-      backgroundColor: "rgba(20,10,14,0.62)",
-    },
-
-    roomTimelineTimeOverlay: {
-      color: "#FFFFFF",
-    },
-
-    roomTrackOverlay: {
-      backgroundColor: "rgba(255,255,255,0.4)",
     },
 
     roomBrowserFallbackError: {
