@@ -207,6 +207,8 @@ export default function WatchScreen() {
 
   const [room, setRoom] = useState<RoomState | null>(null);
 
+  const [videoTitle, setVideoTitle] = useState("");
+
   const [messages, setMessages] = useState<Message[]>([]);
 
   const [partnerOnline, setPartnerOnline] = useState(false);
@@ -406,6 +408,9 @@ export default function WatchScreen() {
           videoId: room.video_id,
           playerVars: { playsinline: 1, rel: 0 },
           events: {
+            onReady: (event: any) => {
+              setVideoTitle(event.target.getVideoData()?.title ?? "");
+            },
             onStateChange: onLocalStateChange,
           },
         });
@@ -442,6 +447,11 @@ export default function WatchScreen() {
 
   // Наш плеер: отправляем партнёру, когда мы нажали play, pause
   function onLocalStateChange(event: any) {
+    const nextVideoTitle = playerRef.current?.getVideoData?.()?.title;
+    if (typeof nextVideoTitle === "string" && nextVideoTitle) {
+      setVideoTitle(nextVideoTitle);
+    }
+
     const current = roomRef.current;
     const uid = userIdRef.current;
     const cid = coupleIdRef.current;
@@ -622,8 +632,10 @@ export default function WatchScreen() {
 
   const landscape = isWeb ? deviceLandscape : screenWidth > screenHeight;
   const wideLayout = landscape;
-  const compactControls = screenWidth < 440;
-  const extraCompactControls = screenWidth < 380;
+  const compactControls = landscape ? screenWidth < 900 : screenWidth < 440;
+  const extraCompactControls = landscape
+    ? screenWidth < 700
+    : screenWidth < 380;
   const orientationAnimation = useRef(new Animated.Value(1)).current;
   const previousWideLayout = useRef(wideLayout);
 
@@ -1327,12 +1339,17 @@ export default function WatchScreen() {
     0,
     screenWidth -
       (extraCompactControls ? 24 : compactControls ? 28 : 44) -
-      316,
+      Math.min(360, Math.max(220, Math.round(screenWidth * 0.28))) -
+      12,
+  );
+  const landscapeChatWidth = Math.min(
+    360,
+    Math.max(220, Math.round(screenWidth * 0.28)),
   );
   const roomPlayerHeight = landscape
     ? Math.max(
-        120,
-        Math.min(availableHeight - 100, landscapePlayerWidth * (9 / 16)),
+        140,
+        Math.min(availableHeight - 90, landscapePlayerWidth * (9 / 16)),
       )
     : Math.max(120, availableHeight - (compactControls ? 270 : 300));
   const orientationTransitionStyle = {
@@ -1370,7 +1387,13 @@ export default function WatchScreen() {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-      <View style={[styles.topRow, landscape && styles.topRowLandscape]}>
+      <View
+        style={[
+          styles.topRow,
+          landscape && styles.topRowLandscape,
+          landscape && styles.topRowHidden,
+        ]}
+      >
         <Pressable
           style={[styles.backButton, landscape && styles.backButtonLandscape]}
           onPress={() => router.back()}
@@ -1403,38 +1426,6 @@ export default function WatchScreen() {
         const code = getAppData().couple?.invite_code ?? "";
 
         const status = partnerOnline ? "Синхронно" : "Вы одни";
-
-        const playerCard = (
-          <View
-            style={[
-              styles.roomPlayer,
-              landscape && {
-                height: roomPlayerHeight,
-                minHeight: roomPlayerHeight,
-                aspectRatio: undefined,
-                flexShrink: 0,
-              },
-            ]}
-          >
-            {hasVideo && !blockEmbed ? (
-              <View nativeID="room-player" style={styles.roomPlayerFrame} />
-            ) : null}
-
-            <View style={styles.roomCodePillWrap}>
-              <View style={styles.roomCodePill}>
-                <View
-                  style={[
-                    styles.roomDot,
-                    partnerOnline && styles.roomDotOnline,
-                  ]}
-                />
-                <Text style={styles.roomCodePillText}>
-                  Код: {code} · {status}
-                </Text>
-              </View>
-            </View>
-          </View>
-        );
 
         const timeline = (
           <View style={styles.roomTimeline}>
@@ -1477,6 +1468,65 @@ export default function WatchScreen() {
                 );
               })}
             </View>
+          </View>
+        );
+
+        const playerCard = (
+          <View
+            style={[
+              styles.roomPlayer,
+              landscape && {
+                height: roomPlayerHeight,
+                minHeight: roomPlayerHeight,
+                aspectRatio: undefined,
+                flexShrink: 0,
+              },
+            ]}
+          >
+            {hasVideo && !blockEmbed ? (
+              <View nativeID="room-player" style={styles.roomPlayerFrame} />
+            ) : null}
+
+            {wideLayout ? (
+              <>
+                <View style={styles.landscapeVideoMeta}>
+                  <Text style={styles.landscapeVideoTitle} numberOfLines={1}>
+                    {videoTitle || "Смотреть вместе"}
+                  </Text>
+                  <Text style={styles.landscapeVideoSubtitle}>
+                    {videoTitle ? "YouTube" : "Видео появится здесь"}
+                  </Text>
+                </View>
+                <View style={styles.landscapeVideoStatus}>
+                  <View
+                    style={[
+                      styles.roomDot,
+                      partnerOnline && styles.roomDotOnline,
+                    ]}
+                  />
+                  <Text style={styles.landscapeVideoStatusText}>
+                    {status} · {code}
+                  </Text>
+                </View>
+                <View style={styles.landscapeTimeline}>{timeline}</View>
+              </>
+            ) : null}
+
+            {!wideLayout ? (
+              <View style={styles.roomCodePillWrap}>
+                <View style={styles.roomCodePill}>
+                  <View
+                    style={[
+                      styles.roomDot,
+                      partnerOnline && styles.roomDotOnline,
+                    ]}
+                  />
+                  <Text style={styles.roomCodePillText}>
+                    Код: {code} · {status}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
           </View>
         );
 
@@ -1670,49 +1720,63 @@ export default function WatchScreen() {
         ) : null;
 
         const chat = (
-          <View style={[styles.roomChat, wideLayout && styles.flex]}>
-            <View style={styles.roomChatHeader}>
-              <Text style={styles.roomChatTitle}>Чат</Text>
-              <Text style={styles.roomChatSub}>
-                {partnerOnline ? "вдвоём" : "вы одни"}
-              </Text>
-            </View>
-
-            <ScrollView
-              style={styles.flex}
-              contentContainerStyle={styles.roomChatList}
-            >
-              {messages.length === 0 ? (
-                <Text style={styles.roomChatEmpty}>
-                  Здесь пока пусто. Напишите первым.
+          <View
+            style={[
+              styles.roomChatGroup,
+              wideLayout
+                ? styles.roomChatGroupLandscape
+                : styles.roomChatGroupPortrait,
+            ]}
+          >
+            <View style={[styles.roomChat, wideLayout && styles.flex]}>
+              <View style={styles.roomChatHeader}>
+                <Text style={styles.roomChatTitle}>Чат</Text>
+                <Text style={styles.roomChatSub}>
+                  {partnerOnline ? "вдвоём" : "вы одни"}
                 </Text>
-              ) : (
-                messages.map((message) => {
-                  const mine = message.user_id === userIdRef.current;
+              </View>
 
-                  return (
-                    <View
-                      key={message.id}
-                      style={[
-                        styles.bubble,
-                        mine ? styles.bubbleMine : styles.bubbleOther,
-                      ]}
-                    >
-                      <Text
+              <ScrollView
+                style={styles.flex}
+                contentContainerStyle={styles.roomChatList}
+              >
+                {messages.length === 0 ? (
+                  <Text style={styles.roomChatEmpty}>
+                    Здесь пока пусто. Напишите первым.
+                  </Text>
+                ) : (
+                  messages.map((message) => {
+                    const mine = message.user_id === userIdRef.current;
+
+                    return (
+                      <View
+                        key={message.id}
                         style={[
-                          styles.bubbleText,
-                          mine && styles.bubbleTextMine,
+                          styles.bubble,
+                          mine ? styles.bubbleMine : styles.bubbleOther,
                         ]}
                       >
-                        {message.text}
-                      </Text>
-                    </View>
-                  );
-                })
-              )}
-            </ScrollView>
+                        <Text
+                          style={[
+                            styles.bubbleText,
+                            mine && styles.bubbleTextMine,
+                          ]}
+                        >
+                          {message.text}
+                        </Text>
+                      </View>
+                    );
+                  })
+                )}
+              </ScrollView>
+            </View>
 
-            <View style={styles.roomChatInput}>
+            <View
+              style={[
+                styles.roomChatInput,
+                wideLayout && styles.roomChatInputLandscape,
+              ]}
+            >
               <TextInput
                 style={styles.roomChatField}
                 placeholder="Написать..."
@@ -1750,7 +1814,7 @@ export default function WatchScreen() {
             <View style={wideLayout ? styles.wideLeft : styles.roomColumn}>
               {playerCard}
 
-              {timeline}
+              {!wideLayout ? timeline : null}
               {browserError}
               {controls}
 
@@ -1826,8 +1890,9 @@ const styles = liveStyles(() =>
     },
 
     contentLandscape: {
-      paddingTop: 12,
-      paddingBottom: 20,
+      paddingHorizontal: 14,
+      paddingTop: 10,
+      paddingBottom: 10,
     },
 
     contentExtraCompact: {
@@ -1868,6 +1933,10 @@ const styles = liveStyles(() =>
     topRowLandscape: {
       gap: 10,
       marginBottom: 10,
+    },
+
+    topRowHidden: {
+      display: "none",
     },
 
     backButton: {
@@ -2090,6 +2159,56 @@ const styles = liveStyles(() =>
       bottom: 0,
     },
 
+    landscapeVideoMeta: {
+      position: "absolute",
+      top: 14,
+      left: 16,
+      maxWidth: "48%",
+      zIndex: 2,
+    },
+
+    landscapeVideoTitle: {
+      color: "#FFFFFF",
+      fontFamily: FONTS.textBold,
+      fontSize: 14,
+    },
+
+    landscapeVideoSubtitle: {
+      color: "rgba(255,255,255,0.72)",
+      fontFamily: FONTS.text,
+      fontSize: 11,
+      marginTop: 2,
+    },
+
+    landscapeVideoStatus: {
+      position: "absolute",
+      top: 14,
+      left: "50%",
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 7,
+      backgroundColor: "rgba(255,255,255,0.16)",
+      borderRadius: 999,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      transform: [{ translateX: "-50%" }],
+      zIndex: 2,
+    },
+
+    landscapeVideoStatusText: {
+      color: "#FFFFFF",
+      fontFamily: FONTS.textBold,
+      fontSize: 11,
+    },
+
+    landscapeTimeline: {
+      position: "absolute",
+      left: 10,
+      right: 10,
+      bottom: 8,
+      zIndex: 2,
+    },
+
     roomCodePillWrap: {
       position: "absolute",
       left: 0,
@@ -2294,9 +2413,27 @@ const styles = liveStyles(() =>
       overflow: "hidden",
     },
 
+    roomChatGroup: {
+      flex: 1,
+      minHeight: 0,
+    },
+
+    roomChatGroupPortrait: {
+      minHeight: 260,
+      backgroundColor: C.card,
+      borderRadius: 22,
+      overflow: "hidden",
+    },
+
+    roomChatGroupLandscape: {
+      gap: 10,
+      backgroundColor: "transparent",
+      overflow: "visible",
+    },
+
     roomChat: {
       flex: 1,
-      minHeight: 260,
+      minHeight: 0,
       backgroundColor: C.card,
       borderRadius: 22,
       overflow: "hidden",
@@ -2343,6 +2480,11 @@ const styles = liveStyles(() =>
       alignItems: "center",
       gap: 8,
       padding: 10,
+    },
+
+    roomChatInputLandscape: {
+      padding: 0,
+      flexShrink: 0,
     },
 
     roomChatField: {
@@ -2411,8 +2553,9 @@ const styles = liveStyles(() =>
     },
 
     wideRow: {
+      flex: 1,
       flexDirection: "row",
-      gap: 16,
+      gap: 12,
       alignItems: "stretch",
     },
 
@@ -2426,9 +2569,7 @@ const styles = liveStyles(() =>
 
     wideRight: {
       width: 300,
-      minWidth: 260,
       alignSelf: "stretch",
-      overflow: "hidden",
     },
 
     androidCard: {

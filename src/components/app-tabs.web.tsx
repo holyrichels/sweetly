@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Slot, usePathname, useRouter } from "expo-router";
 import { Animated, PanResponder, Pressable, StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
@@ -30,7 +30,37 @@ export default function AppTabs() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const topOffset = TOP_OFFSET;
+  const [deviceLandscape, setDeviceLandscape] = useState(() => {
+    if (typeof window === "undefined") return false;
+
+    const orientation = window.screen.orientation?.type;
+    return orientation
+      ? orientation.startsWith("landscape")
+      : window.screen.width > window.screen.height;
+  });
+
+  useEffect(() => {
+    const updateOrientation = () => {
+      const orientation = window.screen.orientation?.type;
+      setDeviceLandscape(
+        orientation
+          ? orientation.startsWith("landscape")
+          : window.screen.width > window.screen.height,
+      );
+    };
+
+    const orientation = window.screen.orientation;
+    orientation?.addEventListener("change", updateOrientation);
+    window.addEventListener("orientationchange", updateOrientation);
+
+    return () => {
+      orientation?.removeEventListener("change", updateOrientation);
+      window.removeEventListener("orientationchange", updateOrientation);
+    };
+  }, []);
+
+  const landscapeWatch = pathname === "/watch" && deviceLandscape;
+  const topOffset = landscapeWatch ? 0 : TOP_OFFSET;
 
   const currentIndex = TABS.findIndex((tab) => tab.route === pathname);
 
@@ -86,32 +116,34 @@ export default function AppTabs() {
         <Slot />
       </Animated.View>
 
-      <View style={styles.bar}>
-        {TABS.map((tab) => {
-          const active = pathname === tab.route;
-          const color = active ? c.accent : c.muted;
+      {!landscapeWatch ? (
+        <View style={styles.bar}>
+          {TABS.map((tab) => {
+            const active = pathname === tab.route;
+            const color = active ? c.accent : c.muted;
 
-          return (
-            <Pressable
-              key={tab.route}
-              style={styles.item}
-              accessibilityLabel={tab.label}
-              onPress={() => router.navigate(tab.route as any)}
-            >
-              <Svg width={24} height={24} viewBox="0 0 24 24">
-                <Path
-                  d={tab.d}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth={active ? 2 : 1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </Svg>
-            </Pressable>
-          );
-        })}
-      </View>
+            return (
+              <Pressable
+                key={tab.route}
+                style={styles.item}
+                accessibilityLabel={tab.label}
+                onPress={() => router.navigate(tab.route as any)}
+              >
+                <Svg width={24} height={24} viewBox="0 0 24 24">
+                  <Path
+                    d={tab.d}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={active ? 2 : 1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </Svg>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
