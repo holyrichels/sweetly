@@ -1,6 +1,7 @@
 import SkeletonScreen from "@/components/skeleton-screen";
 import { C, FONTS, liveStyles } from "@/constants/sweetly-theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Svg, { Path } from "react-native-svg";
 
@@ -653,22 +654,58 @@ export default function WatchScreen() {
 
     setAndroidCode(null);
 
-    const { data, error } =
-      await supabase.functions.invoke("request-web-login");
+    try {
+      const { data, error } =
+        await supabase.functions.invoke("request-web-login");
 
-    if (error || !data?.code) {
-      setAndroidError("Не получилось получить код. Попробуйте ещё раз.");
+      if (error) {
+        console.error("request-web-login failed:", error);
+        let details = `${error.name}: ${error.message}`;
 
+        if (error instanceof FunctionsHttpError) {
+          const response = error.context;
+          details = `HTTP ${response.status}`;
+
+          try {
+            const body: unknown = await response.json();
+            if (typeof body === "string") {
+              details += `: ${body}`;
+            } else if (body && typeof body === "object") {
+              if ("message" in body && typeof body.message === "string") {
+                details += `: ${body.message}`;
+              } else if ("error" in body && typeof body.error === "string") {
+                details += `: ${body.error}`;
+              }
+            }
+          } catch {
+            // The HTTP status still identifies the failed request if the body isn't JSON.
+          }
+        }
+
+        setAndroidError(`Не получилось получить код (${details}).`);
+        return null;
+      }
+
+      if (typeof data?.code !== "string" || !data.code) {
+        console.error("request-web-login returned no code:", data);
+        setAndroidError("Сервис не вернул код. Попробуйте ещё раз.");
+        return null;
+      }
+
+      setAndroidCode(data.code);
+
+      setCodeExpiresAt(Date.now() + 10 * 60 * 1000);
+
+      setLinkState("linked");
+
+      return data.code;
+    } catch (error) {
+      console.error("Could not request web login code:", error);
+      const details =
+        error instanceof Error ? error.message : String(error);
+      setAndroidError(`Не получилось получить код (${details}).`);
       return null;
     }
-
-    setAndroidCode(data.code);
-
-    setCodeExpiresAt(Date.now() + 10 * 60 * 1000);
-
-    setLinkState("linked");
-
-    return data.code;
   }
 
   useEffect(() => {
