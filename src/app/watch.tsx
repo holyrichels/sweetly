@@ -676,6 +676,9 @@ export default function WatchScreen() {
               } else if ("error" in body && typeof body.error === "string") {
                 details += `: ${body.error}`;
               }
+              if ("stage" in body && typeof body.stage === "string") {
+                details += ` (${body.stage})`;
+              }
             }
           } catch {
             // The HTTP status still identifies the failed request if the body isn't JSON.
