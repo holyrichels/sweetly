@@ -225,6 +225,7 @@ export default function WatchScreen() {
   const loadedVideoRef = useRef<string | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
+  const chatInputFocused = useRef(false);
 
   // Актуальные значения для обработчиков плеера (они не должны видеть старые данные)
   const roomRef = useRef<RoomState | null>(null);
@@ -587,8 +588,39 @@ export default function WatchScreen() {
   // Ориентация: горизонтально — плеер слева, чат справа
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const [viewportHeight, setViewportHeight] = useState(0);
+  const [deviceLandscape, setDeviceLandscape] = useState(() => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const orientation = window.screen.orientation?.type;
+      if (orientation) return orientation.startsWith("landscape");
+      return window.screen.width > window.screen.height;
+    }
 
-  const landscape = screenWidth > screenHeight;
+    return screenWidth > screenHeight;
+  });
+
+  useEffect(() => {
+    if (!isWeb) return;
+
+    const updateOrientation = () => {
+      const orientation = window.screen.orientation?.type;
+      setDeviceLandscape(
+        orientation
+          ? orientation.startsWith("landscape")
+          : window.screen.width > window.screen.height,
+      );
+    };
+
+    const orientation = window.screen.orientation;
+    orientation?.addEventListener("change", updateOrientation);
+    window.addEventListener("orientationchange", updateOrientation);
+
+    return () => {
+      orientation?.removeEventListener("change", updateOrientation);
+      window.removeEventListener("orientationchange", updateOrientation);
+    };
+  }, [isWeb]);
+
+  const landscape = isWeb ? deviceLandscape : screenWidth > screenHeight;
   const wideLayout = landscape;
   const compactControls = screenWidth < 440;
   const extraCompactControls = screenWidth < 380;
@@ -1317,10 +1349,16 @@ export default function WatchScreen() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={styles.screen}
       onLayout={(event) => {
         const height = Math.round(event.nativeEvent.layout.height);
         setViewportHeight((current) => (current === height ? current : height));
+        if (chatInputFocused.current) {
+          requestAnimationFrame(() => {
+            scrollRef.current?.scrollToEnd({ animated: true });
+          });
+        }
       }}
       scrollEnabled
       contentContainerStyle={[
@@ -1682,6 +1720,17 @@ export default function WatchScreen() {
                 value={messageDraft}
                 onChangeText={setMessageDraft}
                 onSubmitEditing={sendMessage}
+                blurOnSubmit={false}
+                returnKeyType="send"
+                onFocus={() => {
+                  chatInputFocused.current = true;
+                  setTimeout(() => {
+                    scrollRef.current?.scrollToEnd({ animated: true });
+                  }, 150);
+                }}
+                onBlur={() => {
+                  chatInputFocused.current = false;
+                }}
               />
 
               <Pressable style={styles.roomSend} onPress={sendMessage}>
@@ -1691,51 +1740,14 @@ export default function WatchScreen() {
           </View>
         );
 
-        if (!wideLayout) {
-          return (
-            <Animated.View
-              style={[styles.roomColumn, orientationTransitionStyle]}
-            >
-              {playerCard}
-
-              {timeline}
-              {browserError}
-              {controls}
-
-              {savedList}
-
-              <Animated.View
-                style={[
-                  styles.roomChatWrap,
-                  {
-                    height: chatAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, 260],
-                    }),
-                    opacity: chatAnimation,
-                    transform: [
-                      {
-                        translateY: chatAnimation.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [-12, 0],
-                        }),
-                      },
-                    ],
-                  },
-                ]}
-                pointerEvents={chatVisible ? "auto" : "none"}
-              >
-                {chat}
-              </Animated.View>
-            </Animated.View>
-          );
-        }
-
         return (
           <Animated.View
-            style={[styles.wideRow, orientationTransitionStyle]}
+            style={[
+              wideLayout ? styles.wideRow : styles.roomColumn,
+              orientationTransitionStyle,
+            ]}
           >
-            <View style={styles.wideLeft}>
+            <View style={wideLayout ? styles.wideLeft : styles.roomColumn}>
               {playerCard}
 
               {timeline}
@@ -1748,22 +1760,41 @@ export default function WatchScreen() {
             <Animated.View
               style={[
                 styles.wideRight,
-                {
-                  width: chatAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 300],
-                  }),
-                  minWidth: 0,
-                  opacity: chatAnimation,
-                  transform: [
-                    {
-                      translateX: chatAnimation.interpolate({
+                styles.roomChatWrap,
+                wideLayout
+                  ? {
+                      width: chatAnimation.interpolate({
                         inputRange: [0, 1],
-                        outputRange: [12, 0],
+                        outputRange: [0, 300],
                       }),
+                      height: "100%",
+                      minWidth: 0,
+                      opacity: chatAnimation,
+                      transform: [
+                        {
+                          translateX: chatAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [12, 0],
+                          }),
+                        },
+                      ],
+                    }
+                  : {
+                      width: "100%",
+                      height: chatAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 260],
+                      }),
+                      opacity: chatAnimation,
+                      transform: [
+                        {
+                          translateY: chatAnimation.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [-12, 0],
+                          }),
+                        },
+                      ],
                     },
-                  ],
-                },
               ]}
               pointerEvents={chatVisible ? "auto" : "none"}
             >
