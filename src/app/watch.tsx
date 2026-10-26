@@ -135,7 +135,7 @@ const ICON_SEND = "M3 11l18-8-8 18-2-8-8-2z";
 const ICON_EXTERNAL_LINK =
   "M14 3h7v7m0-7L10 14m8-1v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6";
 const LANDSCAPE_SPLITTER_WIDTH = 32;
-const LANDSCAPE_SPLITTER_SENSITIVITY = 2;
+const LANDSCAPE_SPLITTER_SENSITIVITY = 1;
 
 type ReactionKind = "heart" | "funny" | "star" | "like";
 
