@@ -658,6 +658,7 @@ export default function WatchScreen() {
   );
   const maxLandscapeChatWidthRef = useRef(maxLandscapeChatWidth);
   maxLandscapeChatWidthRef.current = maxLandscapeChatWidth;
+  const splitterPointerCleanup = useRef<(() => void) | null>(null);
   const landscapeSplitter = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -679,6 +680,10 @@ export default function WatchScreen() {
       },
     }),
   ).current;
+  useEffect(
+    () => () => splitterPointerCleanup.current?.(),
+    [],
+  );
 
   useEffect(() => {
     setLandscapeChatWidth((width) =>
@@ -1871,8 +1876,74 @@ export default function WatchScreen() {
 
             {wideLayout && chatVisible ? (
               <View
-                {...landscapeSplitter.panHandlers}
-                style={styles.landscapeSplitter}
+                {...(isWeb ? {} : landscapeSplitter.panHandlers)}
+                onPointerDown={
+                  isWeb
+                    ? (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        splitterPointerCleanup.current?.();
+
+                        const startX = event.nativeEvent.pageX;
+                        const startWidth = landscapeChatWidthRef.current;
+                        const previousCursor = document.body.style.cursor;
+                        const previousUserSelect = document.body.style.userSelect;
+
+                        const updateWidth = (pageX: number) => {
+                          const nextWidth = Math.min(
+                            maxLandscapeChatWidthRef.current,
+                            Math.max(
+                              minLandscapeChatWidth,
+                              startWidth -
+                                (pageX - startX) *
+                                  LANDSCAPE_SPLITTER_SENSITIVITY,
+                            ),
+                          );
+                          setLandscapeChatWidth(nextWidth);
+                        };
+
+                        const onPointerMove = (moveEvent: PointerEvent) => {
+                          updateWidth(moveEvent.pageX);
+                        };
+                        const cleanup = () => {
+                          window.removeEventListener(
+                            "pointermove",
+                            onPointerMove,
+                          );
+                          window.removeEventListener(
+                            "pointerup",
+                            cleanup,
+                          );
+                          window.removeEventListener(
+                            "pointercancel",
+                            cleanup,
+                          );
+                          window.removeEventListener("blur", cleanup);
+                          document.body.style.cursor = previousCursor;
+                          document.body.style.userSelect = previousUserSelect;
+                          splitterPointerCleanup.current = null;
+                        };
+
+                        splitterPointerCleanup.current = cleanup;
+                        document.body.style.cursor = "col-resize";
+                        document.body.style.userSelect = "none";
+                        window.addEventListener("pointermove", onPointerMove);
+                        window.addEventListener("pointerup", cleanup, {
+                          once: true,
+                        });
+                        window.addEventListener("pointercancel", cleanup, {
+                          once: true,
+                        });
+                        window.addEventListener("blur", cleanup, {
+                          once: true,
+                        });
+                      }
+                    : undefined
+                }
+                style={[
+                  styles.landscapeSplitter,
+                  isWeb && styles.landscapeSplitterWeb,
+                ]}
                 accessibilityLabel="Изменить ширину чата"
                 accessibilityRole="adjustable"
               >
@@ -2542,6 +2613,10 @@ const styles = liveStyles(() =>
       flexShrink: 0,
       alignItems: "center",
       justifyContent: "center",
+    },
+
+    landscapeSplitterWeb: {
+      touchAction: "none" as const,
     },
 
     landscapeSplitterHandle: {
