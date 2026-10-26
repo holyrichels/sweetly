@@ -5,7 +5,7 @@ export const BOT_USERNAME = "sweetly_couple_bot";
 
 // Ссылка-приглашение: открывает бота и приложение с кодом пары
 export function inviteLink(code: string) {
-  return `https://t.me/${BOT_USERNAME}?startapp=${code}`;
+  return `https://t.me/${BOT_USERNAME}?startapp=${encodeURIComponent(code)}`;
 }
 
 // Системное окно «Поделиться» с приглашением: сначала текст, потом ссылка

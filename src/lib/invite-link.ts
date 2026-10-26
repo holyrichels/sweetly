@@ -6,13 +6,26 @@ const KEY = "sweetly_pending_invite";
 export function readInviteFromTelegram(): string | null {
   if (Platform.OS !== "web" || typeof window === "undefined") return null;
 
-  const param = (window as any).Telegram?.WebApp?.initDataUnsafe?.start_param;
+  const raw = (window as any).Telegram?.WebApp?.initDataUnsafe?.start_param;
 
-  return typeof param === "string" && param.length > 0 ? param : null;
+  if (typeof raw !== "string") return null;
+
+  const value = decodeURIComponent(raw.trim());
+
+  return value.length > 0 ? value : null;
 }
 
 export function savePendingInvite(code: string) {
-  if (typeof window !== "undefined") window.localStorage.setItem(KEY, code.toUpperCase());
+  if (typeof window === "undefined") return;
+
+  const normalized = String(code ?? "").trim().toUpperCase();
+
+  if (!normalized) {
+    window.localStorage.removeItem(KEY);
+    return;
+  }
+
+  window.localStorage.setItem(KEY, normalized);
 }
 
 export function getPendingInvite(): string | null {
